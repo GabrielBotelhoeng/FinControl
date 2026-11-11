@@ -1,0 +1,249 @@
+Projeto: FinControl — CRM de Gestão Financeira Pessoal
+Projeto de portfólio
+ Web + Mobile
+
+
+Minha proposta é desenvolver um sistema chamado FinControl, uma plataforma de gestão financeira pessoal que ajude qualquer pessoa a controlar sua renda, despesas, dívidas, cartões de crédito e objetivos financeiros.
+
+O diferencial será transformar os dados financeiros em informações fáceis de entender, ajudando o usuário a tomar decisões melhores.
+
+Não quero que seja apenas mais um aplicativo de anotar gastos. Quero que tenha características de um verdadeiro sistema de gestão financeira, com dashboard, relatórios, planejamento e inteligência financeira.
+
+
+Nome provisório: Recomeça Financeiro
+
+
+1. Identidade do projeto
+Item	Definição
+Nome	FinControl
+Categoria	CRM financeiro pessoal
+Público	Pessoas físicas
+Plataforma	Web responsivo + mobile
+Modelo	SaaS demonstrativo
+Objetivo	Portfólio de Engenharia de Software
+Idioma	Português (Brasil)
+Moeda	Real (R$)
+
+Proposta de valor:
+
+"Tenha controle total do seu dinheiro. Saiba quanto ganha, quanto gasta, quanto deve e como melhorar sua vida financeira."
+2. Módulos principais do sistema
+Eu dividiria o projeto em 10 módulos.
+
+
+
+
+
+
+
+
+
+
+01. Dashboard financeiro
+- Saldo atual.
+- Receitas e despesas do mês.
+- Total de dívidas.
+- Despesas pendentes.
+- Gráficos de evolução financeira.
+- Comparação com meses anteriores.
+
+
+
+
+
+
+
+
+
+
+
+
+
+02. Controle de despesas
+- Cadastro de despesas.
+- Categorias personalizadas.
+- Despesas fixas e variáveis.
+- Despesas recorrentes.
+- Histórico de movimentações.
+- Filtros por período e categoria.
+
+
+
+
+
+
+
+
+
+
+
+
+
+03. Gestão de dívidas
+- Cadastro de credores.
+- Valor original e valor atualizado.
+- Juros e multas.
+- Quantidade de parcelas.
+- Data de vencimento.
+- Registro de pagamentos.
+- Histórico de negociações.
+- Progresso de quitação.
+
+
+
+
+
+
+
+
+
+
+
+
+
+04. Gestão de cartões
+- Cadastro de cartões.
+- Limite total e disponível.
+- Faturas abertas e fechadas.
+- Compras parceladas.
+- Data de fechamento e vencimento.
+- Histórico de faturas.
+
+
+
+
+
+
+
+
+
+
+
+
+
+05. Planejamento financeiro
+- Definir orçamento mensal.
+- Limites por categoria.
+- Planejamento de receitas.
+- Previsão de despesas futuras.
+- Alertas de orçamento ultrapassado.
+
+
+
+
+
+
+
+
+
+
+
+
+
+06. Metas financeiras
+- Criar objetivos de economia.
+- Definir valor desejado.
+- Estabelecer prazo.
+- Registrar depósitos.
+- Acompanhar percentual alcançado.
+
+
+
+
+
+
+
+
+
+
+
+
+
+07. Relatórios
+- Gastos por categoria.
+- Evolução de receitas.
+- Evolução das dívidas.
+- Comparação mensal.
+- Exportação em PDF e CSV.
+
+
+
+
+
+
+
+
+
+
+
+
+
+08. Assistente financeiro com IA
+- Analisar os gastos.
+- Identificar despesas elevadas.
+- Responder perguntas financeiras.
+- Sugerir ajustes no orçamento.
+- Criar sugestões de quitação de dívidas.
+
+
+
+
+
+
+
+
+
+
+
+
+
+09. Notificações
+- Contas próximas do vencimento.
+- Faturas em aberto.
+- Orçamento próximo do limite.
+- Metas alcançadas.
+- Lembretes de pagamentos.
+
+
+
+
+
+
+
+
+
+
+
+
+
+10. Perfil e configurações
+- Cadastro e autenticação.
+- Dados pessoais.
+- Preferências financeiras.
+- Categorias personalizadas.
+- Segurança e privacidade.
+
+
+Arquitetura proposta
+Frontend
+React + TypeScript + Tailwind CSS
+
+Interface web responsiva e PWA para uso no celular
+
+
+Backend
+Node.js + Express + TypeScript
+
+API REST, regras de negócio e validações
+
+
+Banco de dados
+PostgreSQL + Supabase
+
+Persistência, autenticação e armazenamento
+
+
+Inteligência artificial
+API de modelo de linguagem
+
+Análises e recomendações financeiras
