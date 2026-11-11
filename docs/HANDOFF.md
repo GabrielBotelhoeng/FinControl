@@ -41,7 +41,8 @@ _Atualizado em 2026-11-11._
 - **Supabase:** `site_url` = https://fincontrol-gb.vercel.app, que também está na lista de redirects.
 - **Pendências:**
   - **CORS de previews: resolvido.** `WEB_PREVIEW_ORIGIN_PATTERN` é uma regex que o app ancora sozinho, configurada na Vercel com as URLs do time.
-  - **Supabase:** falta liberar os redirects dos previews (`https://*-gabriel-botelhos-projects.vercel.app/**`). O push foi bloqueado pela política de permissões e ficou para o usuário rodar.
+  - **Supabase, redirects dos previews: resolvido** (pelo dashboard, autorizado pelo usuário). O padrão é `https://fincontrol-*-gabriel-botelhos-projects.vercel.app/**`, que cobre só os previews do FinControl. O `config.toml` está espelhado e o diff deu zero.
+  - **PR #3 mergeado na `main`.** O deploy de produção dos dois projetos foi verificado: health ok e CORS de preview ativo.
   - **Google:** só publica com o link de uma política de privacidade. Página inicial e domínio autorizado já foram salvos.
   - Na Vercel, o Git Bash reescreve caminhos `/api/...` no `vercel curl`. Use `MSYS_NO_PATHCONV=1`.
 
