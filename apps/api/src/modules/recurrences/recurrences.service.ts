@@ -94,6 +94,15 @@ export function createRecurrencesService(deps: RecurrencesServiceDeps) {
     if (endDate !== null && endDate < newStart) {
       throw new UnprocessableError('O fim da recorrência não pode ser anterior a este lançamento.');
     }
+    // As pagas a partir do pivô vão para a nova série com a data original; mover esta paga para cima de
+    // outra paga violaria (recorrência, data da ocorrência). Recusa antes de qualquer escrita.
+    if (tx.status === 'paid' && reschedule && newStart > pivot) {
+      const taken = await transactions.findByOccurrence(userId, rec.id, newStart);
+      if (taken && taken.id !== tx.id && taken.status === 'paid') {
+        const day = newStart.split('-').reverse().join('/');
+        throw new UnprocessableError(`Já existe um lançamento pago desta recorrência em ${day}. Escolha outra data.`);
+      }
+    }
 
     let targetId = rec.id;
     if (!reschedule) {

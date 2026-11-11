@@ -118,6 +118,21 @@ describe('recorrências', () => {
     ]);
   });
 
+  it('mover uma ocorrência paga para a data de outra paga da série dá 422 e não altera nada', async () => {
+    const user = await newUser();
+    await series(user);
+    const [sep, oct] = await range(user, '2026-09-01', '2026-10-31');
+    for (const item of [sep!, oct!]) {
+      expect((await request(app).post(`/api/v1/transactions/${item.id}/pay`).set(user.auth).send({ paidDate: item.dueDate })).status).toBe(200);
+    }
+    const before = await range(user, '2026-09-01', '2026-12-31');
+
+    const res = await request(app).patch(`/api/v1/transactions/${sep!.id}?scope=future`).set(user.auth).send({ dueDate: '2026-10-10' });
+    expect(res.status).toBe(422);
+    expect(res.body.detail).toMatch(/10\/10\/2026/);
+    expect(await range(user, '2026-09-01', '2026-12-31')).toEqual(before);
+  });
+
   it('editar "só esta" altera apenas a ocorrência e persiste após recarregar', async () => {
     const user = await newUser();
     await series(user);
