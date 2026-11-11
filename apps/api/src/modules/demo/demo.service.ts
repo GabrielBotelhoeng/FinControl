@@ -13,15 +13,22 @@ import type { DemoRepository } from './demo.repository';
 const DEMO_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const CLEANUP_BATCH = 500;
 
-export type DemoServiceDeps = {
+/** Tudo que o seed grava, ligado a uma única transação do banco. */
+export type SeedScope = {
   repo: DemoRepository;
   accounts: AccountsRepository;
-  categories: CategoriesRepository;
   recurrencesRepo: RecurrencesRepository;
   recurrences: RecurrencesService;
   transactions: TransactionsRepository;
+};
+
+export type DemoServiceDeps = {
+  repo: DemoRepository;
+  categories: CategoriesRepository;
   profile: ProfileService;
   clock: () => Date;
+  /** Roda `fn` numa transação: ou o seed inteiro fica gravado, ou nada fica. */
+  inTransaction: <T>(fn: (scope: SeedScope) => Promise<T>) => Promise<T>;
 };
 
 export function createDemoService(deps: DemoServiceDeps) {
@@ -30,53 +37,60 @@ export function createDemoService(deps: DemoServiceDeps) {
       if (!claims.isAnonymous) throw new ForbiddenError('A demo está disponível apenas para visitantes sem cadastro.');
       const userId = claims.userId;
       if ((await deps.repo.countAccounts(userId)) > 0) return { seeded: false };
-
-      const today = todayInSaoPaulo(deps.clock());
-      const plan = buildDemoData(today);
-
-      const accountIds = new Map<DemoAccountKey, string>();
-      for (const { key, ...data } of plan.accounts) accountIds.set(key, (await deps.accounts.create(userId, data)).id);
-      const accountId = (key: DemoAccountKey): string => {
-        const id = accountIds.get(key);
-        if (!id) throw new Error(`Conta demo ausente: ${key}`);
-        return id;
-      };
-
+      // Leitura das categorias padrão fora da transação: elas já existem (criadas no provisionamento).
       const categories = await deps.categories.list(userId);
-      const categoryId = (name: string, type: CategoryType): string => {
-        const found = categories.find((c) => c.name === name && c.type === type);
-        if (!found) throw new Error(`Categoria padrão ausente: ${name}`);
-        return found.id;
-      };
 
-      for (const r of plan.recurrences) {
-        await deps.recurrencesRepo.create(userId, {
-          frequency: 'monthly', startDate: r.startDate, endDate: null, type: r.type, amount: r.amount, description: r.description,
-          accountId: accountId(r.accountKey), destinationAccountId: null, categoryId: categoryId(r.categoryName, r.type), nature: 'fixed',
-        });
-      }
+      // Atômico: quem recarrega no meio não vê dados pela metade, e uma falha não deixa a demo travada
+      // (com contas gravadas, o guarda acima impediria gerar de novo).
+      return deps.inTransaction(async (tx) => {
+        if ((await tx.repo.countAccounts(userId)) > 0) return { seeded: false };
 
-      await deps.transactions.insertMany(
-        userId,
-        plan.transactions.map((t) => ({
-          type: t.type,
-          amount: t.amount,
-          description: t.description,
-          accountId: accountId(t.accountKey),
-          destinationAccountId: t.destinationAccountKey ? accountId(t.destinationAccountKey) : null,
-          categoryId: t.categoryName && t.type !== 'transfer' ? categoryId(t.categoryName, t.type) : null,
-          nature: t.nature,
-          status: t.status,
-          dueDate: t.dueDate,
-          paidDate: t.paidDate,
-          recurrenceId: null,
-          occurrenceDate: null,
-        })),
-      );
+        const today = todayInSaoPaulo(deps.clock());
+        const plan = buildDemoData(today);
 
-      await deps.recurrences.materialize(userId, endOfMonth(monthOf(today)));
-      await deps.repo.markRecurringPaidBefore(userId, today, plan.overdueDescription);
-      return { seeded: true };
+        const accountIds = new Map<DemoAccountKey, string>();
+        for (const { key, ...data } of plan.accounts) accountIds.set(key, (await tx.accounts.create(userId, data)).id);
+        const accountId = (key: DemoAccountKey): string => {
+          const id = accountIds.get(key);
+          if (!id) throw new Error(`Conta demo ausente: ${key}`);
+          return id;
+        };
+
+        const categoryId = (name: string, type: CategoryType): string => {
+          const found = categories.find((c) => c.name === name && c.type === type);
+          if (!found) throw new Error(`Categoria padrão ausente: ${name}`);
+          return found.id;
+        };
+
+        for (const r of plan.recurrences) {
+          await tx.recurrencesRepo.create(userId, {
+            frequency: 'monthly', startDate: r.startDate, endDate: null, type: r.type, amount: r.amount, description: r.description,
+            accountId: accountId(r.accountKey), destinationAccountId: null, categoryId: categoryId(r.categoryName, r.type), nature: 'fixed',
+          });
+        }
+
+        await tx.transactions.insertMany(
+          userId,
+          plan.transactions.map((t) => ({
+            type: t.type,
+            amount: t.amount,
+            description: t.description,
+            accountId: accountId(t.accountKey),
+            destinationAccountId: t.destinationAccountKey ? accountId(t.destinationAccountKey) : null,
+            categoryId: t.categoryName && t.type !== 'transfer' ? categoryId(t.categoryName, t.type) : null,
+            nature: t.nature,
+            status: t.status,
+            dueDate: t.dueDate,
+            paidDate: t.paidDate,
+            recurrenceId: null,
+            occurrenceDate: null,
+          })),
+        );
+
+        await tx.recurrences.materialize(userId, endOfMonth(monthOf(today)));
+        await tx.repo.markRecurringPaidBefore(userId, today, plan.overdueDescription);
+        return { seeded: true };
+      });
     },
 
     async cleanup(): Promise<{ deleted: number }> {

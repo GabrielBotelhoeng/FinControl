@@ -1,7 +1,7 @@
 import type { DateOnly, Frequency, TransactionNature, TransactionType } from '@fincontrol/shared';
 import type { Prisma } from '../../generated/prisma/client';
 import { fromDateOnly, toDateOnly } from '../../infra/date-mapping';
-import type { Db } from '../../infra/prisma';
+import type { DbClient } from '../../infra/prisma';
 
 export type RecurrenceTemplate = {
   type: TransactionType;
@@ -52,7 +52,7 @@ function toUpdateData(p: Partial<RecurrenceData>): Prisma.RecurrenceUncheckedUpd
   };
 }
 
-export function createRecurrencesRepository(db: Db) {
+export function createRecurrencesRepository(db: DbClient) {
   return {
     async create(userId: string, d: RecurrenceData): Promise<RecurrenceRow> {
       const row = await db.recurrence.create({

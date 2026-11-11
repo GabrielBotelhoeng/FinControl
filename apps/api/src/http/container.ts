@@ -30,8 +30,23 @@ export function buildContainer(deps: AppDeps) {
   const transactions = createTransactionsService({ repo: transactionsRepo, validateRefs, recurrences, clock: deps.clock });
   const dashboard = createDashboardService({ repo: createDashboardRepository(deps.db), transactions: transactionsRepo, recurrences, clock: deps.clock });
   const demo = createDemoService({
-    repo: createDemoRepository(deps.db), accounts: accountsRepo, categories: categoriesRepo, recurrencesRepo, recurrences,
-    transactions: transactionsRepo, profile, clock: deps.clock,
+    repo: createDemoRepository(deps.db), categories: categoriesRepo, profile, clock: deps.clock,
+    // O seed grava ~170 linhas; o limite de 5 s padrão do Prisma é apertado no plano gratuito.
+    inTransaction: (fn) =>
+      deps.db.$transaction(
+        async (db) => {
+          const transactionsTx = createTransactionsRepository(db);
+          const recurrencesTx = createRecurrencesRepository(db);
+          return fn({
+            repo: createDemoRepository(db),
+            accounts: createAccountsRepository(db),
+            recurrencesRepo: recurrencesTx,
+            transactions: transactionsTx,
+            recurrences: createRecurrencesService({ repo: recurrencesTx, transactions: transactionsTx, validateRefs, clock: deps.clock }),
+          });
+        },
+        { maxWait: 10_000, timeout: 30_000 },
+      ),
   });
   return {
     provisioner, profile, accountsRepo, accounts, categoriesRepo, categories,

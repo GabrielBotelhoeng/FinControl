@@ -47,6 +47,30 @@ describe('limpeza agendada das demos', () => {
     return id;
   }
 
+  it('o seed é atômico: se falhar no meio, nada fica gravado e a demo pode ser gerada de novo', async () => {
+    // O seed lê o relógio no início e de novo ao materializar as recorrências, depois de já ter gravado
+    // contas, recorrências e lançamentos. Falhar nessa 2ª leitura simula um erro no meio do caminho.
+    let failOnCall = 0;
+    let calls = 0;
+    const clock = () => {
+      calls += 1;
+      if (calls === failOnCall) throw new Error('falha simulada no meio do seed');
+      return FIXED_NOW;
+    };
+    const { app: flaky } = buildTestApp({ clock });
+    const visitor = await newUser({ isAnonymous: true });
+
+    calls = 0;
+    failOnCall = 2;
+    expect((await request(flaky).post('/api/v1/demo/seed').set(visitor.auth)).status).toBe(500);
+    failOnCall = 0;
+
+    expect((await request(flaky).get('/api/v1/accounts').set(visitor.auth)).body).toEqual([]);
+    expect(await testDb.transaction.count({ where: { userId: visitor.id } })).toBe(0);
+    expect((await request(flaky).post('/api/v1/demo/seed').set(visitor.auth)).body).toEqual({ seeded: true });
+    expect((await request(flaky).get('/api/v1/accounts').set(visitor.auth)).body).toHaveLength(3);
+  });
+
   it('apaga só demos com mais de 7 dias', async () => {
     const oldDemo = await profile(true, 8);
     await profile(true, 1);
