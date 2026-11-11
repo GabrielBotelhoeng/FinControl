@@ -15,4 +15,8 @@ describe('loadConfig', () => {
   it('exige CRON_SECRET com pelo menos 32 caracteres', () => {
     expect(() => loadConfig({ ...process.env, CRON_SECRET: 'curto' })).toThrow(/CRON_SECRET/);
   });
+
+  it('rejeita WEB_PREVIEW_ORIGIN_PATTERN que não é regex válida', () => {
+    expect(() => loadConfig({ ...process.env, WEB_PREVIEW_ORIGIN_PATTERN: '([' })).toThrow(/WEB_PREVIEW_ORIGIN_PATTERN/);
+  });
 });

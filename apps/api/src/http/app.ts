@@ -14,6 +14,16 @@ export type { AppDeps } from './deps';
 
 export const API_VERSION = '0.1.0';
 
+type OriginCheck = (origin: string | undefined, done: (err: Error | null, allow?: boolean) => void) => void;
+
+/** A origem principal é exata; os previews casam com a regex inteira (ancorada), nunca por prefixo. */
+function allowedOrigin(config: AppDeps['config']): OriginCheck {
+  const preview = config.WEB_PREVIEW_ORIGIN_PATTERN ? new RegExp(`^(?:${config.WEB_PREVIEW_ORIGIN_PATTERN})$`) : null;
+  return (origin, done) => {
+    done(null, origin === config.WEB_ORIGIN || (origin !== undefined && preview !== null && preview.test(origin)));
+  };
+}
+
 export function createApp(deps: AppDeps): Express {
   const app = express();
   const container = buildContainer(deps);
@@ -23,7 +33,7 @@ export function createApp(deps: AppDeps): Express {
   app.set('trust proxy', 1);
   app.use(requestLogger(deps.logger));
   app.use(helmet());
-  app.use(cors({ origin: deps.config.WEB_ORIGIN }));
+  app.use(cors({ origin: allowedOrigin(deps.config) }));
   app.use(express.json({ limit: '100kb' }));
   app.use(
     rateLimit({

@@ -1,0 +1,15 @@
+# Nunca enviar segredos nem artefatos locais no upload da CLI da Vercel.
+.secrets
+.env
+.env.*
+**/.env
+**/.env.*
+node_modules
+**/node_modules
+**/dist
+apps/api/src/generated
+supabase/.temp
+.superpowers
+playwright-report
+test-results
+coverage
