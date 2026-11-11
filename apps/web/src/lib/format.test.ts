@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { formatDate, formatMonthLabel, formatSignedBRL, splitBRL } from './format';
 
-const plain = (s: string) => s.replace(/ /g, ' ');
+const plain = (s: string) => s.replace(/\s/g, ' ');
 
 describe('formatadores pt-BR', () => {
   it('formata data sem hora', () => {

@@ -23,7 +23,7 @@ export function formatSignedBRL(cents: number, type: TransactionType): string {
 
 /** Divide o valor para o saldo herói: "R$" e centavos em peso fino, inteiros em extra-negrito. */
 export function splitBRL(cents: number): { sign: string; currency: string; integer: string; cents: string } {
-  const formatted = formatBRL(Math.abs(cents)).replace(/ /g, ' ');
+  const formatted = formatBRL(Math.abs(cents)).replace(/\s/g, ' ');
   const [, number = '0,00'] = formatted.split(' ');
   const [integer = '0', decimals = '00'] = number.split(',');
   return { sign: cents < 0 ? MINUS : '', currency: 'R$', integer, cents: `,${decimals}` };
