@@ -43,7 +43,7 @@ _Atualizado em 2026-11-11._
   - **CORS de previews: resolvido.** `WEB_PREVIEW_ORIGIN_PATTERN` é uma regex que o app ancora sozinho, configurada na Vercel com as URLs do time.
   - **Supabase, redirects dos previews: resolvido** (pelo dashboard, autorizado pelo usuário). O padrão é `https://fincontrol-*-gabriel-botelhos-projects.vercel.app/**`, que cobre só os previews do FinControl. O `config.toml` está espelhado e o diff deu zero.
   - **PR #3 mergeado na `main`.** O deploy de produção dos dois projetos foi verificado: health ok e CORS de preview ativo.
-  - **Google:** só publica com o link de uma política de privacidade. Página inicial e domínio autorizado já foram salvos.
+  - **Google:** a página `/privacidade` (pública, com link na tela de entrada) foi criada na branch feat/privacidade. Depois do merge: colar https://fincontrol-gb.vercel.app/privacidade no Branding do Google Cloud e clicar em "Publicar app" em Público-alvo.
   - Na Vercel, o Git Bash reescreve caminhos `/api/...` no `vercel curl`. Use `MSYS_NO_PATHCONV=1`.
 
 ## Próximo passo

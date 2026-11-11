@@ -72,3 +72,10 @@ describe('RequireAuth', () => {
     vi.restoreAllMocks();
   });
 });
+
+describe('LoginPage — privacidade', () => {
+  it('mostra o link para a política de privacidade', async () => {
+    renderApp(<LoginPage />, { gateway: fakeGateway(null).gateway, route: '/entrar', path: '/entrar' });
+    expect(await screen.findByRole('link', { name: 'Política de privacidade' })).toHaveAttribute('href', '/privacidade');
+  });
+});
