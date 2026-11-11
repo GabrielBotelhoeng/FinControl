@@ -43,7 +43,7 @@ _Atualizado em 2026-11-11._
   - **CORS de previews: resolvido.** `WEB_PREVIEW_ORIGIN_PATTERN` é uma regex que o app ancora sozinho, configurada na Vercel com as URLs do time.
   - **Supabase, redirects dos previews: resolvido** (pelo dashboard, autorizado pelo usuário). O padrão é `https://fincontrol-*-gabriel-botelhos-projects.vercel.app/**`, que cobre só os previews do FinControl. O `config.toml` está espelhado e o diff deu zero.
   - **PR #3 mergeado na `main`.** O deploy de produção dos dois projetos foi verificado: health ok e CORS de preview ativo.
-  - **Google:** a página `/privacidade` (pública, com link na tela de entrada) foi criada na branch feat/privacidade. Depois do merge: colar https://fincontrol-gb.vercel.app/privacidade no Branding do Google Cloud e clicar em "Publicar app" em Público-alvo.
+  - **Google:** o app está publicado ("Em produção") desde 2026-11-11, com a política em `/privacidade`. Qualquer conta Google consegue entrar.
   - Na Vercel, o Git Bash reescreve caminhos `/api/...` no `vercel curl`. Use `MSYS_NO_PATHCONV=1`.
 
 ## Próximo passo
@@ -51,13 +51,14 @@ _Atualizado em 2026-11-11._
 - **Parte 2 (Web): concluída** (branch feat/sp1-web, mergeada). Inclui 42 testes, build com PWA e verificação visual sem rolagem horizontal em 360 px. A direção visual está em DESIGN.md ("Aurora no cofre", dourado, com o CoraHub como referência), e a arte de entrada foi gerada no Higgsfield.
 - **Parte 3 (combinar com o usuário):**
   - Deploy na Vercel (web + API), com Supabase (Auth: e-mail, Google, anônimo) e Google OAuth.
-  - E2E com Playwright: o roteiro com sessão simulada fica como base em scratchpad/visual.mjs.
-  - README de vitrine com os screenshots.
+  - E2E com Playwright: feito (`e2e/`, 7 cenários no CI, com o provedor de identidade simulado em `e2e/fake-auth.ts`).
+  - README de vitrine: feito (as imagens vêm de `SCREENSHOTS=1 npm run test:e2e -- screenshots`).
 - **Revisão final da Parte 2:** feita como autorrevisão. Corrigido o logout com token expirado, que deixava a sessão presa (teste RED→GREEN). Pendências menores: se a geração da demo falhar depois do login anônimo, um novo clique cria outro usuário anônimo; e o `readEnv` falha com tela em branco quando faltam variáveis no build.
 
 ## Pendências registradas na revisão final (menores)
 
-- Seed da demo não é atômico. O botão no front deve ser desabilitado durante a chamada.
+- Seed da demo não é atômico. Quem recarrega a página durante o seed vê dados pela metade (reproduzido no E2E).
+- Corrigido: criar um item enquanto a lista ainda carregava pela primeira vez não o mostrava (corrida do React Query). Agora `useFinanceMutation` cancela antes de invalidar.
 - A busca `q` trata `%` e `_` como curingas.
 - `updateFuture` com data coincidente de outra ocorrência paga pode dar 500 (caso raro).
 
