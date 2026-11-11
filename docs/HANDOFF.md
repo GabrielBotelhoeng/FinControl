@@ -18,7 +18,7 @@ _Atualizado em 2026-11-11._
   - Deploy na Vercel (web + API), com Supabase (Auth: e-mail, Google, anônimo) e Google OAuth.
   - E2E com Playwright: o roteiro com sessão simulada fica como base em scratchpad/visual.mjs.
   - README de vitrine com os screenshots.
-- **Revisão final da Parte 2:** ainda não feita (limite de uso).
+- **Revisão final da Parte 2:** feita como autorrevisão. Corrigido o logout com token expirado, que deixava a sessão presa (teste RED→GREEN). Pendências menores: se a geração da demo falhar depois do login anônimo, um novo clique cria outro usuário anônimo; e o `readEnv` falha com tela em branco quando faltam variáveis no build.
 
 ## Pendências registradas na revisão final (menores)
 
