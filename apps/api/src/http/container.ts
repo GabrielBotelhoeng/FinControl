@@ -5,6 +5,9 @@ import { createCategoriesService } from '../modules/categories/categories.servic
 import { createProfileRepository } from '../modules/profile/profile.repository';
 import { createProfileService } from '../modules/profile/profile.service';
 import { createProvisioner } from '../modules/profile/provisioning';
+import { createRefsValidator } from '../modules/transactions/transactions.refs';
+import { createTransactionsRepository } from '../modules/transactions/transactions.repository';
+import { createTransactionsService } from '../modules/transactions/transactions.service';
 import type { AppDeps } from './deps';
 
 export function buildContainer(deps: AppDeps) {
@@ -14,7 +17,10 @@ export function buildContainer(deps: AppDeps) {
   const accounts = createAccountsService(accountsRepo);
   const categoriesRepo = createCategoriesRepository(deps.db);
   const categories = createCategoriesService(categoriesRepo);
-  return { provisioner, profile, accountsRepo, accounts, categoriesRepo, categories };
+  const transactionsRepo = createTransactionsRepository(deps.db);
+  const validateRefs = createRefsValidator(accounts, categories);
+  const transactions = createTransactionsService({ repo: transactionsRepo, validateRefs, clock: deps.clock });
+  return { provisioner, profile, accountsRepo, accounts, categoriesRepo, categories, transactionsRepo, validateRefs, transactions };
 }
 
 export type Container = ReturnType<typeof buildContainer>;

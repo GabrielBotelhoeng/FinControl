@@ -20,3 +20,9 @@ export async function categoryId(app: Express, user: TestUser, name: string, typ
   if (!found) throw new Error(`Categoria ${name} (${type}) não encontrada`);
   return found.id;
 }
+
+export async function createTransaction(app: Express, user: TestUser, body: Record<string, unknown>) {
+  const res = await request(app).post('/api/v1/transactions').set(user.auth).send(body);
+  expect(res.status, JSON.stringify(res.body)).toBe(201);
+  return res.body as import('@fincontrol/shared').TransactionDTO;
+}
