@@ -2,7 +2,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { ArrowRight, Sparkles } from 'lucide-react';
 import { useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { useLocation, useNavigate, useSearchParams } from 'react-router';
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router';
 import { z } from 'zod';
 import { Button } from '../../components/ui/button';
 import { Field, Input } from '../../components/ui/field';
@@ -200,6 +200,9 @@ export function LoginPage() {
               </button>
             )}
           </Panel>
+          <Link to="/privacidade" className="mt-4 block text-center text-xs text-muted underline hover:text-text">
+            Política de privacidade
+          </Link>
         </div>
       </div>
     </div>
