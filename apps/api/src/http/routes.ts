@@ -1,7 +1,9 @@
 import type { Router } from 'express';
+import { accountsRouter } from '../modules/accounts/accounts.routes';
 import { profileRouter } from '../modules/profile/profile.routes';
 import type { Container } from './container';
 
 export function registerRoutes(api: Router, c: Container): void {
   api.use('/me', profileRouter(c.profile));
+  api.use('/accounts', accountsRouter(c.accounts));
 }
