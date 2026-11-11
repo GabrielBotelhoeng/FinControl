@@ -19,6 +19,8 @@ export function createApp(deps: AppDeps): Express {
   const container = buildContainer(deps);
 
   app.disable('x-powered-by');
+  // Atrás do proxy da Vercel (um salto): o IP real vem em X-Forwarded-For; sem isso o rate limit seria global.
+  app.set('trust proxy', 1);
   app.use(requestLogger(deps.logger));
   app.use(helmet());
   app.use(cors({ origin: deps.config.WEB_ORIGIN }));
