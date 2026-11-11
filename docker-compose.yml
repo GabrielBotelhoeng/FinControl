@@ -1,0 +1,19 @@
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: fincontrol
+      POSTGRES_PASSWORD: fincontrol
+      POSTGRES_DB: fincontrol_dev
+    ports:
+      - "5435:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./docker/init-test-db.sql:/docker-entrypoint-initdb.d/init-test-db.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fincontrol -d fincontrol_dev"]
+      interval: 2s
+      timeout: 3s
+      retries: 20
+volumes:
+  pgdata:
