@@ -1,7 +1,7 @@
 # FinControl — Sub-projeto 1: Fundação + Fluxo de Caixa
 
 - **Data:** 2026-11-11
-- **Status:** Aguardando revisão
+- **Status:** Aprovada (usuário delegou as aprovações em 2026-11-11)
 - **Origem:** `Ideia Projeto.txt` (raiz do repositório) + sessão de brainstorming
 
 ---
@@ -54,7 +54,7 @@ Entregar um produto já demonstrável:
 | D3 | Supabase Auth. O front faz o login e a API valida o JWT | Autenticação própria no Express | É seguro e já pronto (e-mail, Google, recuperação de senha). Autenticação própria traria risco sem ganho visível |
 | D4 | Demo isolada por visitante, via login anônimo do Supabase + seed gerado | Conta compartilhada com reset noturno; demo somente leitura | Um visitante não interfere no outro e a experiência é completa. Ainda demonstra engenharia (seed dinâmico + limpeza agendada) |
 | D5 | Dinheiro em centavos inteiros (`BIGINT`) | `float`, `numeric` com casas decimais na aplicação | Evita erro de arredondamento. A aritmética fica exata em TypeScript (`number` até 2^53 cobre qualquer valor pessoal) |
-| D6 | Monorepo com pnpm workspaces: `apps/web`, `apps/api`, `packages/shared` | Repositórios separados | Schemas Zod compartilhados entre front e back e um CI único |
+| D6 | Monorepo com npm workspaces: `apps/web`, `apps/api`, `packages/shared` | Repositórios separados; pnpm (não instalado na máquina) | Schemas Zod compartilhados entre front e back e um CI único; npm já vem com o Node 22 |
 | D7 | Prisma como ORM | Drizzle, SQL puro | Migrations maduras e tipagem forte. O usuário já tem experiência (StudyManager) |
 | D8 | Deploy de web e API na Vercel; cron pelo Vercel Cron | Render/Railway para a API | A Vercel roda Express nativamente (Fluid Compute). Um provedor só, plano gratuito e preview por PR |
 | D9 | Ocorrências de recorrência criadas sob demanda e de forma idempotente | Cron que pré-gera ocorrências; ocorrências virtuais (nunca persistidas) | Persistir permite marcar uma ocorrência como paga e editá-la. Gerar sob demanda dispensa job e não deixa buracos |
@@ -213,7 +213,7 @@ Todas as tabelas ficam no schema `public` e têm `id uuid`, `created_at` e `upda
 - Criar um lançamento com "repetir" cria uma `recurrence` e a primeira ocorrência.
 - **Materialização sob demanda.** Toda leitura de período passa pelo `RecurrenceMaterializer`: listagem de transações, dashboard e evolução. Antes de consultar, ele cria as ocorrências que faltam de cada recorrência ativa do usuário, de `start_date` até `min(fim do período, end_date, hoje + 12 meses)`.
   - A gravação é idempotente: um `INSERT ... ON CONFLICT (recurrence_id, occurrence_date) DO NOTHING`.
-- **Dia inexistente no mês** (ex.: dia 31 em fevereiro): a ocorrência vai para o último dia do mês. A `occurrence_date` continua sendo calculada a partir do dia original.
+- **Dia inexistente no mês** (ex.: dia 31 em fevereiro): a ocorrência vai para o último dia do mês. A data de cada ocorrência é calculada sempre a partir do início da série, então dia 31 cai em 28/02 e volta a 31/03.
 - Ocorrências nascem `pending`, com `due_date = occurrence_date`.
 - **Editar uma ocorrência**:
   - "Só esta": altera apenas a transação. Ela continua ligada à série, mas a materialização nunca a sobrescreve.
@@ -262,7 +262,7 @@ Base `/api/v1`. Todas as rotas exigem `Authorization: Bearer <jwt>`, exceto `/he
 | GET | `/dashboard/evolution?months=6` | Receitas, despesas e saldo de fim de mês, mês a mês |
 | GET | `/dashboard/by-category?month=YYYY-MM` | Despesas pagas por categoria |
 | POST | `/demo/seed` | Só para JWT anônimo. Idempotente (não faz nada se o seed já existir) |
-| POST | `/internal/cron/cleanup-demo` | Header `Authorization: Bearer $CRON_SECRET` |
+| GET / POST | `/internal/cron/cleanup-demo` | Header `Authorization: Bearer $CRON_SECRET` |
 
 **Variação em relação ao mês anterior:** quando o valor do mês anterior é 0, a API retorna `null`, e o front mostra "—".
 

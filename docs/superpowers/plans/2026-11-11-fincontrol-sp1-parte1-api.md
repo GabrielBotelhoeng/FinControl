@@ -3929,4 +3929,1642 @@ git commit -m "feat(api): lançamentos com filtros, paginação por cursor, paga
 
 ---
 
-<!-- CONTINUA-PARTE-C -->
+### Task 12: Recorrências (materialização, "só esta" e "esta e as próximas")
+
+**Files:**
+- Create: `apps/api/src/modules/recurrences/recurrences.repository.ts`, `recurrences.service.ts`
+- Modify: `apps/api/src/modules/transactions/transactions.service.ts` (substituição completa), `apps/api/src/modules/transactions/transactions.routes.ts` (substituição completa), `apps/api/src/http/container.ts`
+- Test: `apps/api/test/recurrences.test.ts`
+
+**Interfaces:**
+- Consumes: `occurrenceDates` (Task 8), `TransactionsRepository` com `create`, `update`, `delete`, `findById`, `findByOccurrence` e `insertMany` (Task 11), `ValidateRefs`.
+- Produces:
+  - `type RecurrenceTemplate = { type; amount: number; description; accountId; destinationAccountId: string | null; categoryId: string | null; nature: TransactionNature | null }`
+  - `type RecurrenceRow = RecurrenceTemplate & { id; frequency: Frequency; startDate: DateOnly; endDate: DateOnly | null }`
+  - `createRecurrencesRepository(db)`, com `create`, `findById`, `update`, `delete`, `listForMaterialization(userId, until)`, `skipsFor(ids)`, `addSkip`, `deletePendingFrom`, `relinkFrom` e `countTransactions`
+  - `RecurrencesService`, com:
+    - `materialize(userId, until): Promise<void>`
+    - `createSeries(userId, input, frequency, endDate, paidDate): Promise<TransactionRow>`
+    - `updateFuture(userId, tx, input): Promise<TransactionRow>`
+    - `removeFuture(userId, tx): Promise<void>`
+    - `removeSingle(userId, tx): Promise<void>`
+  - Em `TransactionsService`, `update` e `remove` passam a receber `scope: Scope`. A materialização roda antes de toda listagem.
+
+- [ ] **Step 1: Escrever o teste que falha**
+
+`apps/api/test/recurrences.test.ts`:
+```ts
+import request from 'supertest';
+import { beforeEach, describe, expect, it } from 'vitest';
+import { buildTestApp } from './helpers/app';
+import { newUser, type TestUser } from './helpers/auth';
+import { resetDb, testDb } from './helpers/db';
+import { categoryId, createAccount, createTransaction } from './helpers/factories';
+
+const { app } = buildTestApp();
+
+type Item = { id: string; dueDate: string; amount: number; status: string; recurrenceId: string | null; description: string };
+
+async function range(user: TestUser, from: string, to: string, extra = ''): Promise<Item[]> {
+  const res = await request(app).get(`/api/v1/transactions?from=${from}&to=${to}&limit=100${extra}`).set(user.auth);
+  expect(res.status).toBe(200);
+  return (res.body.items as Item[]).sort((a, b) => a.dueDate.localeCompare(b.dueDate));
+}
+
+async function series(user: TestUser, over: Record<string, unknown> = {}) {
+  const acc = await createAccount(app, user, { name: 'Corrente' });
+  const cat = await categoryId(app, user, 'Contas', 'expense');
+  const first = await createTransaction(app, user, {
+    type: 'expense', amount: 5000, description: 'Internet', accountId: acc.id, categoryId: cat, nature: 'fixed',
+    dueDate: '2026-09-10', recurrence: { frequency: 'monthly' }, ...over,
+  });
+  return { acc, cat, first };
+}
+
+describe('recorrências', () => {
+  beforeEach(resetDb);
+
+  it('gera as ocorrências do período sob demanda, sem duplicar ao recarregar', async () => {
+    const user = await newUser();
+    const { first } = await series(user);
+    expect(first.recurrenceId).not.toBeNull();
+    const items = await range(user, '2026-09-01', '2026-12-31');
+    expect(items.map((i) => i.dueDate)).toEqual(['2026-09-10', '2026-10-10', '2026-11-10', '2026-12-10']);
+    expect(new Set(items.map((i) => i.recurrenceId))).toEqual(new Set([first.recurrenceId]));
+    expect(await range(user, '2026-09-01', '2026-12-31')).toHaveLength(4);
+  });
+
+  it('listagens simultâneas não duplicam ocorrências', async () => {
+    const user = await newUser();
+    const { first } = await series(user);
+    await Promise.all([range(user, '2026-09-01', '2026-12-31'), range(user, '2026-09-01', '2026-12-31')]);
+    expect(await testDb.transaction.count({ where: { recurrenceId: first.recurrenceId } })).toBe(4);
+  });
+
+  it('dia 31 cai no último dia dos meses curtos', async () => {
+    const user = await newUser();
+    await series(user, { dueDate: '2026-08-31' });
+    const items = await range(user, '2026-08-01', '2027-02-28');
+    expect(items.map((i) => i.dueDate)).toEqual([
+      '2026-08-31', '2026-09-30', '2026-10-31', '2026-11-30', '2026-12-31', '2027-01-31', '2027-02-28',
+    ]);
+  });
+
+  it('respeita a data final', async () => {
+    const user = await newUser();
+    await series(user, { recurrence: { frequency: 'monthly', endDate: '2026-10-10' } });
+    expect(await range(user, '2026-09-01', '2027-03-31')).toHaveLength(2);
+  });
+
+  it('não gera além de hoje + 366 dias', async () => {
+    const user = await newUser();
+    await series(user);
+    const items = await range(user, '2026-09-01', '2030-12-31');
+    expect(items.at(-1)?.dueDate).toBe('2027-11-10');
+  });
+
+  it('excluir "só esta" não recria a ocorrência', async () => {
+    const user = await newUser();
+    await series(user);
+    const oct = (await range(user, '2026-10-01', '2026-10-31'))[0]!;
+    expect((await request(app).delete(`/api/v1/transactions/${oct.id}`).set(user.auth)).status).toBe(204);
+    expect((await range(user, '2026-09-01', '2026-12-31')).map((i) => i.dueDate)).toEqual(['2026-09-10', '2026-11-10', '2026-12-10']);
+  });
+
+  it('excluir "esta e as próximas" encerra a série e preserva as futuras já pagas', async () => {
+    const user = await newUser();
+    await series(user);
+    const items = await range(user, '2026-09-01', '2026-12-31');
+    const nov = items[2]!;
+    const dec = items[3]!;
+    await request(app).post(`/api/v1/transactions/${dec.id}/pay`).set(user.auth);
+    expect((await request(app).delete(`/api/v1/transactions/${nov.id}?scope=future`).set(user.auth)).status).toBe(204);
+    const after = await range(user, '2026-09-01', '2027-03-31');
+    expect(after.map((i) => [i.dueDate, i.status])).toEqual([
+      ['2026-09-10', 'pending'], ['2026-10-10', 'pending'], ['2026-12-10', 'paid'],
+    ]);
+  });
+
+  it('editar "esta e as próximas" muda as futuras e mantém as anteriores e as pagas', async () => {
+    const user = await newUser();
+    await series(user);
+    const items = await range(user, '2026-09-01', '2026-12-31');
+    await request(app).post(`/api/v1/transactions/${items[1]!.id}/pay`).set(user.auth);
+    const res = await request(app).patch(`/api/v1/transactions/${items[2]!.id}?scope=future`).set(user.auth).send({ amount: 9999 });
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({ dueDate: '2026-11-10', amount: 9999 });
+    const after = await range(user, '2026-09-01', '2027-01-31');
+    expect(after.map((i) => [i.dueDate, i.amount, i.status])).toEqual([
+      ['2026-09-10', 5000, 'pending'],
+      ['2026-10-10', 5000, 'paid'],
+      ['2026-11-10', 9999, 'pending'],
+      ['2026-12-10', 9999, 'pending'],
+      ['2027-01-10', 9999, 'pending'],
+    ]);
+  });
+
+  it('editar "esta e as próximas" com nova data muda o dia das próximas', async () => {
+    const user = await newUser();
+    await series(user);
+    const nov = (await range(user, '2026-11-01', '2026-11-30'))[0]!;
+    const res = await request(app).patch(`/api/v1/transactions/${nov.id}?scope=future`).set(user.auth).send({ dueDate: '2026-11-15' });
+    expect(res.body.dueDate).toBe('2026-11-15');
+    expect((await range(user, '2026-09-01', '2026-12-31')).map((i) => i.dueDate)).toEqual([
+      '2026-09-10', '2026-10-10', '2026-11-15', '2026-12-15',
+    ]);
+  });
+
+  it('editar "só esta" altera apenas a ocorrência e persiste após recarregar', async () => {
+    const user = await newUser();
+    await series(user);
+    const oct = (await range(user, '2026-10-01', '2026-10-31'))[0]!;
+    await request(app).patch(`/api/v1/transactions/${oct.id}`).set(user.auth).send({ amount: 6100, dueDate: '2026-10-12' });
+    const after = await range(user, '2026-09-01', '2026-12-31');
+    expect(after.map((i) => [i.dueDate, i.amount])).toEqual([
+      ['2026-09-10', 5000], ['2026-10-12', 6100], ['2026-11-10', 5000], ['2026-12-10', 5000],
+    ]);
+  });
+
+  it('conta arquivada não recebe novas ocorrências', async () => {
+    const user = await newUser();
+    const { acc } = await series(user);
+    await range(user, '2026-09-01', '2026-11-30');
+    await request(app).post(`/api/v1/accounts/${acc.id}/archive`).set(user.auth);
+    expect(await range(user, '2026-09-01', '2027-02-28')).toHaveLength(3);
+  });
+
+  it('transferência recorrente aparece na conta de destino', async () => {
+    const user = await newUser();
+    const a = await createAccount(app, user);
+    const b = await createAccount(app, user, { type: 'savings' });
+    await createTransaction(app, user, {
+      type: 'transfer', amount: 20000, description: 'Reserva', accountId: a.id, destinationAccountId: b.id,
+      dueDate: '2026-10-06', recurrence: { frequency: 'monthly' },
+    });
+    expect(await range(user, '2026-10-01', '2026-12-31', `&accountId=${b.id}`)).toHaveLength(3);
+  });
+});
+```
+
+- [ ] **Step 2: Rodar e confirmar que falha**
+
+Run: `npm test -w @fincontrol/api -- recurrences`
+Expected: FAIL. Só a primeira ocorrência existe, `recurrenceId` vem `null` e `scope` é ignorado.
+
+- [ ] **Step 3: Implementar o repository**
+
+`apps/api/src/modules/recurrences/recurrences.repository.ts`:
+```ts
+import type { DateOnly, Frequency, TransactionNature, TransactionType } from '@fincontrol/shared';
+import type { Prisma } from '../../generated/prisma/client';
+import { fromDateOnly, toDateOnly } from '../../infra/date-mapping';
+import type { Db } from '../../infra/prisma';
+
+export type RecurrenceTemplate = {
+  type: TransactionType;
+  amount: number;
+  description: string;
+  accountId: string;
+  destinationAccountId: string | null;
+  categoryId: string | null;
+  nature: TransactionNature | null;
+};
+
+export type RecurrenceRow = RecurrenceTemplate & {
+  id: string;
+  frequency: Frequency;
+  startDate: DateOnly;
+  endDate: DateOnly | null;
+};
+
+type RecurrenceData = Omit<RecurrenceRow, 'id'>;
+
+type RecurrenceRecord = Omit<RecurrenceRow, 'amount' | 'startDate' | 'endDate'> & {
+  amount: bigint;
+  startDate: Date;
+  endDate: Date | null;
+};
+
+const toRow = (r: RecurrenceRecord): RecurrenceRow => ({
+  id: r.id,
+  frequency: r.frequency,
+  startDate: toDateOnly(r.startDate),
+  endDate: r.endDate ? toDateOnly(r.endDate) : null,
+  type: r.type,
+  amount: Number(r.amount),
+  description: r.description,
+  accountId: r.accountId,
+  destinationAccountId: r.destinationAccountId,
+  categoryId: r.categoryId,
+  nature: r.nature,
+});
+
+function toUpdateData(p: Partial<RecurrenceData>): Prisma.RecurrenceUncheckedUpdateInput {
+  const { amount, startDate, endDate, ...rest } = p;
+  return {
+    ...rest,
+    ...(amount !== undefined ? { amount: BigInt(amount) } : {}),
+    ...(startDate !== undefined ? { startDate: fromDateOnly(startDate) } : {}),
+    ...(endDate !== undefined ? { endDate: endDate === null ? null : fromDateOnly(endDate) } : {}),
+  };
+}
+
+export function createRecurrencesRepository(db: Db) {
+  return {
+    async create(userId: string, d: RecurrenceData): Promise<RecurrenceRow> {
+      const row = await db.recurrence.create({
+        data: {
+          userId,
+          frequency: d.frequency,
+          startDate: fromDateOnly(d.startDate),
+          endDate: d.endDate ? fromDateOnly(d.endDate) : null,
+          type: d.type,
+          amount: BigInt(d.amount),
+          description: d.description,
+          accountId: d.accountId,
+          destinationAccountId: d.destinationAccountId,
+          categoryId: d.categoryId,
+          nature: d.nature,
+        },
+      });
+      return toRow(row);
+    },
+
+    async findById(userId: string, id: string): Promise<RecurrenceRow | null> {
+      const row = await db.recurrence.findFirst({ where: { id, userId } });
+      return row ? toRow(row) : null;
+    },
+
+    async update(userId: string, id: string, patch: Partial<RecurrenceData>): Promise<void> {
+      await db.recurrence.update({ where: { id, userId }, data: toUpdateData(patch) });
+    },
+
+    async delete(userId: string, id: string): Promise<void> {
+      await db.recurrence.delete({ where: { id, userId } });
+    },
+
+    /** Séries que podem gerar ocorrências até `until`: nunca em conta (origem ou destino) arquivada. */
+    async listForMaterialization(userId: string, until: DateOnly): Promise<RecurrenceRow[]> {
+      const rows = await db.recurrence.findMany({
+        where: {
+          userId,
+          startDate: { lte: fromDateOnly(until) },
+          account: { archivedAt: null },
+          OR: [{ destinationAccountId: null }, { destinationAccount: { archivedAt: null } }],
+        },
+      });
+      return rows.map(toRow);
+    },
+
+    async skipsFor(recurrenceIds: string[]): Promise<Map<string, Set<DateOnly>>> {
+      const rows = await db.recurrenceSkip.findMany({ where: { recurrenceId: { in: recurrenceIds } } });
+      const map = new Map<string, Set<DateOnly>>();
+      for (const r of rows) {
+        const set = map.get(r.recurrenceId) ?? new Set<DateOnly>();
+        set.add(toDateOnly(r.occurrenceDate));
+        map.set(r.recurrenceId, set);
+      }
+      return map;
+    },
+
+    async addSkip(recurrenceId: string, occurrenceDate: DateOnly): Promise<void> {
+      await db.recurrenceSkip.createMany({
+        data: [{ recurrenceId, occurrenceDate: fromDateOnly(occurrenceDate) }],
+        skipDuplicates: true,
+      });
+    },
+
+    async deletePendingFrom(userId: string, recurrenceId: string, fromDate: DateOnly): Promise<void> {
+      await db.transaction.deleteMany({
+        where: { userId, recurrenceId, status: 'pending', occurrenceDate: { gte: fromDateOnly(fromDate) } },
+      });
+    },
+
+    /** Move para a nova série as ocorrências restantes (as pagas) a partir de `fromDate`. */
+    async relinkFrom(userId: string, fromId: string, toId: string, fromDate: DateOnly): Promise<void> {
+      await db.transaction.updateMany({
+        where: { userId, recurrenceId: fromId, occurrenceDate: { gte: fromDateOnly(fromDate) } },
+        data: { recurrenceId: toId },
+      });
+    },
+
+    countTransactions(userId: string, recurrenceId: string): Promise<number> {
+      return db.transaction.count({ where: { userId, recurrenceId } });
+    },
+  };
+}
+
+export type RecurrencesRepository = ReturnType<typeof createRecurrencesRepository>;
+```
+
+- [ ] **Step 4: Implementar o service de recorrências**
+
+`apps/api/src/modules/recurrences/recurrences.service.ts`:
+```ts
+import {
+  addDays, endOfMonth, maxDate, minDate, monthOf, todayInSaoPaulo,
+  type DateOnly, type Frequency, type UpdateTransactionInput,
+} from '@fincontrol/shared';
+import { occurrenceDates } from '../../domain/recurrence';
+import { NotFoundError, UnprocessableError } from '../../http/errors';
+import type { ValidateRefs } from '../transactions/transactions.refs';
+import type { NewTransaction, TransactionRow, TransactionsRepository } from '../transactions/transactions.repository';
+import type { RecurrenceRow, RecurrencesRepository, RecurrenceTemplate } from './recurrences.repository';
+
+const HORIZON_DAYS = 366;
+
+const templateOf = (t: RecurrenceTemplate): RecurrenceTemplate => ({
+  type: t.type,
+  amount: t.amount,
+  description: t.description,
+  accountId: t.accountId,
+  destinationAccountId: t.destinationAccountId,
+  categoryId: t.categoryId,
+  nature: t.nature,
+});
+
+export type RecurrencesServiceDeps = {
+  repo: RecurrencesRepository;
+  transactions: TransactionsRepository;
+  validateRefs: ValidateRefs;
+  clock: () => Date;
+};
+
+export function createRecurrencesService(deps: RecurrencesServiceDeps) {
+  const { repo, transactions, validateRefs } = deps;
+  const today = () => todayInSaoPaulo(deps.clock());
+
+  async function getOwned(userId: string, id: string): Promise<RecurrenceRow> {
+    const rec = await repo.findById(userId, id);
+    if (!rec) throw new NotFoundError('Recorrência');
+    return rec;
+  }
+
+  /** Cria as ocorrências que faltam até `until` (no máximo hoje + 366 dias). É idempotente (spec 5.3). */
+  async function materialize(userId: string, until: DateOnly): Promise<void> {
+    const limit = minDate(until, addDays(today(), HORIZON_DAYS));
+    const recs = await repo.listForMaterialization(userId, limit);
+    if (recs.length === 0) return;
+    const skips = await repo.skipsFor(recs.map((r) => r.id));
+    const rows: NewTransaction[] = [];
+    for (const rec of recs) {
+      const skipped = skips.get(rec.id);
+      for (const date of occurrenceDates({ frequency: rec.frequency, startDate: rec.startDate, endDate: rec.endDate, until: limit })) {
+        if (skipped?.has(date)) continue;
+        rows.push({ ...templateOf(rec), status: 'pending', dueDate: date, paidDate: null, recurrenceId: rec.id, occurrenceDate: date });
+      }
+    }
+    await transactions.insertMany(userId, rows);
+  }
+
+  async function createSeries(
+    userId: string,
+    input: RecurrenceTemplate & { status: 'pending' | 'paid'; dueDate: DateOnly },
+    frequency: Frequency,
+    endDate: DateOnly | null,
+    paidDate: DateOnly | null,
+  ): Promise<TransactionRow> {
+    const template = templateOf(input);
+    const rec = await repo.create(userId, { ...template, frequency, startDate: input.dueDate, endDate });
+    return transactions.create(userId, {
+      ...template, status: input.status, dueDate: input.dueDate, paidDate, recurrenceId: rec.id, occurrenceDate: input.dueDate,
+    });
+  }
+
+  async function updateFuture(userId: string, tx: TransactionRow, input: UpdateTransactionInput): Promise<TransactionRow> {
+    if (!tx.recurrenceId) throw new NotFoundError('Recorrência');
+    const rec = await getOwned(userId, tx.recurrenceId);
+    const pivot = tx.occurrenceDate ?? tx.dueDate;
+    const template: RecurrenceTemplate = {
+      type: rec.type,
+      amount: input.amount ?? rec.amount,
+      description: input.description ?? rec.description,
+      accountId: input.accountId ?? rec.accountId,
+      destinationAccountId: input.destinationAccountId !== undefined ? input.destinationAccountId : rec.destinationAccountId,
+      categoryId: input.categoryId !== undefined ? input.categoryId : rec.categoryId,
+      nature: input.nature !== undefined ? input.nature : rec.nature,
+    };
+    await validateRefs(userId, template, {
+      account: input.accountId !== undefined,
+      destination: input.destinationAccountId !== undefined,
+      category: input.categoryId !== undefined,
+    });
+
+    const frequency = input.recurrence?.frequency ?? rec.frequency;
+    const endDate = input.recurrence ? input.recurrence.endDate : rec.endDate;
+    const newStart = input.dueDate ?? pivot;
+    const reschedule = newStart !== pivot || frequency !== rec.frequency;
+    if (endDate !== null && endDate < newStart) {
+      throw new UnprocessableError('O fim da recorrência não pode ser anterior a este lançamento.');
+    }
+
+    let targetId = rec.id;
+    if (!reschedule) {
+      // Mesmo calendário: atualiza o template e regenera as pendentes a partir daqui.
+      await repo.update(userId, rec.id, { ...template, endDate });
+      await repo.deletePendingFrom(userId, rec.id, pivot);
+    } else {
+      // Novo calendário: encerra a série antiga antes do pivô e abre uma nova.
+      const created = await repo.create(userId, { ...template, frequency, startDate: newStart, endDate });
+      const oldEnd = addDays(pivot, -1);
+      await repo.update(userId, rec.id, { endDate: oldEnd });
+      await repo.deletePendingFrom(userId, rec.id, pivot);
+      await repo.relinkFrom(userId, rec.id, created.id, pivot);
+      if (oldEnd < rec.startDate && (await repo.countTransactions(userId, rec.id)) === 0) await repo.delete(userId, rec.id);
+      targetId = created.id;
+    }
+
+    if (tx.status === 'paid') {
+      await transactions.update(userId, tx.id, { ...template, ...(reschedule ? { dueDate: newStart, occurrenceDate: newStart } : {}) });
+    }
+    await materialize(userId, maxDate(endOfMonth(monthOf(newStart)), endOfMonth(monthOf(today()))));
+
+    const result = await transactions.findByOccurrence(userId, targetId, newStart);
+    if (!result) throw new NotFoundError('Lançamento');
+    return result;
+  }
+
+  async function removeFuture(userId: string, tx: TransactionRow): Promise<void> {
+    if (!tx.recurrenceId) throw new NotFoundError('Recorrência');
+    const rec = await getOwned(userId, tx.recurrenceId);
+    const pivot = tx.occurrenceDate ?? tx.dueDate;
+    await transactions.delete(userId, tx.id);
+    await repo.deletePendingFrom(userId, rec.id, pivot);
+    const end = addDays(pivot, -1);
+    if (end < rec.startDate && (await repo.countTransactions(userId, rec.id)) === 0) await repo.delete(userId, rec.id);
+    else await repo.update(userId, rec.id, { endDate: end });
+  }
+
+  async function removeSingle(userId: string, tx: TransactionRow): Promise<void> {
+    await transactions.delete(userId, tx.id);
+    if (tx.recurrenceId && tx.occurrenceDate) await repo.addSkip(tx.recurrenceId, tx.occurrenceDate);
+  }
+
+  return { materialize, createSeries, updateFuture, removeFuture, removeSingle };
+}
+
+export type RecurrencesService = ReturnType<typeof createRecurrencesService>;
+```
+
+- [ ] **Step 5: Integrar ao service e às rotas de lançamentos**
+
+`apps/api/src/modules/transactions/transactions.service.ts` (substituição completa):
+```ts
+import {
+  endOfMonth, monthOf, todayInSaoPaulo,
+  type CreateTransactionInput, type DateOnly, type ListTransactionsQuery, type Scope, type ShapeInput,
+  type TransactionDTO, type TransactionPage, type TransactionStatus, type UpdateTransactionInput,
+} from '@fincontrol/shared';
+import { NotFoundError, UnprocessableError } from '../../http/errors';
+import type { RecurrencesService } from '../recurrences/recurrences.service';
+import { decodeCursor, encodeCursor } from './transactions.cursor';
+import { toTransactionDTO } from './transactions.mapper';
+import type { ValidateRefs } from './transactions.refs';
+import type { TransactionRow, TransactionsRepository } from './transactions.repository';
+
+export type TransactionsServiceDeps = {
+  repo: TransactionsRepository;
+  validateRefs: ValidateRefs;
+  recurrences: RecurrencesService;
+  clock: () => Date;
+};
+
+export function createTransactionsService(deps: TransactionsServiceDeps) {
+  const { repo, validateRefs, recurrences } = deps;
+  const today = () => todayInSaoPaulo(deps.clock());
+
+  async function getOwned(userId: string, id: string): Promise<TransactionRow> {
+    const tx = await repo.findById(userId, id);
+    if (!tx) throw new NotFoundError('Lançamento');
+    return tx;
+  }
+
+  function resolvePaidDate(status: TransactionStatus, paidDate: DateOnly | null | undefined): DateOnly | null {
+    if (status === 'pending') return null;
+    const t = today();
+    const date = paidDate ?? t;
+    if (date > t) throw new UnprocessableError('A data de pagamento não pode estar no futuro.');
+    return date;
+  }
+
+  return {
+    async create(userId: string, input: CreateTransactionInput): Promise<TransactionDTO> {
+      await validateRefs(userId, input);
+      const paidDate = resolvePaidDate(input.status, input.paidDate);
+      if (input.recurrence) {
+        const row = await recurrences.createSeries(userId, input, input.recurrence.frequency, input.recurrence.endDate, paidDate);
+        return toTransactionDTO(row, today());
+      }
+      const row = await repo.create(userId, {
+        type: input.type,
+        amount: input.amount,
+        description: input.description,
+        accountId: input.accountId,
+        destinationAccountId: input.destinationAccountId,
+        categoryId: input.categoryId,
+        nature: input.nature,
+        status: input.status,
+        dueDate: input.dueDate,
+        paidDate,
+        recurrenceId: null,
+        occurrenceDate: null,
+      });
+      return toTransactionDTO(row, today());
+    },
+
+    async list(userId: string, q: ListTransactionsQuery): Promise<TransactionPage> {
+      await recurrences.materialize(userId, q.to ?? endOfMonth(monthOf(today())));
+      const cursor = q.cursor ? decodeCursor(q.cursor) : undefined;
+      const { cursor: _c, limit, ...filters } = q;
+      const rows = await repo.list(userId, filters, cursor, limit + 1);
+      const page = rows.slice(0, limit);
+      const last = page.at(-1);
+      return {
+        items: page.map((r) => toTransactionDTO(r, today())),
+        nextCursor: rows.length > limit && last ? encodeCursor(last) : null,
+      };
+    },
+
+    async update(userId: string, id: string, input: UpdateTransactionInput, scope: Scope): Promise<TransactionDTO> {
+      const current = await getOwned(userId, id);
+      if (scope === 'future' && current.recurrenceId) {
+        return toTransactionDTO(await recurrences.updateFuture(userId, current, input), today());
+      }
+      const merged: ShapeInput = {
+        type: current.type,
+        accountId: input.accountId ?? current.accountId,
+        destinationAccountId: input.destinationAccountId !== undefined ? input.destinationAccountId : current.destinationAccountId,
+        categoryId: input.categoryId !== undefined ? input.categoryId : current.categoryId,
+        nature: input.nature !== undefined ? input.nature : current.nature,
+      };
+      await validateRefs(userId, merged, {
+        account: input.accountId !== undefined,
+        destination: input.destinationAccountId !== undefined,
+        category: input.categoryId !== undefined,
+      });
+      const { recurrence: _recurrence, ...fields } = input;
+      return toTransactionDTO(await repo.update(userId, id, fields), today());
+    },
+
+    async remove(userId: string, id: string, scope: Scope): Promise<void> {
+      const current = await getOwned(userId, id);
+      if (!current.recurrenceId) {
+        await repo.delete(userId, id);
+        return;
+      }
+      if (scope === 'future') await recurrences.removeFuture(userId, current);
+      else await recurrences.removeSingle(userId, current);
+    },
+
+    async pay(userId: string, id: string, paidDate?: DateOnly): Promise<TransactionDTO> {
+      await getOwned(userId, id);
+      const row = await repo.update(userId, id, { status: 'paid', paidDate: resolvePaidDate('paid', paidDate) });
+      return toTransactionDTO(row, today());
+    },
+
+    async unpay(userId: string, id: string): Promise<TransactionDTO> {
+      await getOwned(userId, id);
+      return toTransactionDTO(await repo.update(userId, id, { status: 'pending', paidDate: null }), today());
+    },
+  };
+}
+
+export type TransactionsService = ReturnType<typeof createTransactionsService>;
+```
+
+`apps/api/src/modules/transactions/transactions.routes.ts` (substituição completa):
+```ts
+import {
+  createTransactionSchema, idSchema, listTransactionsQuerySchema, paySchema, scopeQuerySchema, updateTransactionSchema,
+} from '@fincontrol/shared';
+import { Router } from 'express';
+import { userIdOf } from '../../http/auth';
+import { parse } from '../../http/validate';
+import type { TransactionsService } from './transactions.service';
+
+export function transactionsRouter(service: TransactionsService): Router {
+  const r = Router();
+  r.get('/', async (req, res) => {
+    res.json(await service.list(userIdOf(res), parse(listTransactionsQuerySchema, req.query)));
+  });
+  r.post('/', async (req, res) => {
+    res.status(201).json(await service.create(userIdOf(res), parse(createTransactionSchema, req.body)));
+  });
+  r.patch('/:id', async (req, res) => {
+    const { scope } = parse(scopeQuerySchema, req.query);
+    res.json(await service.update(userIdOf(res), parse(idSchema, req.params.id), parse(updateTransactionSchema, req.body), scope));
+  });
+  r.delete('/:id', async (req, res) => {
+    const { scope } = parse(scopeQuerySchema, req.query);
+    await service.remove(userIdOf(res), parse(idSchema, req.params.id), scope);
+    res.status(204).end();
+  });
+  r.post('/:id/pay', async (req, res) => {
+    const { paidDate } = parse(paySchema, req.body ?? {});
+    res.json(await service.pay(userIdOf(res), parse(idSchema, req.params.id), paidDate));
+  });
+  r.post('/:id/unpay', async (req, res) => {
+    res.json(await service.unpay(userIdOf(res), parse(idSchema, req.params.id)));
+  });
+  return r;
+}
+```
+
+Em `apps/api/src/http/container.ts`, acrescente os imports:
+```ts
+import { createRecurrencesRepository } from '../modules/recurrences/recurrences.repository';
+import { createRecurrencesService } from '../modules/recurrences/recurrences.service';
+```
+e troque as duas linhas que criam `transactions` e o `return` por:
+```ts
+  const recurrencesRepo = createRecurrencesRepository(deps.db);
+  const recurrences = createRecurrencesService({ repo: recurrencesRepo, transactions: transactionsRepo, validateRefs, clock: deps.clock });
+  const transactions = createTransactionsService({ repo: transactionsRepo, validateRefs, recurrences, clock: deps.clock });
+  return {
+    provisioner, profile, accountsRepo, accounts, categoriesRepo, categories,
+    transactionsRepo, validateRefs, recurrencesRepo, recurrences, transactions,
+  };
+```
+(mantenha a linha `const validateRefs = createRefsValidator(accounts, categories);` antes delas).
+
+- [ ] **Step 6: Rodar os testes**
+
+Run: `npm test -w @fincontrol/api && npm run lint && npm run typecheck`
+Expected: PASS, incluindo os testes da Task 11, que agora passam pela materialização.
+
+- [ ] **Step 7: Commit**
+
+```bash
+git add apps/api
+git commit -m "feat(api): recorrências materializadas sob demanda com edição e exclusão por escopo"
+```
+
+---
+
+### Task 13: Dashboard (resumo, evolução e gastos por categoria)
+
+**Files:**
+- Create: `apps/api/src/modules/dashboard/dashboard.repository.ts`, `dashboard.service.ts`, `dashboard.routes.ts`
+- Modify: `apps/api/src/http/container.ts`, `apps/api/src/http/routes.ts`
+- Test: `apps/api/test/dashboard.test.ts`
+
+**Interfaces:**
+- Consumes: `computeForecast` e `percentChange` (Task 7); `RecurrencesService.materialize`; `TransactionsRepository.listPendingUntil`; `toTransactionDTO`; os schemas `summaryQuerySchema`, `evolutionQuerySchema` e `byCategoryQuerySchema`.
+- Produces:
+  - `createDashboardRepository(db)`, com `paidTotalsByType(userId, from, to)`, `pendingTotalsUntil(userId, until)`, `countPendingUntil`, `countOverdue`, `balanceAt(userId, until?)` e `expenseByCategory(userId, from, to)`
+  - `DashboardService`, com `summary(userId, month?)`, `evolution(userId, months)` e `byCategory(userId, month?)`
+  - `DashboardService.balanceAt` também fica disponível para o seed da demo, no teste.
+
+- [ ] **Step 1: Escrever o teste que falha**
+
+`apps/api/test/dashboard.test.ts`:
+```ts
+import request from 'supertest';
+import { beforeEach, describe, expect, it } from 'vitest';
+import { buildTestApp } from './helpers/app';
+import { newUser, type TestUser } from './helpers/auth';
+import { resetDb } from './helpers/db';
+import { categoryId, createAccount, createTransaction } from './helpers/factories';
+
+const { app } = buildTestApp();
+
+async function scenario(user: TestUser) {
+  const a = await createAccount(app, user, { name: 'Corrente', initialBalance: 100000 });
+  const b = await createAccount(app, user, { name: 'Poupança', type: 'savings' });
+  const food = await categoryId(app, user, 'Alimentação', 'expense');
+  const home = await categoryId(app, user, 'Moradia', 'expense');
+  const salary = await categoryId(app, user, 'Salário', 'income');
+  const freela = await categoryId(app, user, 'Freelance', 'income');
+  const tx = (body: Record<string, unknown>) => createTransaction(app, user, { accountId: a.id, nature: 'variable', ...body });
+  await tx({ type: 'income', amount: 500000, description: 'Salário', categoryId: salary, nature: 'fixed', dueDate: '2026-11-01', status: 'paid', paidDate: '2026-11-01' });
+  await tx({ type: 'expense', amount: 20000, description: 'Mercado', categoryId: food, dueDate: '2026-11-05', status: 'paid', paidDate: '2026-11-05' });
+  await tx({ type: 'expense', amount: 10000, description: 'Feira', categoryId: food, dueDate: '2026-10-10', status: 'paid', paidDate: '2026-10-10' });
+  await tx({ type: 'expense', amount: 30000, description: 'Aluguel', categoryId: home, nature: 'fixed', dueDate: '2026-11-20' });
+  await tx({ type: 'expense', amount: 5000, description: 'Seguro', categoryId: home, nature: 'fixed', dueDate: '2026-11-03' });
+  await tx({ type: 'income', amount: 80000, description: 'Projeto', categoryId: freela, dueDate: '2026-12-05' });
+  await createTransaction(app, user, {
+    type: 'transfer', amount: 10000, description: 'Reserva', accountId: a.id, destinationAccountId: b.id,
+    dueDate: '2026-11-02', status: 'paid', paidDate: '2026-11-02',
+  });
+  return { a, b };
+}
+
+describe('dashboard', () => {
+  beforeEach(resetDb);
+
+  it('resumo do mês: saldo, previsão, comparação, pendentes e vencidas', async () => {
+    const user = await newUser();
+    await scenario(user);
+    const res = await request(app).get('/api/v1/dashboard/summary').set(user.auth);
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({
+      month: '2026-11',
+      totalBalance: 570000,
+      forecastEndOfMonth: 535000,
+      income: { current: 500000, previous: 0, changePercent: null },
+      expense: { current: 20000, previous: 10000, changePercent: 100 },
+      pendingCount: 2,
+      overdueCount: 1,
+    });
+    expect(res.body.upcoming.map((t: { description: string; overdue: boolean }) => [t.description, t.overdue])).toEqual([
+      ['Seguro', true], ['Aluguel', false],
+    ]);
+  });
+
+  it('transferências não contam como receita nem despesa e conta arquivada sai do saldo total', async () => {
+    const user = await newUser();
+    const { b } = await scenario(user);
+    await request(app).post(`/api/v1/accounts/${b.id}/archive`).set(user.auth);
+    const res = await request(app).get('/api/v1/dashboard/summary').set(user.auth);
+    expect(res.body.totalBalance).toBe(560000);
+    expect(res.body.expense.current).toBe(20000);
+  });
+
+  it('evolução mês a mês com saldo de fim de mês', async () => {
+    const user = await newUser();
+    await scenario(user);
+    const res = await request(app).get('/api/v1/dashboard/evolution?months=2').set(user.auth);
+    expect(res.body).toEqual([
+      { month: '2026-10', income: 0, expense: 10000, endBalance: 90000 },
+      { month: '2026-11', income: 500000, expense: 20000, endBalance: 570000 },
+    ]);
+  });
+
+  it('gastos por categoria só com despesas pagas do mês', async () => {
+    const user = await newUser();
+    await scenario(user);
+    const res = await request(app).get('/api/v1/dashboard/by-category?month=2026-11').set(user.auth);
+    expect(res.body).toEqual([expect.objectContaining({ name: 'Alimentação', total: 20000 })]);
+  });
+
+  it('o resumo materializa recorrências sem precisar listar antes', async () => {
+    const user = await newUser();
+    const a = await createAccount(app, user);
+    const bills = await categoryId(app, user, 'Contas', 'expense');
+    await createTransaction(app, user, {
+      type: 'expense', amount: 11990, description: 'Internet', accountId: a.id, categoryId: bills, nature: 'fixed',
+      dueDate: '2026-10-15', recurrence: { frequency: 'monthly' },
+    });
+    const res = await request(app).get('/api/v1/dashboard/summary').set(user.auth);
+    expect(res.body.upcoming.map((t: { dueDate: string }) => t.dueDate)).toEqual(['2026-10-15', '2026-11-15']);
+    expect(res.body.overdueCount).toBe(1);
+  });
+
+  it('valida os parâmetros', async () => {
+    const user = await newUser();
+    expect((await request(app).get('/api/v1/dashboard/summary?month=2026-13').set(user.auth)).status).toBe(400);
+    expect((await request(app).get('/api/v1/dashboard/evolution?months=24').set(user.auth)).status).toBe(400);
+  });
+});
+```
+
+- [ ] **Step 2: Rodar e confirmar que falha**
+
+Run: `npm test -w @fincontrol/api -- dashboard`
+Expected: FAIL, porque a rota `/dashboard` não existe.
+
+- [ ] **Step 3: Implementar o repository**
+
+`apps/api/src/modules/dashboard/dashboard.repository.ts`:
+```ts
+import type { CategorySpendDTO, DateOnly, TransactionType } from '@fincontrol/shared';
+import type { Prisma } from '../../generated/prisma/client';
+import { fromDateOnly } from '../../infra/date-mapping';
+import type { Db } from '../../infra/prisma';
+
+type Totals = { income: number; expense: number };
+type TypeGroup = { type: TransactionType; _sum: { amount: bigint | null } };
+
+function totals(groups: TypeGroup[]): Totals {
+  const result = { income: 0, expense: 0 };
+  for (const g of groups) {
+    if (g.type === 'income') result.income += Number(g._sum.amount ?? 0n);
+    if (g.type === 'expense') result.expense += Number(g._sum.amount ?? 0n);
+  }
+  return result;
+}
+
+function paidWhere(userId: string, from?: DateOnly, to?: DateOnly): Prisma.TransactionWhereInput {
+  const range = { ...(from ? { gte: fromDateOnly(from) } : {}), ...(to ? { lte: fromDateOnly(to) } : {}) };
+  return { userId, status: 'paid', ...(from || to ? { paidDate: range } : {}) };
+}
+
+const activeAccount: Prisma.TransactionWhereInput = { account: { archivedAt: null } };
+
+export function createDashboardRepository(db: Db) {
+  return {
+    /** Receitas e despesas pagas no período (pela data de pagamento). Transferências ficam de fora. */
+    async paidTotalsByType(userId: string, from: DateOnly, to: DateOnly): Promise<Totals> {
+      const groups = await db.transaction.groupBy({ by: ['type'], where: paidWhere(userId, from, to), _sum: { amount: true } });
+      return totals(groups);
+    },
+
+    async pendingTotalsUntil(userId: string, until: DateOnly): Promise<Totals> {
+      const groups = await db.transaction.groupBy({
+        by: ['type'],
+        where: { userId, status: 'pending', dueDate: { lte: fromDateOnly(until) }, ...activeAccount },
+        _sum: { amount: true },
+      });
+      return totals(groups);
+    },
+
+    countPendingUntil(userId: string, until: DateOnly): Promise<number> {
+      return db.transaction.count({ where: { userId, status: 'pending', dueDate: { lte: fromDateOnly(until) }, ...activeAccount } });
+    },
+
+    countOverdue(userId: string, today: DateOnly): Promise<number> {
+      return db.transaction.count({ where: { userId, status: 'pending', dueDate: { lt: fromDateOnly(today) }, ...activeAccount } });
+    },
+
+    /** Saldo somado das contas não arquivadas, com os pagamentos até `until` (ou todos). */
+    async balanceAt(userId: string, until?: DateOnly): Promise<number> {
+      const paid = paidWhere(userId, undefined, until);
+      const [initial, own, incoming] = await Promise.all([
+        db.account.aggregate({ where: { userId, archivedAt: null }, _sum: { initialBalance: true } }),
+        db.transaction.groupBy({ by: ['type'], where: { ...paid, ...activeAccount }, _sum: { amount: true } }),
+        db.transaction.aggregate({ where: { ...paid, type: 'transfer', destinationAccount: { archivedAt: null } }, _sum: { amount: true } }),
+      ]);
+      let balance = Number(initial._sum.initialBalance ?? 0n);
+      for (const g of own) {
+        const value = Number(g._sum.amount ?? 0n);
+        balance += g.type === 'income' ? value : -value;
+      }
+      return balance + Number(incoming._sum.amount ?? 0n);
+    },
+
+    async expenseByCategory(userId: string, from: DateOnly, to: DateOnly): Promise<CategorySpendDTO[]> {
+      const groups = await db.transaction.groupBy({
+        by: ['categoryId'],
+        where: { ...paidWhere(userId, from, to), type: 'expense' },
+        _sum: { amount: true },
+      });
+      const ids = groups.map((g) => g.categoryId).filter((id): id is string => id !== null);
+      const categories = await db.category.findMany({ where: { userId, id: { in: ids } } });
+      const byId = new Map(categories.map((c) => [c.id, c]));
+      return groups
+        .flatMap((g) => {
+          const c = g.categoryId ? byId.get(g.categoryId) : undefined;
+          return c ? [{ categoryId: c.id, name: c.name, icon: c.icon, color: c.color, total: Number(g._sum.amount ?? 0n) }] : [];
+        })
+        .sort((x, y) => y.total - x.total);
+    },
+  };
+}
+
+export type DashboardRepository = ReturnType<typeof createDashboardRepository>;
+```
+
+- [ ] **Step 4: Implementar o service e as rotas**
+
+`apps/api/src/modules/dashboard/dashboard.service.ts`:
+```ts
+import {
+  addMonthsToYm, endOfMonth, maxDate, monthOf, startOfMonth, todayInSaoPaulo,
+  type CategorySpendDTO, type DashboardSummaryDTO, type EvolutionPointDTO, type YearMonth,
+} from '@fincontrol/shared';
+import { computeForecast, percentChange } from '../../domain/balance';
+import type { RecurrencesService } from '../recurrences/recurrences.service';
+import { toTransactionDTO } from '../transactions/transactions.mapper';
+import type { TransactionsRepository } from '../transactions/transactions.repository';
+import type { DashboardRepository } from './dashboard.repository';
+
+const UPCOMING_LIMIT = 10;
+
+export type DashboardServiceDeps = {
+  repo: DashboardRepository;
+  transactions: TransactionsRepository;
+  recurrences: RecurrencesService;
+  clock: () => Date;
+};
+
+export function createDashboardService(deps: DashboardServiceDeps) {
+  const { repo } = deps;
+  const today = () => todayInSaoPaulo(deps.clock());
+
+  return {
+    async summary(userId: string, month?: YearMonth): Promise<DashboardSummaryDTO> {
+      const t = today();
+      const current = monthOf(t);
+      const m = month ?? current;
+      const monthEnd = endOfMonth(m);
+      const currentEnd = endOfMonth(current);
+      const previous = addMonthsToYm(m, -1);
+      await deps.recurrences.materialize(userId, maxDate(monthEnd, currentEnd));
+
+      const [now, before, totalBalance, pending, pendingCount, overdueCount, upcoming] = await Promise.all([
+        repo.paidTotalsByType(userId, startOfMonth(m), monthEnd),
+        repo.paidTotalsByType(userId, startOfMonth(previous), endOfMonth(previous)),
+        repo.balanceAt(userId),
+        repo.pendingTotalsUntil(userId, currentEnd),
+        repo.countPendingUntil(userId, monthEnd),
+        repo.countOverdue(userId, t),
+        deps.transactions.listPendingUntil(userId, monthEnd, UPCOMING_LIMIT),
+      ]);
+
+      return {
+        month: m,
+        totalBalance,
+        forecastEndOfMonth: computeForecast(totalBalance, pending.income, pending.expense),
+        income: { current: now.income, previous: before.income, changePercent: percentChange(now.income, before.income) },
+        expense: { current: now.expense, previous: before.expense, changePercent: percentChange(now.expense, before.expense) },
+        pendingCount,
+        overdueCount,
+        upcoming: upcoming.map((r) => toTransactionDTO(r, t)),
+      };
+    },
+
+    async evolution(userId: string, months: number): Promise<EvolutionPointDTO[]> {
+      const current = monthOf(today());
+      const list = Array.from({ length: months }, (_, i) => addMonthsToYm(current, i - months + 1));
+      return Promise.all(
+        list.map(async (m) => {
+          const [sums, endBalance] = await Promise.all([
+            repo.paidTotalsByType(userId, startOfMonth(m), endOfMonth(m)),
+            repo.balanceAt(userId, endOfMonth(m)),
+          ]);
+          return { month: m, income: sums.income, expense: sums.expense, endBalance };
+        }),
+      );
+    },
+
+    byCategory(userId: string, month?: YearMonth): Promise<CategorySpendDTO[]> {
+      const m = month ?? monthOf(today());
+      return repo.expenseByCategory(userId, startOfMonth(m), endOfMonth(m));
+    },
+  };
+}
+
+export type DashboardService = ReturnType<typeof createDashboardService>;
+```
+
+`apps/api/src/modules/dashboard/dashboard.routes.ts`:
+```ts
+import { byCategoryQuerySchema, evolutionQuerySchema, summaryQuerySchema } from '@fincontrol/shared';
+import { Router } from 'express';
+import { userIdOf } from '../../http/auth';
+import { parse } from '../../http/validate';
+import type { DashboardService } from './dashboard.service';
+
+export function dashboardRouter(service: DashboardService): Router {
+  const r = Router();
+  r.get('/summary', async (req, res) => {
+    const { month } = parse(summaryQuerySchema, req.query);
+    res.json(await service.summary(userIdOf(res), month));
+  });
+  r.get('/evolution', async (req, res) => {
+    const { months } = parse(evolutionQuerySchema, req.query);
+    res.json(await service.evolution(userIdOf(res), months));
+  });
+  r.get('/by-category', async (req, res) => {
+    const { month } = parse(byCategoryQuerySchema, req.query);
+    res.json(await service.byCategory(userIdOf(res), month));
+  });
+  return r;
+}
+```
+
+- [ ] **Step 5: Registrar**
+
+Em `apps/api/src/http/container.ts`, acrescente os imports:
+```ts
+import { createDashboardRepository } from '../modules/dashboard/dashboard.repository';
+import { createDashboardService } from '../modules/dashboard/dashboard.service';
+```
+e, antes do `return`, a linha:
+```ts
+  const dashboard = createDashboardService({ repo: createDashboardRepository(deps.db), transactions: transactionsRepo, recurrences, clock: deps.clock });
+```
+Acrescente `dashboard` ao objeto retornado.
+
+Em `apps/api/src/http/routes.ts`, acrescente o import `import { dashboardRouter } from '../modules/dashboard/dashboard.routes';` e a linha:
+```ts
+  api.use('/dashboard', dashboardRouter(c.dashboard));
+```
+
+- [ ] **Step 6: Rodar os testes**
+
+Run: `npm test -w @fincontrol/api && npm run lint && npm run typecheck`
+Expected: PASS.
+
+- [ ] **Step 7: Commit**
+
+```bash
+git add apps/api
+git commit -m "feat(api): dashboard com saldo, previsão, comparação mensal, evolução e gastos por categoria"
+```
+
+---
+
+### Task 14: Conta demo (seed) e limpeza agendada
+
+**Files:**
+- Create: `apps/api/src/domain/demo-data.ts`
+- Create: `apps/api/src/modules/demo/demo.repository.ts`, `demo.service.ts`, `demo.routes.ts`, `cron.routes.ts`
+- Modify: `apps/api/src/http/container.ts`, `apps/api/src/http/routes.ts`, `apps/api/src/http/app.ts`
+- Test: `apps/api/src/domain/demo-data.test.ts`, `apps/api/test/demo.test.ts`
+
+**Interfaces:**
+- Consumes: os repositories de contas, categorias, recorrências e lançamentos; `RecurrencesService.materialize`; `ProfileService.deleteAccount`; `AuthClaims`.
+- Produces:
+  - `buildDemoData(today: DateOnly, seed?: number): DemoPlan`, junto com os tipos `DemoPlan`, `DemoAccount`, `DemoRecurrence`, `DemoTransaction` e `DemoAccountKey`
+  - `DemoService`, com `seed(claims): Promise<{ seeded: boolean }>` e `cleanup(): Promise<{ deleted: number }>`
+  - `POST /api/v1/demo/seed`, autenticado e só para JWT anônimo
+  - `GET|POST /api/v1/internal/cron/cleanup-demo`, protegido por `Authorization: Bearer $CRON_SECRET`. O Vercel Cron chama com GET.
+
+- [ ] **Step 1: Escrever o teste do gerador (puro) que falha**
+
+`apps/api/src/domain/demo-data.test.ts`:
+```ts
+import { addMonthsToYm, endOfMonth, monthOf, startOfMonth } from '@fincontrol/shared';
+import { describe, expect, it } from 'vitest';
+import { buildDemoData } from './demo-data';
+
+const TODAY = '2026-11-11';
+
+describe('buildDemoData', () => {
+  it('é determinístico para a mesma data', () => {
+    expect(buildDemoData(TODAY)).toEqual(buildDemoData(TODAY));
+  });
+
+  it('mantém todas as datas entre 6 meses atrás e o fim do mês atual, e nada pago no futuro', () => {
+    const plan = buildDemoData(TODAY);
+    const min = startOfMonth(addMonthsToYm(monthOf(TODAY), -6));
+    const max = endOfMonth(monthOf(TODAY));
+    for (const t of plan.transactions) {
+      expect(t.dueDate >= min && t.dueDate <= max).toBe(true);
+      if (t.status === 'paid') expect(t.paidDate! <= TODAY).toBe(true);
+      expect(Number.isInteger(t.amount) && t.amount > 0).toBe(true);
+    }
+  });
+
+  it('transferências vão da corrente para a poupança, sem categoria', () => {
+    const transfers = buildDemoData(TODAY).transactions.filter((t) => t.type === 'transfer');
+    expect(transfers.length).toBeGreaterThan(0);
+    for (const t of transfers) expect(t).toMatchObject({ accountKey: 'checking', destinationAccountKey: 'savings', categoryName: null, nature: null });
+  });
+
+  it('cada mês passado tem pelo menos 10 despesas variáveis', () => {
+    const plan = buildDemoData(TODAY);
+    for (let i = 1; i <= 6; i++) {
+      const ym = addMonthsToYm(monthOf(TODAY), -i);
+      const count = plan.transactions.filter((t) => t.type === 'expense' && t.nature === 'variable' && monthOf(t.dueDate) === ym).length;
+      expect(count).toBeGreaterThanOrEqual(10);
+    }
+  });
+
+  it('recorrências começam no primeiro mês do histórico', () => {
+    const plan = buildDemoData(TODAY);
+    expect(plan.recurrences.map((r) => r.description)).toEqual(['Salário', 'Aluguel', 'Internet', 'Streaming', 'Academia']);
+    for (const r of plan.recurrences) expect(monthOf(r.startDate)).toBe('2026-05');
+  });
+
+  it('deixa um lançamento pendente no fim do mês atual', () => {
+    const pending = buildDemoData(TODAY).transactions.filter((t) => t.status === 'pending');
+    expect(pending).toEqual([expect.objectContaining({ description: 'IPVA (parcela)', dueDate: '2026-11-30' })]);
+  });
+});
+```
+
+- [ ] **Step 2: Rodar e confirmar que falha**
+
+Run: `npm test -w @fincontrol/api -- demo-data`
+Expected: FAIL, porque o módulo não existe.
+
+- [ ] **Step 3: Implementar o gerador**
+
+`apps/api/src/domain/demo-data.ts`:
+```ts
+import {
+  addMonthsToYm, dateInMonth, endOfMonth, monthOf,
+  type AccountType, type DateOnly, type TransactionNature, type TransactionStatus, type TransactionType,
+} from '@fincontrol/shared';
+
+export type DemoAccountKey = 'checking' | 'savings' | 'wallet';
+export type DemoAccount = { key: DemoAccountKey; name: string; type: AccountType; color: string; initialBalance: number };
+export type DemoRecurrence = {
+  description: string;
+  type: 'income' | 'expense';
+  amount: number;
+  startDate: DateOnly;
+  accountKey: DemoAccountKey;
+  categoryName: string;
+};
+export type DemoTransaction = {
+  type: TransactionType;
+  amount: number;
+  description: string;
+  accountKey: DemoAccountKey;
+  destinationAccountKey: DemoAccountKey | null;
+  categoryName: string | null;
+  nature: TransactionNature | null;
+  status: TransactionStatus;
+  dueDate: DateOnly;
+  paidDate: DateOnly | null;
+};
+export type DemoPlan = {
+  accounts: DemoAccount[];
+  recurrences: DemoRecurrence[];
+  transactions: DemoTransaction[];
+  /** Descrição da recorrência cuja ocorrência vencida mais recente fica sem pagar. */
+  overdueDescription: string;
+};
+
+const HISTORY_MONTHS = 6;
+
+/** PRNG pequeno e determinístico (mulberry32): a demo sai igual a cada execução e nos testes. */
+function mulberry32(seed: number): () => number {
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6d2b79f5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+export function buildDemoData(today: DateOnly, seed = 42): DemoPlan {
+  const rand = mulberry32(seed);
+  const cents = (min: number, max: number) => Math.round((min + rand() * (max - min)) / 10) * 10;
+  const currentYm = monthOf(today);
+  const firstYm = addMonthsToYm(currentYm, -HISTORY_MONTHS);
+
+  const accounts: DemoAccount[] = [
+    { key: 'checking', name: 'Conta corrente', type: 'checking', color: '#2563eb', initialBalance: 235000 },
+    { key: 'savings', name: 'Poupança', type: 'savings', color: '#16a34a', initialBalance: 800000 },
+    { key: 'wallet', name: 'Carteira', type: 'wallet', color: '#f59e0b', initialBalance: 15000 },
+  ];
+
+  const recurrences: DemoRecurrence[] = [
+    { description: 'Salário', type: 'income', amount: 650000, day: 5, categoryName: 'Salário' },
+    { description: 'Aluguel', type: 'expense', amount: 180000, day: 10, categoryName: 'Moradia' },
+    { description: 'Internet', type: 'expense', amount: 11990, day: 15, categoryName: 'Contas' },
+    { description: 'Streaming', type: 'expense', amount: 5590, day: 20, categoryName: 'Assinaturas' },
+    { description: 'Academia', type: 'expense', amount: 9990, day: 8, categoryName: 'Saúde' },
+  ].map(({ day, ...r }) => ({ ...r, type: r.type as 'income' | 'expense', startDate: dateInMonth(firstYm, day), accountKey: 'checking' as const }));
+
+  const transactions: DemoTransaction[] = [];
+  for (let i = 0; i <= HISTORY_MONTHS; i++) {
+    const ym = addMonthsToYm(firstYm, i);
+    const lastDay = ym === currentYm ? Number(today.slice(8, 10)) : Number(endOfMonth(ym).slice(8, 10));
+    const randomDay = () => dateInMonth(ym, 1 + Math.floor(rand() * lastDay));
+
+    const variable = (count: number, min: number, max: number, description: string, categoryName: string) => {
+      for (let k = 0; k < count; k++) {
+        const d = randomDay();
+        transactions.push({
+          type: 'expense', amount: cents(min, max), description, accountKey: 'checking', destinationAccountKey: null,
+          categoryName, nature: 'variable', status: 'paid', dueDate: d, paidDate: d,
+        });
+      }
+    };
+    variable(4, 18000, 42000, 'Mercado', 'Alimentação');
+    variable(6, 1500, 6000, 'Transporte por app', 'Transporte');
+    variable(3, 3500, 9000, 'Delivery', 'Alimentação');
+    variable(2, 6000, 20000, 'Lazer', 'Lazer');
+    variable(1, 8000, 35000, 'Compras', 'Compras');
+
+    if (i % 2 === 0) {
+      const d = randomDay();
+      transactions.push({
+        type: 'income', amount: cents(80000, 200000), description: 'Projeto freelance', accountKey: 'checking',
+        destinationAccountKey: null, categoryName: 'Freelance', nature: 'variable', status: 'paid', dueDate: d, paidDate: d,
+      });
+    }
+
+    for (const [day, amount] of [[6, 40000], [21, 20000]] as const) {
+      if (day > lastDay) continue;
+      const d = dateInMonth(ym, day);
+      transactions.push({
+        type: 'transfer', amount, description: 'Reserva de emergência', accountKey: 'checking', destinationAccountKey: 'savings',
+        categoryName: null, nature: null, status: 'paid', dueDate: d, paidDate: d,
+      });
+    }
+  }
+
+  transactions.push({
+    type: 'expense', amount: 35000, description: 'IPVA (parcela)', accountKey: 'checking', destinationAccountKey: null,
+    categoryName: 'Transporte', nature: 'fixed', status: 'pending', dueDate: endOfMonth(currentYm), paidDate: null,
+  });
+
+  return { accounts, recurrences, transactions, overdueDescription: 'Internet' };
+}
+```
+
+Run: `npm test -w @fincontrol/api -- demo-data`
+Expected: PASS.
+
+- [ ] **Step 4: Escrever o teste de integração que falha**
+
+`apps/api/test/demo.test.ts`:
+```ts
+import { randomUUID } from 'node:crypto';
+import request from 'supertest';
+import { beforeEach, describe, expect, it } from 'vitest';
+import { buildTestApp, FIXED_NOW } from './helpers/app';
+import { newUser } from './helpers/auth';
+import { resetDb, testDb } from './helpers/db';
+
+const { app, authAdmin } = buildTestApp();
+const SECRET = process.env.CRON_SECRET!;
+const DAY = 24 * 60 * 60 * 1000;
+
+describe('conta demo', () => {
+  beforeEach(resetDb);
+
+  it('só usuário anônimo pode gerar a demo', async () => {
+    const user = await newUser();
+    expect((await request(app).post('/api/v1/demo/seed').set(user.auth)).status).toBe(403);
+  });
+
+  it('gera 6 meses de dados coerentes, uma única vez', async () => {
+    const visitor = await newUser({ isAnonymous: true });
+    expect((await request(app).post('/api/v1/demo/seed').set(visitor.auth)).body).toEqual({ seeded: true });
+    expect((await request(app).post('/api/v1/demo/seed').set(visitor.auth)).body).toEqual({ seeded: false });
+
+    const accounts = await request(app).get('/api/v1/accounts').set(visitor.auth);
+    expect(accounts.body).toHaveLength(3);
+
+    const summary = await request(app).get('/api/v1/dashboard/summary').set(visitor.auth);
+    expect(summary.body.totalBalance).toBeGreaterThan(0);
+    expect(summary.body.overdueCount).toBe(1);
+    expect(summary.body.upcoming.some((t: { description: string }) => t.description === 'IPVA (parcela)')).toBe(true);
+
+    const evolution = await request(app).get('/api/v1/dashboard/evolution?months=6').set(visitor.auth);
+    for (const point of evolution.body as { income: number; expense: number }[]) {
+      expect(point.income).toBeGreaterThan(0);
+      expect(point.expense).toBeGreaterThan(0);
+    }
+  });
+});
+
+describe('limpeza agendada das demos', () => {
+  beforeEach(resetDb);
+
+  async function profile(isDemo: boolean, ageDays: number) {
+    const id = randomUUID();
+    await testDb.profile.create({ data: { id, name: 'X', isDemo, createdAt: new Date(FIXED_NOW.getTime() - ageDays * DAY) } });
+    return id;
+  }
+
+  it('apaga só demos com mais de 7 dias', async () => {
+    const oldDemo = await profile(true, 8);
+    await profile(true, 1);
+    await profile(false, 30);
+    const res = await request(app).get('/api/v1/internal/cron/cleanup-demo').set('Authorization', `Bearer ${SECRET}`);
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ deleted: 1 });
+    expect(authAdmin.deleted).toEqual([oldDemo]);
+    expect(await testDb.profile.count()).toBe(2);
+  });
+
+  it('exige o segredo do cron', async () => {
+    expect((await request(app).get('/api/v1/internal/cron/cleanup-demo')).status).toBe(401);
+    expect((await request(app).post('/api/v1/internal/cron/cleanup-demo').set('Authorization', 'Bearer errado')).status).toBe(401);
+  });
+});
+```
+
+Run: `npm test -w @fincontrol/api -- demo.test`
+Expected: FAIL, porque as rotas não existem.
+
+- [ ] **Step 5: Implementar o módulo demo**
+
+`apps/api/src/modules/demo/demo.repository.ts`:
+```ts
+import type { DateOnly } from '@fincontrol/shared';
+import { fromDateOnly } from '../../infra/date-mapping';
+import type { Db } from '../../infra/prisma';
+
+const NO_ID = '00000000-0000-0000-0000-000000000000';
+
+export function createDemoRepository(db: Db) {
+  return {
+    countAccounts(userId: string): Promise<number> {
+      return db.account.count({ where: { userId } });
+    },
+
+    /** Paga as ocorrências de recorrência vencidas, exceto a mais recente de `keepDescription` (vira a "vencida" da demo). */
+    async markRecurringPaidBefore(userId: string, today: DateOnly, keepDescription: string): Promise<void> {
+      const keep = await db.transaction.findFirst({
+        where: { userId, status: 'pending', recurrenceId: { not: null }, description: keepDescription, dueDate: { lt: fromDateOnly(today) } },
+        orderBy: { dueDate: 'desc' },
+        select: { id: true },
+      });
+      await db.$executeRaw`
+        UPDATE "transactions"
+        SET "status" = 'paid', "paid_date" = "due_date", "updated_at" = now()
+        WHERE "user_id" = ${userId}::uuid
+          AND "status" = 'pending'
+          AND "recurrence_id" IS NOT NULL
+          AND "due_date" < ${today}::date
+          AND "id" <> ${keep?.id ?? NO_ID}::uuid`;
+    },
+
+    async staleDemoProfileIds(cutoff: Date, limit: number): Promise<string[]> {
+      const rows = await db.profile.findMany({ where: { isDemo: true, createdAt: { lt: cutoff } }, select: { id: true }, take: limit });
+      return rows.map((r) => r.id);
+    },
+  };
+}
+
+export type DemoRepository = ReturnType<typeof createDemoRepository>;
+```
+
+`apps/api/src/modules/demo/demo.service.ts`:
+```ts
+import { endOfMonth, monthOf, todayInSaoPaulo, type CategoryType } from '@fincontrol/shared';
+import { buildDemoData, type DemoAccountKey } from '../../domain/demo-data';
+import { ForbiddenError } from '../../http/errors';
+import type { AuthClaims } from '../../infra/token-verifier';
+import type { AccountsRepository } from '../accounts/accounts.repository';
+import type { CategoriesRepository } from '../categories/categories.repository';
+import type { ProfileService } from '../profile/profile.service';
+import type { RecurrencesRepository } from '../recurrences/recurrences.repository';
+import type { RecurrencesService } from '../recurrences/recurrences.service';
+import type { TransactionsRepository } from '../transactions/transactions.repository';
+import type { DemoRepository } from './demo.repository';
+
+const DEMO_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+const CLEANUP_BATCH = 500;
+
+export type DemoServiceDeps = {
+  repo: DemoRepository;
+  accounts: AccountsRepository;
+  categories: CategoriesRepository;
+  recurrencesRepo: RecurrencesRepository;
+  recurrences: RecurrencesService;
+  transactions: TransactionsRepository;
+  profile: ProfileService;
+  clock: () => Date;
+};
+
+export function createDemoService(deps: DemoServiceDeps) {
+  return {
+    async seed(claims: AuthClaims): Promise<{ seeded: boolean }> {
+      if (!claims.isAnonymous) throw new ForbiddenError('A demo está disponível apenas para visitantes sem cadastro.');
+      const userId = claims.userId;
+      if ((await deps.repo.countAccounts(userId)) > 0) return { seeded: false };
+
+      const today = todayInSaoPaulo(deps.clock());
+      const plan = buildDemoData(today);
+
+      const accountIds = new Map<DemoAccountKey, string>();
+      for (const { key, ...data } of plan.accounts) accountIds.set(key, (await deps.accounts.create(userId, data)).id);
+      const accountId = (key: DemoAccountKey): string => {
+        const id = accountIds.get(key);
+        if (!id) throw new Error(`Conta demo ausente: ${key}`);
+        return id;
+      };
+
+      const categories = await deps.categories.list(userId);
+      const categoryId = (name: string, type: CategoryType): string => {
+        const found = categories.find((c) => c.name === name && c.type === type);
+        if (!found) throw new Error(`Categoria padrão ausente: ${name}`);
+        return found.id;
+      };
+
+      for (const r of plan.recurrences) {
+        await deps.recurrencesRepo.create(userId, {
+          frequency: 'monthly', startDate: r.startDate, endDate: null, type: r.type, amount: r.amount, description: r.description,
+          accountId: accountId(r.accountKey), destinationAccountId: null, categoryId: categoryId(r.categoryName, r.type), nature: 'fixed',
+        });
+      }
+
+      await deps.transactions.insertMany(
+        userId,
+        plan.transactions.map((t) => ({
+          type: t.type,
+          amount: t.amount,
+          description: t.description,
+          accountId: accountId(t.accountKey),
+          destinationAccountId: t.destinationAccountKey ? accountId(t.destinationAccountKey) : null,
+          categoryId: t.categoryName && t.type !== 'transfer' ? categoryId(t.categoryName, t.type) : null,
+          nature: t.nature,
+          status: t.status,
+          dueDate: t.dueDate,
+          paidDate: t.paidDate,
+          recurrenceId: null,
+          occurrenceDate: null,
+        })),
+      );
+
+      await deps.recurrences.materialize(userId, endOfMonth(monthOf(today)));
+      await deps.repo.markRecurringPaidBefore(userId, today, plan.overdueDescription);
+      return { seeded: true };
+    },
+
+    async cleanup(): Promise<{ deleted: number }> {
+      const cutoff = new Date(deps.clock().getTime() - DEMO_TTL_MS);
+      const ids = await deps.repo.staleDemoProfileIds(cutoff, CLEANUP_BATCH);
+      for (const id of ids) await deps.profile.deleteAccount(id);
+      return { deleted: ids.length };
+    },
+  };
+}
+
+export type DemoService = ReturnType<typeof createDemoService>;
+```
+
+`apps/api/src/modules/demo/demo.routes.ts`:
+```ts
+import { Router } from 'express';
+import { rateLimit } from 'express-rate-limit';
+import { authOf } from '../../http/auth';
+import { tooManyRequests } from '../../http/problem';
+import type { DemoService } from './demo.service';
+
+export function demoRouter(service: DemoService, opts: { rateLimitEnabled: boolean }): Router {
+  const r = Router();
+  r.post(
+    '/seed',
+    rateLimit({
+      windowMs: 60 * 60 * 1000,
+      limit: 10,
+      standardHeaders: 'draft-8',
+      legacyHeaders: false,
+      skip: () => !opts.rateLimitEnabled,
+      handler: tooManyRequests,
+    }),
+    async (_req, res) => {
+      res.json(await service.seed(authOf(res)));
+    },
+  );
+  return r;
+}
+```
+
+`apps/api/src/modules/demo/cron.routes.ts`:
+```ts
+import { timingSafeEqual } from 'node:crypto';
+import { Router, type RequestHandler } from 'express';
+import { UnauthorizedError } from '../../http/errors';
+import type { DemoService } from './demo.service';
+
+function safeEqual(a: string, b: string): boolean {
+  const left = Buffer.from(a);
+  const right = Buffer.from(b);
+  return left.length === right.length && timingSafeEqual(left, right);
+}
+
+/** Rotas internas chamadas pelo Vercel Cron (GET), com o segredo no header Authorization. */
+export function cronRouter(deps: { secret: string; demo: DemoService }): Router {
+  const r = Router();
+  const cleanup: RequestHandler = async (req, res) => {
+    if (!safeEqual(req.headers.authorization ?? '', `Bearer ${deps.secret}`)) throw new UnauthorizedError();
+    res.json(await deps.demo.cleanup());
+  };
+  r.get('/cleanup-demo', cleanup);
+  r.post('/cleanup-demo', cleanup);
+  return r;
+}
+```
+
+- [ ] **Step 6: Registrar**
+
+Em `apps/api/src/http/container.ts`, acrescente os imports:
+```ts
+import { createDemoRepository } from '../modules/demo/demo.repository';
+import { createDemoService } from '../modules/demo/demo.service';
+```
+e, antes do `return`, a linha:
+```ts
+  const demo = createDemoService({
+    repo: createDemoRepository(deps.db), accounts: accountsRepo, categories: categoriesRepo, recurrencesRepo, recurrences,
+    transactions: transactionsRepo, profile, clock: deps.clock,
+  });
+```
+Acrescente `demo` ao objeto retornado.
+
+Em `apps/api/src/http/routes.ts`, troque a assinatura e acrescente a rota:
+```ts
+import type { Router } from 'express';
+import { accountsRouter } from '../modules/accounts/accounts.routes';
+import { categoriesRouter } from '../modules/categories/categories.routes';
+import { dashboardRouter } from '../modules/dashboard/dashboard.routes';
+import { demoRouter } from '../modules/demo/demo.routes';
+import { profileRouter } from '../modules/profile/profile.routes';
+import { transactionsRouter } from '../modules/transactions/transactions.routes';
+import type { Container } from './container';
+
+export function registerRoutes(api: Router, c: Container, opts: { rateLimitEnabled: boolean }): void {
+  api.use('/me', profileRouter(c.profile));
+  api.use('/accounts', accountsRouter(c.accounts));
+  api.use('/categories', categoriesRouter(c.categories));
+  api.use('/transactions', transactionsRouter(c.transactions));
+  api.use('/dashboard', dashboardRouter(c.dashboard));
+  api.use('/demo', demoRouter(c.demo, opts));
+}
+```
+
+Em `apps/api/src/http/app.ts`, acrescente o import `import { cronRouter } from '../modules/demo/cron.routes';` e troque o bloco que monta o router autenticado por:
+```ts
+  app.use('/api/v1/internal/cron', cronRouter({ secret: deps.config.CRON_SECRET, demo: container.demo }));
+
+  const api = Router();
+  api.use(requireAuth(deps.verifier));
+  api.use(async (_req, res, next) => {
+    await container.provisioner.ensure(authOf(res));
+    next();
+  });
+  registerRoutes(api, container, { rateLimitEnabled: deps.config.NODE_ENV !== 'test' });
+  app.use('/api/v1', api);
+```
+
+- [ ] **Step 7: Rodar os testes**
+
+Run: `npm test -w @fincontrol/api && npm run lint && npm run typecheck`
+Expected: PASS.
+
+- [ ] **Step 8: Commit**
+
+```bash
+git add apps/api
+git commit -m "feat(api): conta demo com 6 meses de dados gerados e limpeza diária protegida por segredo"
+```
+
+---
+
+### Task 15: Verificação final, smoke test local e README de desenvolvimento
+
+**Files:**
+- Modify: `package.json` (raiz, scripts `dev:api` e `db:migrate`), `README.md`
+
+- [ ] **Step 1: Acrescentar os scripts de conveniência**
+
+Em `package.json` (raiz), acrescente em `scripts`:
+```json
+"dev:api": "npm run dev -w @fincontrol/api",
+"db:migrate": "npm run db:migrate -w @fincontrol/api"
+```
+
+- [ ] **Step 2: Escrever o README de desenvolvimento**
+
+`README.md` (substituição completa; a versão de vitrine vem na Parte 3):
+````markdown
+# FinControl
+
+Plataforma de gestão financeira pessoal: contas, receitas, despesas, transferências, recorrências e dashboard. Projeto de portfólio.
+
+> Em construção. Sub-projeto 1, parte 1: API. Veja a [spec](docs/superpowers/specs/2026-11-11-fincontrol-fundacao-fluxo-caixa-design.md).
+
+## Stack
+
+Monorepo com npm workspaces:
+
+- `apps/api`: Express 5, TypeScript, Prisma 7 e PostgreSQL.
+- `packages/shared`: schemas Zod e utilitários compartilhados.
+
+## Rodando localmente
+
+Pré-requisitos: Node 22 e Docker.
+
+```bash
+npm install
+npm run db:up                         # Postgres na porta 5435 (dev + test)
+cp apps/api/.env.example apps/api/.env
+npm run db:migrate                    # aplica as migrations no banco de dev
+npm run dev:api                       # http://localhost:3333/api/v1/health
+```
+
+## Qualidade
+
+```bash
+npm run lint
+npm run typecheck
+npm test        # unitários + integração contra Postgres real
+```
+````
+
+- [ ] **Step 3: Suíte completa limpa do zero**
+
+Run:
+```bash
+npm ci
+npm run db:up
+npm run lint && npm run typecheck && npm test
+```
+Expected: tudo PASS, sem avisos de teste pulado.
+
+- [ ] **Step 4: Smoke test do servidor real**
+
+Run (em segundo plano): `npm run dev:api`
+Run: `curl -s http://localhost:3333/api/v1/health` → `{"status":"ok","version":"0.1.0"}`
+Run: `curl -s -o /dev/null -w "%{http_code}" http://localhost:3333/api/v1/me` → `401`
+Encerre o servidor.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add package.json README.md
+git commit -m "docs: README de desenvolvimento e scripts de conveniência"
+```
+
+---
+
+## Self-Review (feito ao escrever o plano)
+
+- **Cobertura da spec (parte API):** health ✓ (T4); `/me` GET/PATCH/DELETE ✓ (T6); contas, incluindo arquivamento e 409 ✓ (T9); categorias com reatribuição ✓ (T10); lançamentos com filtros, cursor, pagar e desfazer ✓ (T11); recorrências com dia 31, datas puladas e escopos ✓ (T12); dashboard com resumo, evolução e categorias ✓ (T13); demo e cron ✓ (T14); problem+json, pino, request-id, helmet, CORS e rate limit ✓ (T4/T6); env validada ✓ (T4); RLS e constraints ✓ (T5); isolamento por recurso ✓ (T6/T9/T10/T11).
+- **Fora desta parte:** telas, PWA e Testing Library do front (Parte 2); Playwright, deploy na Vercel/Supabase e README de vitrine (Parte 3).
+- **Desvios registrados na spec:** npm workspaces no lugar de pnpm (D6), e cron também em GET, porque o Vercel Cron chama com GET.
+- **Tipos conferidos:** `ValidateRefs`, `TransactionRow`/`NewTransaction`, `RecurrenceTemplate` e `Scope` têm o mesmo nome e a mesma forma em todas as tasks.
