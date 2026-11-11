@@ -76,6 +76,7 @@
   }
   body {
     min-height: 100dvh;
+    overflow-x: clip;
     background: var(--background);
   }
   ::selection {
@@ -108,7 +109,7 @@
   .aurora::before {
     content: '';
     position: absolute;
-    inset: -20% -10% auto -10%;
+    inset: -20% 0 auto 0;
     height: 140%;
     background: radial-gradient(60% 55% at 70% 20%, var(--glow), transparent 70%);
     filter: blur(24px);

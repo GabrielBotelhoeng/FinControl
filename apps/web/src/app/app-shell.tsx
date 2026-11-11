@@ -18,9 +18,9 @@ function DemoBadge() {
   const { signOut } = useAuth();
   const navigate = useNavigate();
   return (
-    <div className="flex items-center gap-3 rounded-full border border-primary/40 bg-primary-soft py-1.5 pl-4 pr-1.5 text-sm">
+    <div className="flex items-center gap-3 rounded-full border border-primary/40 bg-primary-soft py-1.5 pl-3 pr-1.5 sm:pl-4 text-sm">
       <Sparkles aria-hidden className="h-4 w-4 text-primary" strokeWidth={1.75} />
-      <span className="font-medium">Modo demo</span>
+      <span className="hidden font-medium sm:inline">Modo demo</span>
       <Button
         size="sm"
         className="h-8"
@@ -38,7 +38,7 @@ function DemoBadge() {
 export function AppShell() {
   const { isDemo } = useAuth();
   return (
-    <div className="min-h-dvh md:grid md:grid-cols-[248px_1fr]">
+    <div className="min-h-dvh md:grid md:grid-cols-[248px_minmax(0,1fr)]">
       <aside className="sticky top-0 hidden h-dvh flex-col gap-10 border-r border-border px-5 py-7 md:flex">
         <Logo />
         <nav aria-label="Principal" className="grid gap-1">
@@ -65,7 +65,7 @@ export function AppShell() {
         </nav>
       </aside>
 
-      <div className="flex min-w-0 flex-col">
+      <div className="flex min-w-0 flex-col overflow-x-clip">
         <header className="flex items-center justify-between gap-3 px-5 pt-5 md:px-10 md:pt-7">
           <span className="md:hidden">
             <Logo />

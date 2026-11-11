@@ -12,7 +12,7 @@ export function SignedAmount({ cents, type, className }: { cents: number; type: 
 export function HeroAmount({ cents, className }: { cents: number; className?: string }) {
   const parts = splitBRL(cents);
   return (
-    <span className={cn('tabular font-display leading-none tracking-[-0.03em]', className)}>
+    <span className={cn('tabular font-display leading-none tracking-[-0.02em]', className)}>
       <span className="font-extralight">
         {parts.sign}
         {parts.currency}{' '}

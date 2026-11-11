@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <radialGradient id="glow" cx="70%" cy="22%" r="70%">
+      <stop offset="0" stop-color="#E8B04B" stop-opacity=".55"/>
+      <stop offset="1" stop-color="#E8B04B" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="#07080C"/>
+  <rect width="512" height="512" rx="112" fill="url(#glow)"/>
+  <!-- F estilizado: haste em peso fino + barras em peso forte (o contraste da marca) -->
+  <rect x="156" y="120" width="34" height="272" rx="17" fill="#EEF0F6"/>
+  <rect x="156" y="120" width="200" height="64" rx="32" fill="#E8B04B"/>
+  <rect x="156" y="236" width="148" height="56" rx="28" fill="#E8B04B"/>
+</svg>

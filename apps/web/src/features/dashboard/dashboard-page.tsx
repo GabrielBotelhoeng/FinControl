@@ -85,7 +85,7 @@ export default function DashboardPage() {
         </section>
       )}
 
-      <div className="grid gap-6 lg:grid-cols-[1.6fr_1fr]">
+      <div className="grid gap-6 lg:grid-cols-[1.6fr_1fr] [&>*]:min-w-0">
         <Panel className="p-5 sm:p-6">
           <h2 className="mb-4 font-display text-lg font-semibold tracking-tight">Últimos 6 meses</h2>
           {evolution.isPending && <Skeleton className="h-64" />}

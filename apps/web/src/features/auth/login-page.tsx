@@ -9,6 +9,8 @@ import { Field, Input } from '../../components/ui/field';
 import { HeroAmount } from '../../components/ui/money';
 import { Panel } from '../../components/ui/panel';
 import { Segmented } from '../../components/ui/segmented';
+import artLarge from '../../assets/login-art-1920.webp';
+import artSmall from '../../assets/login-art-960.webp';
 import { useApi } from '../../lib/api-context';
 import { useAuth } from './auth-context';
 import { translateAuthError } from './gateway';
@@ -97,14 +99,22 @@ export function LoginPage() {
   }
 
   return (
-    <div className="aurora min-h-dvh overflow-hidden">
+    <div className="aurora relative min-h-dvh overflow-hidden">
+      <img
+        src={artLarge}
+        srcSet={`${artSmall} 960w, ${artLarge} 1920w`}
+        sizes="100vw"
+        alt=""
+        aria-hidden
+        className="pointer-events-none absolute inset-0 -z-10 h-full w-full object-cover object-right opacity-30 md:opacity-70 [mask-image:linear-gradient(to_right,transparent_10%,black_60%)] [html[data-theme=light]_&]:opacity-25"
+      />
       <div className="mx-auto grid min-h-dvh max-w-7xl gap-12 px-5 py-10 md:grid-cols-[1.15fr_0.85fr] md:items-center md:px-10">
         <section className="flex flex-col gap-8">
           <p className="font-display text-lg tracking-tight">
             <span className="font-extralight">Fin</span>
             <span className="font-extrabold">Control</span>
           </p>
-          <h1 className="font-display text-[clamp(2.6rem,6vw,4.5rem)] leading-[0.95] tracking-[-0.035em] [text-wrap:balance]">
+          <h1 className="font-display text-[clamp(2.6rem,6vw,4.5rem)] leading-[0.95] tracking-[-0.02em] [text-wrap:balance]">
             <span className="font-extralight">Seu dinheiro,</span> <span className="font-extrabold">sob controle.</span>
           </h1>
           <p className="max-w-[46ch] text-base leading-relaxed text-muted">

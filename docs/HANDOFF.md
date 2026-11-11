@@ -13,11 +13,12 @@ _Atualizado em 2026-11-11._
 
 ## Próximo passo
 
-1. **Escrever o plano da Parte 2 (Web)** com a skill `superpowers:writing-plans`.
-   - Começa pela direção visual (paleta, tipografia, tokens). O Higgsfield está liberado para imagens da landing e da demo.
-   - Escopo: React + Vite + Tailwind + shadcn/ui, PWA, telas da seção 8 da spec e cliente HTTP com JWT do Supabase.
-2. **Parte 3:** Playwright E2E, deploy na Vercel (web + api), Supabase (Auth: e-mail, Google, anônimo) e README de vitrine.
-   - Pedir ao usuário: projeto Supabase, conta Vercel e credenciais OAuth do Google.
+- **Parte 2 (Web): concluída** (branch feat/sp1-web, mergeada). Inclui 42 testes, build com PWA e verificação visual sem rolagem horizontal em 360 px. A direção visual está em DESIGN.md ("Aurora no cofre", dourado, com o CoraHub como referência), e a arte de entrada foi gerada no Higgsfield.
+- **Parte 3 (combinar com o usuário):**
+  - Deploy na Vercel (web + API), com Supabase (Auth: e-mail, Google, anônimo) e Google OAuth.
+  - E2E com Playwright: o roteiro com sessão simulada fica como base em scratchpad/visual.mjs.
+  - README de vitrine com os screenshots.
+- **Revisão final da Parte 2:** ainda não feita (limite de uso).
 
 ## Pendências registradas na revisão final (menores)
 

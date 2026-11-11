@@ -62,8 +62,9 @@ export default function TransactionsPage() {
       />
 
       <div className="mb-6 grid gap-3">
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="grid min-w-0 gap-3 sm:flex sm:flex-wrap sm:items-center">
           <MonthPicker value={month} onChange={setMonth} />
+          <div className="min-w-0 overflow-x-auto [scrollbar-width:none]">
           <Segmented
             label="Tipo"
             value={type}
@@ -74,8 +75,9 @@ export default function TransactionsPage() {
               { value: 'income', label: 'Receitas' },
               { value: 'transfer', label: 'Transferências' },
             ]}
-            className="max-w-full overflow-x-auto"
+            className="w-max"
           />
+          </div>
         </div>
         <div className="grid gap-3 sm:grid-cols-[1fr_180px_200px]">
           <label className="relative">
@@ -110,7 +112,7 @@ export default function TransactionsPage() {
         />
       )}
       {groups.length > 0 && (
-        <div className="grid gap-6">
+        <div className="grid gap-6 [&>*]:min-w-0">
           {groups.map((g) => (
             <section key={g.date} aria-labelledby={`dia-${g.date}`}>
               <h2 id={`dia-${g.date}`} className="mb-2 px-1 text-xs font-semibold uppercase tracking-wide text-muted first-letter:uppercase">
