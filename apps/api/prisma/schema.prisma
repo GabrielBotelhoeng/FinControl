@@ -1,0 +1,166 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum ThemePreference {
+  light
+  dark
+  system
+}
+
+enum AccountType {
+  checking
+  savings
+  wallet
+  investment
+}
+
+enum CategoryType {
+  income
+  expense
+}
+
+enum TransactionType {
+  income
+  expense
+  transfer
+}
+
+enum TransactionNature {
+  fixed
+  variable
+}
+
+enum TransactionStatus {
+  pending
+  paid
+}
+
+enum Frequency {
+  weekly
+  monthly
+  yearly
+}
+
+model Profile {
+  id           String          @id @db.Uuid
+  name         String
+  isDemo       Boolean         @default(false) @map("is_demo")
+  theme        ThemePreference @default(system)
+  createdAt    DateTime        @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime        @updatedAt @map("updated_at") @db.Timestamptz
+  accounts     Account[]
+  categories   Category[]
+  recurrences  Recurrence[]
+  transactions Transaction[]
+
+  @@index([isDemo, createdAt])
+  @@map("profiles")
+}
+
+model Account {
+  id                  String        @id @default(uuid()) @db.Uuid
+  userId              String        @map("user_id") @db.Uuid
+  name                String
+  type                AccountType
+  color               String
+  initialBalance      BigInt        @default(0) @map("initial_balance")
+  archivedAt          DateTime?     @map("archived_at") @db.Timestamptz
+  createdAt           DateTime      @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt           DateTime      @updatedAt @map("updated_at") @db.Timestamptz
+  user                Profile       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions        Transaction[] @relation("TransactionAccount")
+  incomingTransfers   Transaction[] @relation("TransactionDestination")
+  recurrences         Recurrence[]  @relation("RecurrenceAccount")
+  incomingRecurrences Recurrence[]  @relation("RecurrenceDestination")
+
+  @@index([userId])
+  @@map("accounts")
+}
+
+model Category {
+  id           String        @id @default(uuid()) @db.Uuid
+  userId       String        @map("user_id") @db.Uuid
+  name         String
+  type         CategoryType
+  icon         String
+  color        String
+  createdAt    DateTime      @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime      @updatedAt @map("updated_at") @db.Timestamptz
+  user         Profile       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+  recurrences  Recurrence[]
+
+  @@unique([userId, type, name])
+  @@map("categories")
+}
+
+model Recurrence {
+  id                   String             @id @default(uuid()) @db.Uuid
+  userId               String             @map("user_id") @db.Uuid
+  frequency            Frequency
+  startDate            DateTime           @map("start_date") @db.Date
+  endDate              DateTime?          @map("end_date") @db.Date
+  type                 TransactionType
+  amount               BigInt
+  description          String
+  accountId            String             @map("account_id") @db.Uuid
+  destinationAccountId String?            @map("destination_account_id") @db.Uuid
+  categoryId           String?            @map("category_id") @db.Uuid
+  nature               TransactionNature?
+  createdAt            DateTime           @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt            DateTime           @updatedAt @map("updated_at") @db.Timestamptz
+  user                 Profile            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  account              Account            @relation("RecurrenceAccount", fields: [accountId], references: [id], onDelete: NoAction)
+  destinationAccount   Account?           @relation("RecurrenceDestination", fields: [destinationAccountId], references: [id], onDelete: NoAction)
+  category             Category?          @relation(fields: [categoryId], references: [id], onDelete: NoAction)
+  transactions         Transaction[]
+  skips                RecurrenceSkip[]
+
+  @@index([userId])
+  @@map("recurrences")
+}
+
+model RecurrenceSkip {
+  id             String     @id @default(uuid()) @db.Uuid
+  recurrenceId   String     @map("recurrence_id") @db.Uuid
+  occurrenceDate DateTime   @map("occurrence_date") @db.Date
+  recurrence     Recurrence @relation(fields: [recurrenceId], references: [id], onDelete: Cascade)
+
+  @@unique([recurrenceId, occurrenceDate])
+  @@map("recurrence_skips")
+}
+
+model Transaction {
+  id                   String             @id @default(uuid()) @db.Uuid
+  userId               String             @map("user_id") @db.Uuid
+  type                 TransactionType
+  amount               BigInt
+  description          String
+  accountId            String             @map("account_id") @db.Uuid
+  destinationAccountId String?            @map("destination_account_id") @db.Uuid
+  categoryId           String?            @map("category_id") @db.Uuid
+  nature               TransactionNature?
+  status               TransactionStatus  @default(pending)
+  dueDate              DateTime           @map("due_date") @db.Date
+  paidDate             DateTime?          @map("paid_date") @db.Date
+  recurrenceId         String?            @map("recurrence_id") @db.Uuid
+  occurrenceDate       DateTime?          @map("occurrence_date") @db.Date
+  createdAt            DateTime           @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt            DateTime           @updatedAt @map("updated_at") @db.Timestamptz
+  user                 Profile            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  account              Account            @relation("TransactionAccount", fields: [accountId], references: [id], onDelete: NoAction)
+  destinationAccount   Account?           @relation("TransactionDestination", fields: [destinationAccountId], references: [id], onDelete: NoAction)
+  category             Category?          @relation(fields: [categoryId], references: [id], onDelete: NoAction)
+  recurrence           Recurrence?        @relation(fields: [recurrenceId], references: [id], onDelete: SetNull)
+
+  @@unique([recurrenceId, occurrenceDate])
+  @@index([userId, dueDate])
+  @@index([userId, paidDate])
+  @@map("transactions")
+}

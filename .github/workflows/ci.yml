@@ -6,6 +6,20 @@ on:
 jobs:
   check:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: fincontrol
+          POSTGRES_PASSWORD: fincontrol
+          POSTGRES_DB: fincontrol_test
+        ports:
+          - 5435:5432
+        options: >-
+          --health-cmd "pg_isready -U fincontrol -d fincontrol_test"
+          --health-interval 2s
+          --health-timeout 3s
+          --health-retries 20
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
