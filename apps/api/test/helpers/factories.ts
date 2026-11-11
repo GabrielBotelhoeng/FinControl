@@ -13,3 +13,10 @@ export async function createAccount(app: Express, user: TestUser, body: Record<s
   expect(res.status).toBe(201);
   return res.body as AccountDTO;
 }
+
+export async function categoryId(app: Express, user: TestUser, name: string, type: 'income' | 'expense'): Promise<string> {
+  const res = await request(app).get(`/api/v1/categories?type=${type}`).set(user.auth);
+  const found = (res.body as { id: string; name: string }[]).find((c) => c.name === name);
+  if (!found) throw new Error(`Categoria ${name} (${type}) não encontrada`);
+  return found.id;
+}
