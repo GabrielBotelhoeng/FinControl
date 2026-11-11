@@ -19,12 +19,21 @@ export function useAccounts(includeArchived = false) {
   });
 }
 
-/** Mutação que, ao terminar, invalida tudo que depende de saldo. */
+const FINANCE_KEYS = ['accounts', 'transactions', 'dashboard', 'categories'];
+
+/**
+ * Mutação que, ao terminar, invalida tudo que depende de saldo.
+ * Cancela antes de invalidar: no primeiro carregamento (ainda sem dados), o React Query reaproveitaria a
+ * busca em andamento, que saiu antes da mutação e volta sem o item novo.
+ */
 export function useFinanceMutation<TVars, TData = unknown>(fn: (vars: TVars) => Promise<TData>) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: fn,
-    onSuccess: () => Promise.all(['accounts', 'transactions', 'dashboard', 'categories'].map((k) => queryClient.invalidateQueries({ queryKey: [k] }))),
+    onSuccess: async () => {
+      await Promise.all(FINANCE_KEYS.map((k) => queryClient.cancelQueries({ queryKey: [k] })));
+      await Promise.all(FINANCE_KEYS.map((k) => queryClient.invalidateQueries({ queryKey: [k] })));
+    },
   });
 }
 
