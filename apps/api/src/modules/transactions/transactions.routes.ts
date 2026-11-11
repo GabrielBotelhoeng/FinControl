@@ -1,5 +1,5 @@
 import {
-  createTransactionSchema, idSchema, listTransactionsQuerySchema, paySchema, updateTransactionSchema,
+  createTransactionSchema, idSchema, listTransactionsQuerySchema, paySchema, scopeQuerySchema, updateTransactionSchema,
 } from '@fincontrol/shared';
 import { Router } from 'express';
 import { userIdOf } from '../../http/auth';
@@ -15,10 +15,12 @@ export function transactionsRouter(service: TransactionsService): Router {
     res.status(201).json(await service.create(userIdOf(res), parse(createTransactionSchema, req.body)));
   });
   r.patch('/:id', async (req, res) => {
-    res.json(await service.update(userIdOf(res), parse(idSchema, req.params.id), parse(updateTransactionSchema, req.body)));
+    const { scope } = parse(scopeQuerySchema, req.query);
+    res.json(await service.update(userIdOf(res), parse(idSchema, req.params.id), parse(updateTransactionSchema, req.body), scope));
   });
   r.delete('/:id', async (req, res) => {
-    await service.remove(userIdOf(res), parse(idSchema, req.params.id));
+    const { scope } = parse(scopeQuerySchema, req.query);
+    await service.remove(userIdOf(res), parse(idSchema, req.params.id), scope);
     res.status(204).end();
   });
   r.post('/:id/pay', async (req, res) => {

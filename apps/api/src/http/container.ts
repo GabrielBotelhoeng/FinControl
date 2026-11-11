@@ -5,6 +5,8 @@ import { createCategoriesService } from '../modules/categories/categories.servic
 import { createProfileRepository } from '../modules/profile/profile.repository';
 import { createProfileService } from '../modules/profile/profile.service';
 import { createProvisioner } from '../modules/profile/provisioning';
+import { createRecurrencesRepository } from '../modules/recurrences/recurrences.repository';
+import { createRecurrencesService } from '../modules/recurrences/recurrences.service';
 import { createRefsValidator } from '../modules/transactions/transactions.refs';
 import { createTransactionsRepository } from '../modules/transactions/transactions.repository';
 import { createTransactionsService } from '../modules/transactions/transactions.service';
@@ -19,8 +21,13 @@ export function buildContainer(deps: AppDeps) {
   const categories = createCategoriesService(categoriesRepo);
   const transactionsRepo = createTransactionsRepository(deps.db);
   const validateRefs = createRefsValidator(accounts, categories);
-  const transactions = createTransactionsService({ repo: transactionsRepo, validateRefs, clock: deps.clock });
-  return { provisioner, profile, accountsRepo, accounts, categoriesRepo, categories, transactionsRepo, validateRefs, transactions };
+  const recurrencesRepo = createRecurrencesRepository(deps.db);
+  const recurrences = createRecurrencesService({ repo: recurrencesRepo, transactions: transactionsRepo, validateRefs, clock: deps.clock });
+  const transactions = createTransactionsService({ repo: transactionsRepo, validateRefs, recurrences, clock: deps.clock });
+  return {
+    provisioner, profile, accountsRepo, accounts, categoriesRepo, categories,
+    transactionsRepo, validateRefs, recurrencesRepo, recurrences, transactions,
+  };
 }
 
 export type Container = ReturnType<typeof buildContainer>;

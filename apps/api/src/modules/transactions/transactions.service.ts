@@ -1,9 +1,10 @@
 import {
-  todayInSaoPaulo,
-  type CreateTransactionInput, type DateOnly, type ListTransactionsQuery, type ShapeInput,
+  endOfMonth, monthOf, todayInSaoPaulo,
+  type CreateTransactionInput, type DateOnly, type ListTransactionsQuery, type Scope, type ShapeInput,
   type TransactionDTO, type TransactionPage, type TransactionStatus, type UpdateTransactionInput,
 } from '@fincontrol/shared';
 import { NotFoundError, UnprocessableError } from '../../http/errors';
+import type { RecurrencesService } from '../recurrences/recurrences.service';
 import { decodeCursor, encodeCursor } from './transactions.cursor';
 import { toTransactionDTO } from './transactions.mapper';
 import type { ValidateRefs } from './transactions.refs';
@@ -12,11 +13,12 @@ import type { TransactionRow, TransactionsRepository } from './transactions.repo
 export type TransactionsServiceDeps = {
   repo: TransactionsRepository;
   validateRefs: ValidateRefs;
+  recurrences: RecurrencesService;
   clock: () => Date;
 };
 
 export function createTransactionsService(deps: TransactionsServiceDeps) {
-  const { repo, validateRefs } = deps;
+  const { repo, validateRefs, recurrences } = deps;
   const today = () => todayInSaoPaulo(deps.clock());
 
   async function getOwned(userId: string, id: string): Promise<TransactionRow> {
@@ -36,6 +38,11 @@ export function createTransactionsService(deps: TransactionsServiceDeps) {
   return {
     async create(userId: string, input: CreateTransactionInput): Promise<TransactionDTO> {
       await validateRefs(userId, input);
+      const paidDate = resolvePaidDate(input.status, input.paidDate);
+      if (input.recurrence) {
+        const row = await recurrences.createSeries(userId, input, input.recurrence.frequency, input.recurrence.endDate, paidDate);
+        return toTransactionDTO(row, today());
+      }
       const row = await repo.create(userId, {
         type: input.type,
         amount: input.amount,
@@ -46,7 +53,7 @@ export function createTransactionsService(deps: TransactionsServiceDeps) {
         nature: input.nature,
         status: input.status,
         dueDate: input.dueDate,
-        paidDate: resolvePaidDate(input.status, input.paidDate),
+        paidDate,
         recurrenceId: null,
         occurrenceDate: null,
       });
@@ -54,6 +61,7 @@ export function createTransactionsService(deps: TransactionsServiceDeps) {
     },
 
     async list(userId: string, q: ListTransactionsQuery): Promise<TransactionPage> {
+      await recurrences.materialize(userId, q.to ?? endOfMonth(monthOf(today())));
       const cursor = q.cursor ? decodeCursor(q.cursor) : undefined;
       const { cursor: _c, limit, ...filters } = q;
       const rows = await repo.list(userId, filters, cursor, limit + 1);
@@ -65,8 +73,11 @@ export function createTransactionsService(deps: TransactionsServiceDeps) {
       };
     },
 
-    async update(userId: string, id: string, input: UpdateTransactionInput): Promise<TransactionDTO> {
+    async update(userId: string, id: string, input: UpdateTransactionInput, scope: Scope): Promise<TransactionDTO> {
       const current = await getOwned(userId, id);
+      if (scope === 'future' && current.recurrenceId) {
+        return toTransactionDTO(await recurrences.updateFuture(userId, current, input), today());
+      }
       const merged: ShapeInput = {
         type: current.type,
         accountId: input.accountId ?? current.accountId,
@@ -83,9 +94,14 @@ export function createTransactionsService(deps: TransactionsServiceDeps) {
       return toTransactionDTO(await repo.update(userId, id, fields), today());
     },
 
-    async remove(userId: string, id: string): Promise<void> {
-      await getOwned(userId, id);
-      await repo.delete(userId, id);
+    async remove(userId: string, id: string, scope: Scope): Promise<void> {
+      const current = await getOwned(userId, id);
+      if (!current.recurrenceId) {
+        await repo.delete(userId, id);
+        return;
+      }
+      if (scope === 'future') await recurrences.removeFuture(userId, current);
+      else await recurrences.removeSingle(userId, current);
     },
 
     async pay(userId: string, id: string, paidDate?: DateOnly): Promise<TransactionDTO> {
