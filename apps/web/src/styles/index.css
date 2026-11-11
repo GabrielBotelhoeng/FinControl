@@ -1,0 +1,140 @@
+@import 'tailwindcss';
+@import '@fontsource-variable/outfit';
+@import '@fontsource-variable/manrope';
+
+/* Tokens: ver DESIGN.md ("Aurora no cofre"). O escuro é o padrão. */
+:root,
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --background: #07080c;
+  --surface: #0f121a;
+  --surface-2: #161a24;
+  --border: #232838;
+  --text: #eef0f6;
+  --text-muted: #9aa1b5;
+  --primary: #e8b04b;
+  --primary-fg: #1a1305;
+  --primary-soft: #2a2111;
+  --glow: rgba(232, 176, 75, 0.26);
+  --income: #3dd68c;
+  --income-soft: #0e2a1e;
+  --expense: #ff6b81;
+  --expense-soft: #2e1219;
+  --warning: #ff6b81;
+  --panel-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+  --background: #f6f6f9;
+  --surface: #ffffff;
+  --surface-2: #efeff4;
+  --border: #e0e1e8;
+  --text: #10121a;
+  --text-muted: #5a6072;
+  --primary: #8a5a00;
+  --primary-fg: #ffffff;
+  --primary-soft: #f7edd8;
+  --glow: rgba(200, 140, 30, 0.18);
+  --income: #0a8754;
+  --income-soft: #e1f4ea;
+  --expense: #d23752;
+  --expense-soft: #fbe6ea;
+  --warning: #d23752;
+  --panel-shadow: 0 1px 2px rgba(16, 18, 26, 0.04), 0 8px 24px -12px rgba(16, 18, 26, 0.12);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-border: var(--border);
+  --color-text: var(--text);
+  --color-muted: var(--text-muted);
+  --color-primary: var(--primary);
+  --color-primary-fg: var(--primary-fg);
+  --color-primary-soft: var(--primary-soft);
+  --color-income: var(--income);
+  --color-income-soft: var(--income-soft);
+  --color-expense: var(--expense);
+  --color-expense-soft: var(--expense-soft);
+  --color-warning: var(--warning);
+  --font-display: 'Outfit Variable', ui-sans-serif, sans-serif;
+  --font-sans: 'Manrope Variable', ui-sans-serif, sans-serif;
+  --radius-panel: 20px;
+  --radius-control: 12px;
+  --shadow-panel: var(--panel-shadow);
+}
+
+@layer base {
+  html {
+    background: var(--background);
+    color: var(--text);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  body {
+    min-height: 100dvh;
+    overflow-x: clip;
+    background: var(--background);
+  }
+  ::selection {
+    background: var(--primary-soft);
+    color: var(--text);
+  }
+  * {
+    caret-color: var(--primary);
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+  :focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+  }
+  a {
+    text-underline-offset: 3px;
+  }
+}
+
+@layer utilities {
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+  /* Aurora: o glow radial que é a assinatura do app (DESIGN.md). */
+  .aurora {
+    position: relative;
+    isolation: isolate;
+  }
+  .aurora::before {
+    content: '';
+    position: absolute;
+    inset: -20% 0 auto 0;
+    height: 140%;
+    background: radial-gradient(60% 55% at 70% 20%, var(--glow), transparent 70%);
+    filter: blur(24px);
+    z-index: -1;
+    pointer-events: none;
+    animation: aurora-breathe 8s ease-in-out infinite alternate;
+  }
+}
+
+@keyframes aurora-breathe {
+  from {
+    opacity: 0.75;
+    transform: scale(1);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1.06);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}
