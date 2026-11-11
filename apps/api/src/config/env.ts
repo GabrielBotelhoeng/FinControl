@@ -8,8 +8,22 @@ const envSchema = z.object({
   SUPABASE_URL: z.url(),
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
   WEB_ORIGIN: z.url(),
+  // Regex (ancorada pelo app) das URLs de preview da web, ex.: deploys de PR na Vercel.
+  WEB_PREVIEW_ORIGIN_PATTERN: z
+    .string()
+    .refine(isValidRegex, 'Regex inválida')
+    .optional(),
   CRON_SECRET: z.string().min(32),
 });
+
+function isValidRegex(source: string): boolean {
+  try {
+    new RegExp(source);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 export type AppConfig = z.infer<typeof envSchema>;
 
