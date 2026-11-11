@@ -13,5 +13,10 @@ export function requestLogger(logger: Logger) {
       res.setHeader('X-Request-Id', id);
       return id;
     },
+    // Lista branca: headers da Vercel trazem tokens internos, IP e geolocalização do usuário.
+    serializers: {
+      req: (req: { id: string; method: string; url: string }) => ({ id: req.id, method: req.method, url: req.url }),
+      res: (res: { statusCode: number }) => ({ statusCode: res.statusCode }),
+    },
   });
 }
