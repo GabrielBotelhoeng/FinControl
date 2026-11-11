@@ -8,11 +8,11 @@ const envSchema = z.object({
 
 export type WebEnv = z.infer<typeof envSchema>;
 
-export function readEnv(source: Record<string, unknown> = import.meta.env): WebEnv {
+export type EnvCheck = { ok: true; env: WebEnv } | { ok: false; fields: string[] };
+
+/** Valida a configuração do build sem lançar erro: quem chama decide o que mostrar (veja main.tsx). */
+export function checkEnv(source: Record<string, unknown> = import.meta.env): EnvCheck {
   const parsed = envSchema.safeParse(source);
-  if (!parsed.success) {
-    const fields = [...new Set(parsed.error.issues.map((i) => i.path.join('.')))].join(', ');
-    throw new Error(`Configuração ausente no front: ${fields}. Veja apps/web/.env.example.`);
-  }
-  return parsed.data;
+  if (parsed.success) return { ok: true, env: parsed.data };
+  return { ok: false, fields: [...new Set(parsed.error.issues.map((i) => i.path.join('.')))] };
 }
