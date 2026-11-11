@@ -29,8 +29,13 @@ export function AuthProvider({ gateway, children }: { gateway: AuthGateway; chil
 
   const getToken = useCallback(async () => (await gateway.getSession())?.accessToken ?? null, [gateway]);
   const signOut = useCallback(async () => {
-    await gateway.signOut();
-    setSession(null);
+    try {
+      await gateway.signOut();
+    } catch {
+      // Token já inválido: o provedor recusa o logout remoto, mas a sessão local precisa sair mesmo assim.
+    } finally {
+      setSession(null);
+    }
   }, [gateway]);
 
   const value = useMemo<AuthContextValue>(
