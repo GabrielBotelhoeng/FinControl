@@ -1,0 +1,99 @@
+# =====================================================
+# skill-irpf-brasil — .gitignore
+# =====================================================
+
+# CRÍTICO: arquivos com dados pessoais sensíveis
+# JAMAIS commitar DBK/DEC/REC reais — contêm CPF, valores, despesas médicas
+*.DBK
+*.dbk
+*.DEC
+*.dec
+*.REC
+*.rec
+*.DDA
+*.dda
+*.audit.md
+**/AUDITORIA-*.md
+**/auditoria-*.md
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtualenv
+venv/
+env/
+ENV/
+.venv/
+.env
+
+# Testing & coverage
+htmlcov/
+.tox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.pytest_cache/
+
+# Jupyter
+.ipynb_checkpoints
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Windows
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Build/release artifacts
+*.zip
+*.tar.gz
+!docs/**/*.zip
+
+# Logs
+*.log
+logs/
+
+# OS-specific
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Working files locais (não distribuir)
+.claude/
+TODO-private.md
+notes-pessoais.md
+
+# Backups
+*.bak
+*.backup
+*~
