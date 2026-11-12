@@ -16,4 +16,10 @@ describe('PrivacyPage', () => {
     }
     expect(screen.getByRole('link', { name: /Voltar/ })).toHaveAttribute('href', '/entrar');
   });
+
+  it('informa a base legal de cada finalidade (LGPD art. 7º)', async () => {
+    renderApp(<PrivacyPage />, { route: '/privacidade', path: '/privacidade' });
+    expect(await screen.findByText(/execução do serviço que você solicitou \(art\. 7º, V/)).toBeInTheDocument();
+    expect(screen.getByText(/legítimo interesse \(art\. 7º, IX/)).toBeInTheDocument();
+  });
 });

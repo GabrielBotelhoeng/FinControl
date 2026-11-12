@@ -4,7 +4,7 @@ import { Link } from 'react-router';
 import { Panel } from '../../components/ui/panel';
 
 const CONTACT = 'botelhog45@gmail.com';
-const UPDATED_AT = '11 de novembro de 2026';
+const UPDATED_AT = '12 de novembro de 2026';
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
@@ -86,9 +86,19 @@ export default function PrivacyPage() {
           <Section title="Como usamos os dados">
             <p>
               Exclusivamente para o app funcionar: autenticar você, guardar e mostrar suas finanças, calcular saldos e previsões e manter o
-              serviço seguro. A base legal é a execução do serviço que você solicitou (art. 7º, V, da LGPD). Não vendemos, não alugamos e não
-              usamos seus dados para anúncios ou para treinar modelos de inteligência artificial.
+              serviço seguro. Não vendemos, não alugamos e não usamos seus dados para anúncios ou para treinar modelos de inteligência
+              artificial.
             </p>
+            <p>Cada finalidade tem uma base legal na LGPD:</p>
+            <List>
+              <li>
+                <strong>Conta, finanças e demonstração:</strong> execução do serviço que você solicitou (art. 7º, V).
+              </li>
+              <li>
+                <strong>Segurança:</strong> registros técnicos mínimos e limite de requisições por endereço IP, para evitar abusos e
+                proteger as contas, com base no legítimo interesse (art. 7º, IX), sem uso para nenhuma outra finalidade.
+              </li>
+            </List>
           </Section>
 
           <Section title="Com quem compartilhamos">
