@@ -100,8 +100,8 @@ A política em `/privacidade` foi comparada com o checklist da skill. Já está 
 | Lacuna | Situação |
 |---|---|
 | Base legal **por finalidade** | **Resolvido em 2026-11-12.** A política agora traz a execução do serviço (art. 7º, V) para conta e finanças, e o legítimo interesse (art. 7º, IX) para os registros de segurança e o limite de requisições por IP. |
-| **Termos de uso** e **idade mínima** | Não existem. Decisão do dono do produto: qual a idade mínima? `[CONFIRMAR]` |
-| Transferência internacional (Vercel) | Descrita de forma genérica. A skill pede indicar o mecanismo do art. 33 (ex.: cláusulas contratuais dos provedores). `[CONFIRMAR]` |
+| **Termos de uso** e **idade mínima** | **Resolvido em 2026-11-12.** A página `/termos` exige 18 anos ou mais (decisão do dono, após a pesquisa sobre o ECA Digital). A tela de entrada avisa e liga para termos e privacidade. |
+| Transferência internacional (Vercel) | **Parcial.** A API foi fixada em São Paulo (`regions: ["gru1"]`; antes rodava em `iad1`, nos EUA). A política descreve o que ainda pode sair do Brasil (CDN e registros da Vercel, login do Google). O DPA da Vercel (2023) cita as cláusulas da UE, sem as cláusulas-padrão da ANPD. `[advogado]` |
 | Registro de operações (art. 37) e plano de incidente | Documentos internos ainda não escritos. A skill tem modelos (versão simplificada para pequeno porte). |
 
 ## Próximos passos sugeridos

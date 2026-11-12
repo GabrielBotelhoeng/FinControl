@@ -31,6 +31,23 @@ function GoogleMark() {
   );
 }
 
+/** Aviso de idade mínima e aceite. Aparece junto da demo e do formulário (no celular, a demo vem antes do painel). */
+function AgeNotice({ className }: { className?: string }) {
+  return (
+    <p className={`text-xs leading-relaxed text-muted ${className ?? ''}`}>
+      Ao continuar, você declara ter 18 anos ou mais e concorda com os{' '}
+      <Link to="/termos" className="underline hover:text-text">
+        Termos de Uso
+      </Link>{' '}
+      e a{' '}
+      <Link to="/privacidade" className="underline hover:text-text">
+        Política de privacidade
+      </Link>
+      .
+    </p>
+  );
+}
+
 export function LoginPage() {
   const { gateway } = useAuth();
   const api = useApi();
@@ -132,6 +149,7 @@ export function LoginPage() {
               <ArrowRight aria-hidden className="h-4 w-4" strokeWidth={1.75} />
             </Button>
           </div>
+          <AgeNotice className="-mt-4 max-w-[46ch]" />
           <div aria-hidden className="hidden max-w-md rounded-[var(--radius-panel)] border border-border bg-surface/60 p-6 shadow-panel md:block">
             <p className="text-sm text-muted">Saldo em todas as contas</p>
             <HeroAmount cents={1248050} className="mt-2 block text-5xl" />
@@ -201,9 +219,7 @@ export function LoginPage() {
               </button>
             )}
           </Panel>
-          <Link to="/privacidade" className="mt-4 block text-center text-xs text-muted underline hover:text-text">
-            Política de privacidade
-          </Link>
+          <AgeNotice className="mt-4 text-center" />
         </div>
       </div>
     </div>
