@@ -99,8 +99,10 @@ describe('RequireAuth', () => {
 });
 
 describe('LoginPage — privacidade', () => {
-  it('mostra o link para a política de privacidade', async () => {
+  it('avisa a idade mínima e liga para os termos e a política de privacidade', async () => {
     renderApp(<LoginPage />, { gateway: fakeGateway(null).gateway, route: '/entrar', path: '/entrar' });
-    expect(await screen.findByRole('link', { name: 'Política de privacidade' })).toHaveAttribute('href', '/privacidade');
+    expect(await screen.findByText(/declara ter 18 anos ou mais/)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Termos de Uso' })).toHaveAttribute('href', '/termos');
+    expect(screen.getByRole('link', { name: 'Política de privacidade' })).toHaveAttribute('href', '/privacidade');
   });
 });

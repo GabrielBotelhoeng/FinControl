@@ -26,4 +26,13 @@ describe('PrivacyPage', () => {
     expect(security).toHaveTextContent(/legítimo interesse \(art\. 7º, IX\)/);
     expect(account).not.toHaveTextContent(/legítimo interesse/);
   });
+
+  it('diz que o app é para maiores de 18 e onde cada provedor processa os dados', async () => {
+    renderApp(<PrivacyPage />, { route: '/privacidade', path: '/privacidade' });
+    expect(await screen.findByText(/destinado a maiores de 18 anos/)).toBeInTheDocument();
+    const vercel = screen.getByText(/^Vercel:/).closest('li');
+    expect(vercel).toHaveTextContent(/São Paulo/);
+    expect(vercel).toHaveTextContent(/Estados Unidos/);
+    expect(screen.getByRole('link', { name: 'Termos de Uso' })).toHaveAttribute('href', '/termos');
+  });
 });

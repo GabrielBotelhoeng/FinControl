@@ -201,9 +201,17 @@ export function LoginPage() {
               </button>
             )}
           </Panel>
-          <Link to="/privacidade" className="mt-4 block text-center text-xs text-muted underline hover:text-text">
-            Política de privacidade
-          </Link>
+          <p className="mt-4 text-center text-xs leading-relaxed text-muted">
+            Ao continuar, você declara ter 18 anos ou mais e concorda com os{' '}
+            <Link to="/termos" className="underline hover:text-text">
+              Termos de Uso
+            </Link>{' '}
+            e a{' '}
+            <Link to="/privacidade" className="underline hover:text-text">
+              Política de privacidade
+            </Link>
+            .
+          </p>
         </div>
       </div>
     </div>

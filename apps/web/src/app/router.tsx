@@ -11,12 +11,14 @@ const AccountsPage = lazy(() => import('../features/accounts/accounts-page'));
 const CategoriesPage = lazy(() => import('../features/categories/categories-page'));
 const ProfilePage = lazy(() => import('../features/profile/profile-page'));
 const PrivacyPage = lazy(() => import('../features/legal/privacy-page'));
+const TermsPage = lazy(() => import('../features/legal/terms-page'));
 
 const page = (node: ReactNode) => <Suspense fallback={<ListSkeleton />}>{node}</Suspense>;
 
 export const router = createBrowserRouter([
   { path: '/entrar', element: <LoginPage /> },
   { path: '/privacidade', element: page(<PrivacyPage />) },
+  { path: '/termos', element: page(<TermsPage />) },
   {
     path: '/',
     element: (
