@@ -30,21 +30,30 @@ export function assertCardCreateRules(input: CreateTransactionInput, originIsCar
 
 /**
  * Invariantes de cartão na edição (decisão R11): não se move um lançamento para ou de um cartão (`accountId` ou
- * `destinationAccountId`), nem se muda a data de um lançamento de cartão. Deve ser chamada antes da ramificação de
+ * `destinationAccountId` realmente mudando de valor, de ou para uma conta cartão), nem se muda a data de um
+ * lançamento de cartão (`dueDate` diferente da atual). Reenviar o mesmo valor — como o formulário da web sempre
+ * faz para `accountId`/`dueDate` — não é uma mudança e não bloqueia. Deve ser chamada antes da ramificação de
  * escopo (`single`/`future`), para também bloquear mover uma recorrência comum para um cartão via `scope=future`.
  */
 export function assertCardEditRules(opts: {
+  currentAccountId: string;
+  currentDestinationAccountId: string | null;
   currentIsCard: boolean;
+  currentDestinationIsCard: boolean;
   currentDueDate: DateOnly;
   input: UpdateTransactionInput;
   targetAccountIsCard: boolean;
   targetDestinationIsCard: boolean;
 }): void {
-  const { currentIsCard, currentDueDate, input, targetAccountIsCard, targetDestinationIsCard } = opts;
-  if (targetAccountIsCard || targetDestinationIsCard) throw new UnprocessableError(CARD_RULE_MESSAGES.move);
-  if (!currentIsCard) return;
-  if (input.accountId !== undefined || input.destinationAccountId !== undefined) throw new UnprocessableError(CARD_RULE_MESSAGES.move);
-  if (input.dueDate !== undefined && input.dueDate !== currentDueDate) throw new UnprocessableError(CARD_RULE_MESSAGES.changeDate);
+  const {
+    currentAccountId, currentDestinationAccountId, currentIsCard, currentDestinationIsCard, currentDueDate,
+    input, targetAccountIsCard, targetDestinationIsCard,
+  } = opts;
+  const accountChanged = input.accountId !== undefined && input.accountId !== currentAccountId;
+  const destinationChanged = input.destinationAccountId !== undefined && input.destinationAccountId !== currentDestinationAccountId;
+  if (accountChanged && (currentIsCard || targetAccountIsCard)) throw new UnprocessableError(CARD_RULE_MESSAGES.move);
+  if (destinationChanged && (currentDestinationIsCard || targetDestinationIsCard)) throw new UnprocessableError(CARD_RULE_MESSAGES.move);
+  if (currentIsCard && input.dueDate !== undefined && input.dueDate !== currentDueDate) throw new UnprocessableError(CARD_RULE_MESSAGES.changeDate);
 }
 
 /** `pay`/`unpay` não fazem sentido num lançamento de cartão: ele já nasce pago (spec C4). */

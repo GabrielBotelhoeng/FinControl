@@ -356,6 +356,18 @@ describe('compras no cartão e parceladas', () => {
     expect(res.status).toBe(200);
   });
 
+  it('reenviar o mesmo accountId e a mesma dueDate de uma compra no cartão (como o formulário da web sempre faz) é permitido', async () => {
+    const { user, card, food } = await cardScenario();
+    const tx = await createTransaction(app, user, {
+      type: 'expense', amount: 5000, description: 'Mercado', accountId: card.id, categoryId: food, nature: 'variable', dueDate: '2026-11-01',
+    });
+    const res = await request(app).patch(`/api/v1/transactions/${tx.id}`).set(user.auth).send({
+      accountId: card.id, dueDate: '2026-11-01', description: 'Mercado atualizado',
+    });
+    expect(res.status).toBe(200);
+    expect(res.body.description).toBe('Mercado atualizado');
+  });
+
   it('editar descrição, categoria, natureza e valor de um lançamento de cartão é permitido', async () => {
     const { user, card, food } = await cardScenario();
     const tx = await createTransaction(app, user, {

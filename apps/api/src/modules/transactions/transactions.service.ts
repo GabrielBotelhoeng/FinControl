@@ -113,11 +113,15 @@ export function createTransactionsService(deps: TransactionsServiceDeps) {
     async update(userId: string, id: string, input: UpdateTransactionInput, scope: Scope): Promise<TransactionDTO> {
       const current = await getOwned(userId, id);
       // Guarda de cartão (decisão R11): antes de ramificar por escopo, para também bloquear mover uma
-      // recorrência comum para um cartão via scope=future.
+      // recorrência comum para um cartão via scope=future. Só bloqueia accountId/destinationAccountId que
+      // realmente mudam de valor — reenviar o mesmo valor (como o formulário da web sempre faz) é permitido.
       const targetAccountIsCard = input.accountId !== undefined ? await isCard(userId, input.accountId) : false;
       const targetDestinationIsCard = input.destinationAccountId ? await isCard(userId, input.destinationAccountId) : false;
       assertCardEditRules({
+        currentAccountId: current.accountId,
+        currentDestinationAccountId: current.destinationAccountId,
         currentIsCard: await isCard(userId, current.accountId),
+        currentDestinationIsCard: current.destinationAccountId ? await isCard(userId, current.destinationAccountId) : false,
         currentDueDate: current.dueDate,
         input,
         targetAccountIsCard,
