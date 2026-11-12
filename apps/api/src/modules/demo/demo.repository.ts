@@ -6,6 +6,11 @@ const NO_ID = '00000000-0000-0000-0000-000000000000';
 
 export function createDemoRepository(db: DbClient) {
   return {
+    /** Serializa seeds do mesmo usuário até o fim da transação (o lock é liberado no commit ou rollback). */
+    async lockSeed(userId: string): Promise<void> {
+      await db.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${userId}))`;
+    },
+
     countAccounts(userId: string): Promise<number> {
       return db.account.count({ where: { userId } });
     },

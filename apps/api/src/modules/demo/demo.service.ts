@@ -43,6 +43,8 @@ export function createDemoService(deps: DemoServiceDeps) {
       // Atômico: quem recarrega no meio não vê dados pela metade, e uma falha não deixa a demo travada
       // (com contas gravadas, o guarda acima impediria gerar de novo).
       return deps.inTransaction(async (tx) => {
+        // Sem o lock, seeds simultâneos (clique repetido, nova tentativa) passariam todos pela contagem.
+        await tx.repo.lockSeed(userId);
         if ((await tx.repo.countAccounts(userId)) > 0) return { seeded: false };
 
         const today = todayInSaoPaulo(deps.clock());

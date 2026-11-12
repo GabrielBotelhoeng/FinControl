@@ -71,6 +71,15 @@ describe('limpeza agendada das demos', () => {
     expect((await request(flaky).get('/api/v1/accounts').set(visitor.auth)).body).toHaveLength(3);
   });
 
+  it('dois seeds simultâneos do mesmo visitante geram a demo uma única vez', async () => {
+    const visitor = await newUser({ isAnonymous: true });
+    await request(app).get('/api/v1/me').set(visitor.auth); // provisiona antes, como o app faz
+    const results = await Promise.all([1, 2, 3].map(() => request(app).post('/api/v1/demo/seed').set(visitor.auth)));
+    expect(results.map((r) => r.status)).toEqual([200, 200, 200]);
+    expect(results.filter((r) => r.body.seeded === true)).toHaveLength(1);
+    expect((await request(app).get('/api/v1/accounts').set(visitor.auth)).body).toHaveLength(3);
+  });
+
   it('apaga só demos com mais de 7 dias', async () => {
     const oldDemo = await profile(true, 8);
     await profile(true, 1);
