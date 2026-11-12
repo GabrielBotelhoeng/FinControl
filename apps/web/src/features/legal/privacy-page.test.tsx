@@ -16,4 +16,14 @@ describe('PrivacyPage', () => {
     }
     expect(screen.getByRole('link', { name: /Voltar/ })).toHaveAttribute('href', '/entrar');
   });
+
+  it('informa a base legal de cada finalidade (LGPD art. 7º)', async () => {
+    renderApp(<PrivacyPage />, { route: '/privacidade', path: '/privacidade' });
+    // Cada base precisa estar no item da sua finalidade, não só em algum lugar da página.
+    const account = (await screen.findByText(/Conta, finanças e demonstração:/)).closest('li');
+    const security = screen.getByText(/Segurança:/).closest('li');
+    expect(account).toHaveTextContent(/execução do serviço que você solicitou \(art\. 7º, V\)/);
+    expect(security).toHaveTextContent(/legítimo interesse \(art\. 7º, IX\)/);
+    expect(account).not.toHaveTextContent(/legítimo interesse/);
+  });
 });
