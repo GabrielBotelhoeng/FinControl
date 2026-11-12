@@ -101,8 +101,11 @@ describe('RequireAuth', () => {
 describe('LoginPage — privacidade', () => {
   it('avisa a idade mínima e liga para os termos e a política de privacidade', async () => {
     renderApp(<LoginPage />, { gateway: fakeGateway(null).gateway, route: '/entrar', path: '/entrar' });
-    expect(await screen.findByText(/declara ter 18 anos ou mais/)).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Termos de Uso' })).toHaveAttribute('href', '/termos');
-    expect(screen.getByRole('link', { name: 'Política de privacidade' })).toHaveAttribute('href', '/privacidade');
+    // O aviso aparece junto da demo (no celular ela vem antes do painel) e junto do formulário.
+    const demo = await screen.findByRole('button', { name: /Experimentar sem cadastro/ });
+    expect(demo.closest('section')).toHaveTextContent(/declara ter 18 anos ou mais/);
+    expect(screen.getAllByText(/declara ter 18 anos ou mais/)).toHaveLength(2);
+    for (const link of screen.getAllByRole('link', { name: 'Termos de Uso' })) expect(link).toHaveAttribute('href', '/termos');
+    for (const link of screen.getAllByRole('link', { name: 'Política de privacidade' })) expect(link).toHaveAttribute('href', '/privacidade');
   });
 });

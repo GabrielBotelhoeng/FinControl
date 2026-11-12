@@ -18,15 +18,15 @@ test.describe('tela de 360 px', () => {
 
 test('a política de privacidade é pública e está ligada na tela de entrada', async ({ page }) => {
   await page.goto('/entrar');
-  await page.getByRole('link', { name: 'Política de privacidade' }).click();
+  await page.getByRole('link', { name: 'Política de privacidade' }).first().click();
   await expect(page).toHaveURL('/privacidade');
   await expect(page.getByRole('heading', { level: 1, name: 'Política de Privacidade' })).toBeVisible();
 });
 
 test('os termos de uso são públicos, estão ligados na entrada e exigem 18 anos', async ({ page }) => {
   await page.goto('/entrar');
-  await expect(page.getByText(/declara ter 18 anos ou mais/)).toBeVisible();
-  await page.getByRole('link', { name: 'Termos de Uso' }).click();
+  await expect(page.getByText(/declara ter 18 anos ou mais/).first()).toBeVisible();
+  await page.getByRole('link', { name: 'Termos de Uso' }).first().click();
   await expect(page).toHaveURL('/termos');
   await expect(page.getByRole('heading', { level: 1, name: 'Termos de Uso' })).toBeVisible();
   await expect(page.getByText(/maiores de 18 anos/)).toBeVisible();
