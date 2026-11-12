@@ -14,6 +14,21 @@ As 25 skills abaixo estão em `.claude/skills/` (escopo do projeto). Elas foram 
   - Só as pastas das skills foram copiadas. Instaladores (`install.sh`), hooks e `settings.json` dos repositórios ficaram de fora.
 - **Adaptação ao Brasil:** muitas skills usam produtos dos EUA (401k, IRA, 529, T-bills). Os conceitos e as fórmulas valem. Os produtos se traduzem assim: previdência PGBL/VGBL, Tesouro Selic/IPCA+, CDB com liquidez diária, LCI/LCA e poupança.
 
+## Scripts das skills: só referência
+
+Algumas skills trazem scripts Python. Na primeira revisão, o CodeRabbit apontou erros de cálculo neles:
+
+| Script | Problema |
+|---|---|
+| `calculadora-cdi/scripts/cdi.py` | A série 4389 do BCB já é a taxa **anual**, mas o script a trata como diária e anualiza de novo. O rendimento sai errado. |
+| `debt-management/scripts/debt_management.py` | Dívidas com o mesmo nome se misturam. Ao atingir o limite de meses, o script informa a dívida como quitada. |
+| `emergency-fund/scripts/emergency_fund.py` | O resgate pode gerar um cronograma infinito quando o rendimento mensal cobre a retirada. Ao atingir o limite, informa a meta como alcançada. |
+| `asset-allocation`, `diversification` | O otimizador fica instável com matrizes de covariância mal escaladas ou singulares. |
+
+Também há dois ajustes de texto: a pontuação de risco do `crm-client-lifecycle` não é normalizada para 0–100, e o `debt-management` trata o ponto de equilíbrio do refinanciamento como se bastasse para provar economia.
+
+**Regra:** o FinControl não executa esses scripts. As skills orientam conceitos e fórmulas. Todo cálculo que entrar no app é implementado no nosso código, com testes próprios e fontes oficiais (ex.: CDI pela API SGS do Banco Central).
+
 ## Onde cada skill entra
 
 ### 1. Já dá para aproveitar com os dados de hoje
