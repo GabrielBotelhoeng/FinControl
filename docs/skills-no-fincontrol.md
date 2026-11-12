@@ -43,7 +43,11 @@ O app já guarda a natureza do lançamento (fixa ou variável), as categorias, o
 | `finance-psychology` | **Plano de 4 baldes** em vez de "orçamento" | Custos fixos (natureza fixa) 50 a 60%, investimentos 10% ou mais, poupança 5 a 10%, gasto livre 20 a 35%. A skill recomenda evitar a palavra "orçamento", que passa sensação de escassez, e tratar o gasto livre como algo planejado, sem culpa. |
 | `return-calculations` | **Variação real** dos saldos | CAGR do saldo total. Comparar com o IPCA quando houver índice. |
 
-Encaixe no roadmap: sub-projeto 5 (dashboard completo). Pela spec, cada indicador precisa de uma story antes de ser implementado.
+Encaixe no roadmap: sub-projeto 5 (dashboard completo).
+
+**Entregue em 2026-11-12:** taxa de poupança e meses de reserva no painel (`domain/health.ts`; campo `health` do `/dashboard/summary`).
+- A reserva usa o **gasto total médio** (abordagem conservadora, "manter o padrão de vida"), e não só as categorias essenciais. Os nomes de categoria podem ser alterados pelo usuário, então só a soma total é confiável hoje. Uma marcação de "essencial" fica como melhoria futura.
+- Contas de investimento ficam fora do saldo líquido.
 
 ### 2. Sub-projeto 2: cartões de crédito
 

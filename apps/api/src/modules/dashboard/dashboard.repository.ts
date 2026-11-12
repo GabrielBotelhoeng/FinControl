@@ -1,4 +1,4 @@
-import type { CategorySpendDTO, DateOnly, TransactionType } from '@fincontrol/shared';
+import type { AccountType, CategorySpendDTO, DateOnly, TransactionType } from '@fincontrol/shared';
 import type { Prisma } from '../../generated/prisma/client';
 import { fromDateOnly } from '../../infra/date-mapping';
 import type { Db } from '../../infra/prisma';
@@ -47,13 +47,14 @@ export function createDashboardRepository(db: Db) {
       return db.transaction.count({ where: { userId, status: 'pending', dueDate: { lt: fromDateOnly(today) }, ...activeAccount } });
     },
 
-    /** Saldo somado das contas não arquivadas, com os pagamentos até `until` (ou todos). */
-    async balanceAt(userId: string, until?: DateOnly): Promise<number> {
+    /** Saldo somado das contas não arquivadas (opcionalmente só de alguns tipos), com os pagamentos até `until` (ou todos). */
+    async balanceAt(userId: string, until?: DateOnly, types?: AccountType[]): Promise<number> {
       const paid = paidWhere(userId, undefined, until);
+      const account = { archivedAt: null, ...(types ? { type: { in: types } } : {}) };
       const [initial, own, incoming] = await Promise.all([
-        db.account.aggregate({ where: { userId, archivedAt: null }, _sum: { initialBalance: true } }),
-        db.transaction.groupBy({ by: ['type'], where: { ...paid, ...activeAccount }, _sum: { amount: true } }),
-        db.transaction.aggregate({ where: { ...paid, type: 'transfer', destinationAccount: { archivedAt: null } }, _sum: { amount: true } }),
+        db.account.aggregate({ where: { userId, ...account }, _sum: { initialBalance: true } }),
+        db.transaction.groupBy({ by: ['type'], where: { ...paid, account }, _sum: { amount: true } }),
+        db.transaction.aggregate({ where: { ...paid, type: 'transfer', destinationAccount: account }, _sum: { amount: true } }),
       ]);
       let balance = Number(initial._sum.initialBalance ?? 0n);
       for (const g of own) {

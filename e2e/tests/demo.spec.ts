@@ -6,6 +6,10 @@ test('visitante entra pela demo em um clique e vê 6 meses de dados', async ({ p
   await expect(page.getByText('Saldo em todas as contas')).toBeVisible();
   // Seed completo: as recorrências passadas ficam pagas e só uma conta de propósito como vencida.
   await expect(page.getByText(/· 1 vencido$/)).toBeVisible();
+  // Indicadores de saúde financeira calculados sobre os 6 meses da demo.
+  const metric = (name: string) => page.getByRole('group', { name }).locator('[data-metric-value]');
+  await expect(metric('Taxa de poupança')).toHaveText(/^-?\d+\s?%$/);
+  await expect(metric('Reserva de emergência')).toHaveText(/^\d+(,\d)? m(eses|ês)$/);
   await expect(page.getByRole('heading', { name: 'Últimos 6 meses' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'A pagar' })).toBeVisible();
 });

@@ -14,6 +14,7 @@ const summary = {
   expense: { current: 312040, previous: 278000, changePercent: 12.2 },
   pendingCount: 2,
   overdueCount: 1,
+  health: { savingsRate: 0.25, reserveMonths: 4.2, liquidBalance: 420000, averageMonthlyExpense: 100000 },
   upcoming: [
     { id: 't1', type: 'expense', amount: 11990, description: 'Internet', accountId: 'a1', destinationAccountId: null, categoryId: 'c1', nature: 'fixed', status: 'pending', dueDate: '2026-10-15', paidDate: null, recurrenceId: 'r1', occurrenceDate: '2026-10-15', overdue: true, createdAt: '' },
   ],
