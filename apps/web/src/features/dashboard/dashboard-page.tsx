@@ -7,6 +7,7 @@ import { MonthPicker } from '../../components/ui/month-picker';
 import { Panel } from '../../components/ui/panel';
 import { EmptyState, ErrorState, Skeleton } from '../../components/ui/states';
 import { formatBRL, formatMonthLabel } from '../../lib/format';
+import { HealthTiles } from './health-tiles';
 import { useAccounts } from '../accounts/api';
 import { useCategories } from '../categories/api';
 import { TransactionForm } from '../transactions/transaction-form';
@@ -82,6 +83,12 @@ export default function DashboardPage() {
             <Comparison label={`Receitas em ${formatMonthLabel(summary.data.month).split(' ')[0]}`} kind="income" data={summary.data.income} />
             <Comparison label={`Despesas em ${formatMonthLabel(summary.data.month).split(' ')[0]}`} kind="expense" data={summary.data.expense} />
           </div>
+        </section>
+      )}
+
+      {summary.data && (
+        <section aria-label="Saúde financeira" className="mb-6">
+          <HealthTiles health={summary.data.health} />
         </section>
       )}
 
