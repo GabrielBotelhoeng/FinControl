@@ -74,7 +74,8 @@ export function LoginPage() {
     setDemoPending(true);
     setError(null);
     try {
-      await gateway.signInAnonymously();
+      // Nova tentativa depois de uma falha no seed: reaproveita o anônimo que já existe em vez de criar outro.
+      if (!(await gateway.getSession())?.user.isAnonymous) await gateway.signInAnonymously();
       await api.post('/demo/seed', undefined);
       navigate('/', { replace: true });
     } catch (err) {
