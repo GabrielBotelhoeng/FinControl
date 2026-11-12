@@ -20,7 +20,7 @@ export function buildContainer(deps: AppDeps) {
   const provisioner = createProvisioner(deps.db);
   const profile = createProfileService({ repo: createProfileRepository(deps.db), provisioner, authAdmin: deps.authAdmin });
   const accountsRepo = createAccountsRepository(deps.db);
-  const accounts = createAccountsService(accountsRepo);
+  const accounts = createAccountsService({ repo: accountsRepo, clock: deps.clock });
   const categoriesRepo = createCategoriesRepository(deps.db);
   const categories = createCategoriesService(categoriesRepo);
   const transactionsRepo = createTransactionsRepository(deps.db);

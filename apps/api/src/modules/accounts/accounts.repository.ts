@@ -1,5 +1,6 @@
-import type { AccountType } from '@fincontrol/shared';
+import { startOfMonth, type AccountType, type YearMonth } from '@fincontrol/shared';
 import { ZERO_FLOWS, type AccountFlows } from '../../domain/balance';
+import { fromDateOnly } from '../../infra/date-mapping';
 import type { DbClient } from '../../infra/prisma';
 
 export type AccountRow = {
@@ -123,6 +124,27 @@ export function createAccountsRepository(db: DbClient) {
         if (g.destinationAccountId) get(g.destinationAccountId).transferInPaid += Number(g._sum.amount ?? 0n);
       }
       return flows;
+    },
+
+    /**
+     * Valor e pago de UMA fatura de cartão num mês (decisão R13): valor = soma das despesas do cartão
+     * naquele `invoiceMonth`; pago = soma das transferências pagas para o cartão no mesmo `invoiceMonth`.
+     * Cálculo único reaproveitado pelo DTO de conta (limite/fatura aberta/próximo vencimento) e, nas
+     * Tarefas 7 e 8, pelas faturas e pelo painel.
+     */
+    async invoiceTotals(userId: string, cardAccountId: string, invoiceMonth: YearMonth): Promise<{ amount: number; paid: number }> {
+      const month = fromDateOnly(startOfMonth(invoiceMonth));
+      const [spent, paid] = await Promise.all([
+        db.transaction.aggregate({
+          where: { userId, accountId: cardAccountId, type: 'expense', status: 'paid', invoiceMonth: month },
+          _sum: { amount: true },
+        }),
+        db.transaction.aggregate({
+          where: { userId, destinationAccountId: cardAccountId, type: 'transfer', status: 'paid', invoiceMonth: month },
+          _sum: { amount: true },
+        }),
+      ]);
+      return { amount: Number(spent._sum.amount ?? 0n), paid: Number(paid._sum.amount ?? 0n) };
     },
   };
 }
