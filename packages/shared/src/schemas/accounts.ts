@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { MAX_CENTS } from '../money';
 import { colorSchema, nameSchema, NON_EMPTY_MESSAGE, nonEmpty } from './common';
 
-export const accountTypeSchema = z.enum(['checking', 'savings', 'wallet', 'investment']);
+export const accountTypeSchema = z.enum(['checking', 'savings', 'wallet', 'investment', 'credit_card']);
 export type AccountType = z.infer<typeof accountTypeSchema>;
 
 const initialBalanceSchema = z.number().int('Valor deve ser em centavos (inteiro)').min(-MAX_CENTS).max(MAX_CENTS);

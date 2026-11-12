@@ -1,5 +1,5 @@
 import type { AccountDTO } from '@fincontrol/shared';
-import { Archive, ArchiveRestore, ArrowLeftRight, Landmark, PiggyBank, Pencil, Plus, TrendingUp, Wallet } from 'lucide-react';
+import { Archive, ArchiveRestore, ArrowLeftRight, Landmark, PiggyBank, Pencil, Plus, TrendingUp, Wallet, type LucideIcon } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '../../components/ui/button';
@@ -12,11 +12,12 @@ import { AccountForm } from './account-form';
 import { accountTypeLabel, useAccounts, useArchiveAccount } from './api';
 import { TransferForm } from './transfer-form';
 
-const TYPE_ICON = { checking: Landmark, savings: PiggyBank, wallet: Wallet, investment: TrendingUp } as const;
+// Record<string, ...> (não Record<AccountType, ...>): cobre tipos ainda sem ícone dedicado (ex.: credit_card, Tarefa 10) com o fallback abaixo.
+const TYPE_ICON: Record<string, LucideIcon> = { checking: Landmark, savings: PiggyBank, wallet: Wallet, investment: TrendingUp };
 
 function AccountItem({ account, onEdit }: { account: AccountDTO; onEdit: () => void }) {
   const archive = useArchiveAccount();
-  const Icon = TYPE_ICON[account.type];
+  const Icon = TYPE_ICON[account.type] ?? Wallet;
   const archived = account.archivedAt !== null;
   return (
     <Panel aria-label={account.name} role="article" className={cn('flex flex-col gap-6 p-6', archived && 'opacity-60')}>
