@@ -1,5 +1,7 @@
 import { createAccountsRepository } from '../modules/accounts/accounts.repository';
 import { createAccountsService } from '../modules/accounts/accounts.service';
+import { createCardsRepository } from '../modules/cards/cards.repository';
+import { createCardsService } from '../modules/cards/cards.service';
 import { createCategoriesRepository } from '../modules/categories/categories.repository';
 import { createCategoriesService } from '../modules/categories/categories.service';
 import { createDashboardRepository } from '../modules/dashboard/dashboard.repository';
@@ -41,6 +43,8 @@ export function buildContainer(deps: AppDeps) {
     },
   });
   const dashboard = createDashboardService({ repo: createDashboardRepository(deps.db), transactions: transactionsRepo, recurrences, clock: deps.clock });
+  const cardsRepo = createCardsRepository(deps.db);
+  const cards = createCardsService({ repo: cardsRepo, accountsRepo, accounts, transactionsRepo, clock: deps.clock });
   const demo = createDemoService({
     repo: createDemoRepository(deps.db), categories: categoriesRepo, profile, clock: deps.clock,
     // O seed grava ~170 linhas; o limite de 5 s padrão do Prisma é apertado no plano gratuito.
@@ -63,6 +67,7 @@ export function buildContainer(deps: AppDeps) {
   return {
     provisioner, profile, accountsRepo, accounts, categoriesRepo, categories,
     transactionsRepo, validateRefs, recurrencesRepo, recurrences, transactions, dashboard, demo,
+    cardsRepo, cards,
   };
 }
 

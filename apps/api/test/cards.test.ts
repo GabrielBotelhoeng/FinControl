@@ -391,3 +391,146 @@ describe('compras no cartão e parceladas', () => {
     expect(res.status).toBe(422);
   });
 });
+
+describe('faturas do cartão e pagamento por transferência', () => {
+  beforeEach(resetDb);
+
+  it('fatura fechada aparece com valor e situação; pagar reduz a corrente, marca paga e devolve o limite', async () => {
+    const { user, card, checking, food } = await cardScenario();
+    await createTransaction(app, user, { type: 'expense', amount: 30000, description: 'Mercado', accountId: card.id, categoryId: food, nature: 'variable', dueDate: '2026-10-20' }); // fatura 2026-11 (fecha 26/10, vence 05/11)
+    const inv = await request(app).get(`/api/v1/cards/${card.id}/invoices/2026-11`).set(user.auth);
+    expect(inv.body).toMatchObject({ month: '2026-11', amount: 30000, paid: 0, status: 'overdue', closingDate: '2026-10-26', dueDate: '2026-11-05' });
+    const pay = await request(app).post(`/api/v1/cards/${card.id}/invoices/2026-11/payments`).set(user.auth).send({ amount: 30000, accountId: checking.id, paidDate: '2026-11-10' });
+    expect(pay.status).toBe(201);
+    expect((await request(app).get(`/api/v1/cards/${card.id}/invoices/2026-11`).set(user.auth)).body.status).toBe('paid');
+    const accounts = (await request(app).get('/api/v1/accounts').set(user.auth)).body;
+    expect(accounts.find((a: { id: string }) => a.id === checking.id).balance).toBe(470000);
+    expect(accounts.find((a: { id: string }) => a.id === card.id)).toMatchObject({ balance: 0, card: { limitAvailable: 800000 } });
+    const summary = (await request(app).get('/api/v1/dashboard/summary').set(user.auth)).body;
+    expect(summary.expense.current).toBe(0); // o pagamento não conta como gasto em novembro (a compra foi em outubro)
+  });
+
+  it('pagar mais do que a fatura reduz a dívida do cartão sem erro', async () => {
+    const { user, card, checking } = await cardScenario();
+    const pay = await request(app).post(`/api/v1/cards/${card.id}/invoices/2026-11/payments`).set(user.auth).send({ amount: 5000, accountId: checking.id, paidDate: '2026-11-10' });
+    expect(pay.status).toBe(201);
+  });
+
+  it('pagamento é uma transferência paga, sem categoria/natureza, com dueDate=paidDate=data enviada e invoiceMonth da fatura', async () => {
+    const { user, card, checking } = await cardScenario();
+    const res = await request(app).post(`/api/v1/cards/${card.id}/invoices/2026-11/payments`).set(user.auth).send({ amount: 12345, accountId: checking.id, paidDate: '2026-11-10' });
+    expect(res.status).toBe(201);
+    expect(res.body).toMatchObject({
+      type: 'transfer', amount: 12345, accountId: checking.id, destinationAccountId: card.id,
+      categoryId: null, nature: null, status: 'paid', dueDate: '2026-11-10', paidDate: '2026-11-10', invoiceMonth: '2026-11',
+    });
+    expect(res.body.description).toMatch(/fatura/i); // descrição em pt-BR que identifica a fatura (decisão do controlador)
+  });
+
+  it('isolamento: fatura de outro usuário dá 404', async () => {
+    const { card } = await cardScenario();
+    const intruder = await newUser();
+    expect((await request(app).get(`/api/v1/cards/${card.id}/invoices/2026-11`).set(intruder.auth)).status).toBe(404);
+    expect((await request(app).post(`/api/v1/cards/${card.id}/invoices/2026-11/payments`).set(intruder.auth).send({ amount: 1, accountId: card.id, paidDate: '2026-11-10' })).status).toBe(404);
+  });
+
+  it('isolamento: lista de faturas de outro usuário dá 404', async () => {
+    const { card } = await cardScenario();
+    const intruder = await newUser();
+    expect((await request(app).get(`/api/v1/cards/${card.id}/invoices`).set(intruder.auth)).status).toBe(404);
+  });
+
+  it(':id que não é cartão (conta comum) dá 404 nas três rotas', async () => {
+    const { user, checking } = await cardScenario();
+    expect((await request(app).get(`/api/v1/cards/${checking.id}/invoices`).set(user.auth)).status).toBe(404);
+    expect((await request(app).get(`/api/v1/cards/${checking.id}/invoices/2026-11`).set(user.auth)).status).toBe(404);
+    expect((await request(app).post(`/api/v1/cards/${checking.id}/invoices/2026-11/payments`).set(user.auth).send({ amount: 1, accountId: checking.id, paidDate: '2026-11-10' })).status).toBe(404);
+  });
+
+  it('mês inválido no path dá 400 (GET detalhe e POST pagamento)', async () => {
+    const { user, card, checking } = await cardScenario();
+    expect((await request(app).get(`/api/v1/cards/${card.id}/invoices/2026-13`).set(user.auth)).status).toBe(400);
+    expect((await request(app).post(`/api/v1/cards/${card.id}/invoices/2026-13/payments`).set(user.auth).send({ amount: 1, accountId: checking.id, paidDate: '2026-11-10' })).status).toBe(400);
+  });
+
+  it('pagar a fatura de um cartão arquivado é permitido (ele continua em "a pagar" até quitar)', async () => {
+    const { user, card, checking } = await cardScenario();
+    await request(app).post(`/api/v1/accounts/${card.id}/archive`).set(user.auth);
+    const res = await request(app).post(`/api/v1/cards/${card.id}/invoices/2026-11/payments`).set(user.auth).send({ amount: 100, accountId: checking.id, paidDate: '2026-11-10' });
+    expect(res.status).toBe(201);
+  });
+
+  it('pagar a fatura a partir de uma conta que é cartão dá 422', async () => {
+    const { user, card, checking } = await cardScenario();
+    const card2 = await createAccount(app, user, {
+      name: 'Cartão 2', type: 'credit_card', color: '#111111', creditLimit: 1000, closingDay: 10, dueDay: 20, paymentAccountId: checking.id,
+    });
+    const res = await request(app).post(`/api/v1/cards/${card.id}/invoices/2026-11/payments`).set(user.auth).send({ amount: 100, accountId: card2.id, paidDate: '2026-11-10' });
+    expect(res.status).toBe(422);
+  });
+
+  it('pagar a fatura com conta pagadora arquivada dá 422', async () => {
+    const { user, card, checking } = await cardScenario();
+    await request(app).post(`/api/v1/accounts/${checking.id}/archive`).set(user.auth);
+    const res = await request(app).post(`/api/v1/cards/${card.id}/invoices/2026-11/payments`).set(user.auth).send({ amount: 100, accountId: checking.id, paidDate: '2026-11-10' });
+    expect(res.status).toBe(422);
+  });
+
+  it('pagar a fatura com paidDate no futuro dá 422 (mesma mensagem da regra de pagamento futuro)', async () => {
+    const { user, card, checking } = await cardScenario();
+    const res = await request(app).post(`/api/v1/cards/${card.id}/invoices/2026-11/payments`).set(user.auth).send({ amount: 100, accountId: checking.id, paidDate: '2026-11-12' });
+    expect(res.status).toBe(422);
+    expect(res.body.detail).toBe('A data de pagamento não pode estar no futuro.');
+  });
+
+  it('lista faturas do mês mais antigo com compra até a fatura aberta, mais recente primeiro; from/to recortam', async () => {
+    const { user, card, food } = await cardScenario();
+    await createTransaction(app, user, { type: 'expense', amount: 10000, description: 'A', accountId: card.id, categoryId: food, nature: 'variable', dueDate: '2026-09-01' }); // fatura 2026-10
+    await createTransaction(app, user, { type: 'expense', amount: 20000, description: 'B', accountId: card.id, categoryId: food, nature: 'variable', dueDate: '2026-10-01' }); // fatura 2026-11
+
+    const all = await request(app).get(`/api/v1/cards/${card.id}/invoices`).set(user.auth);
+    expect(all.body.map((i: { month: string }) => i.month)).toEqual(['2026-12', '2026-11', '2026-10']);
+    expect(all.body.map((i: { amount: number }) => i.amount)).toEqual([0, 20000, 10000]);
+
+    const narrowed = await request(app).get(`/api/v1/cards/${card.id}/invoices?from=2026-11&to=2026-11`).set(user.auth);
+    expect(narrowed.body.map((i: { month: string }) => i.month)).toEqual(['2026-11']);
+  });
+
+  it('sem compras no cartão, a lista de faturas tem só a fatura aberta com valor 0', async () => {
+    const { user, card } = await cardScenario();
+    const res = await request(app).get(`/api/v1/cards/${card.id}/invoices`).set(user.auth);
+    expect(res.body).toEqual([expect.objectContaining({ month: '2026-12', amount: 0, paid: 0 })]);
+  });
+
+  it('detalhe da fatura traz as despesas do cartão e os pagamentos dessa fatura', async () => {
+    const { user, card, checking, food } = await cardScenario();
+    const purchase = await createTransaction(app, user, { type: 'expense', amount: 30000, description: 'Mercado', accountId: card.id, categoryId: food, nature: 'variable', dueDate: '2026-10-20' }); // fatura 2026-11
+    const pay = await request(app).post(`/api/v1/cards/${card.id}/invoices/2026-11/payments`).set(user.auth).send({ amount: 10000, accountId: checking.id, paidDate: '2026-11-10' });
+    expect(pay.status).toBe(201);
+    const detail = await request(app).get(`/api/v1/cards/${card.id}/invoices/2026-11`).set(user.auth);
+    expect(detail.body).toMatchObject({ month: '2026-11', amount: 30000, paid: 10000 });
+    expect(detail.body.transactions.map((t: { id: string }) => t.id).sort()).toEqual([purchase.id, pay.body.id].sort());
+  });
+
+  it('nextDue cobre a fatura anterior à aberta (fechada, ainda não vencida, com saldo); some após pagar (teste herdado da revisão da Tarefa 5)', async () => {
+    const user = await newUser();
+    const checking = await createAccount(app, user, { name: 'Corrente' });
+    const card = await createAccount(app, user, {
+      name: 'Cartão', type: 'credit_card', color: '#7c3aed',
+      creditLimit: 800000, closingDay: 5, dueDay: 20, paymentAccountId: checking.id,
+    });
+    const food = await categoryId(app, user, 'Alimentação', 'expense');
+    await createTransaction(app, user, {
+      type: 'expense', amount: 30000, description: 'Compra', accountId: card.id, categoryId: food, nature: 'variable', dueDate: '2026-11-02',
+    }); // fecha 05/11, vence 20/11 -> fatura 2026-11 (fechada, ainda não vencida, em 2026-11-11)
+
+    const before = (await request(app).get('/api/v1/accounts').set(user.auth)).body;
+    expect(before.find((a: { id: string }) => a.id === card.id).card).toMatchObject({ nextDue: { date: '2026-11-20', amount: 30000 } });
+
+    const pay = await request(app).post(`/api/v1/cards/${card.id}/invoices/2026-11/payments`).set(user.auth).send({ amount: 30000, accountId: checking.id, paidDate: '2026-11-10' });
+    expect(pay.status).toBe(201);
+
+    const after = (await request(app).get('/api/v1/accounts').set(user.auth)).body;
+    expect(after.find((a: { id: string }) => a.id === card.id).card.nextDue).toBeNull();
+  });
+});

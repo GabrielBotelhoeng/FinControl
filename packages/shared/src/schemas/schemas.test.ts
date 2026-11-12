@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  centsSchema, createAccountSchema, createTransactionSchema, listTransactionsQuerySchema,
+  centsSchema, createAccountSchema, createTransactionSchema, listInvoicesQuerySchema, listTransactionsQuerySchema,
   payInvoiceSchema, updateAccountSchema, updateTransactionSchema,
 } from './index';
 
@@ -132,5 +132,17 @@ describe('payInvoiceSchema', () => {
   it('usa a mensagem em pt-BR de centsSchema para valor zero', () => {
     const r = payInvoiceSchema.safeParse({ amount: 0, accountId: ACC, paidDate: '2026-11-10' });
     expect(r.error?.issues[0]?.message).toBe('Valor deve ser maior que zero');
+  });
+});
+
+describe('listInvoicesQuerySchema', () => {
+  it('from e to são opcionais e aceitam AAAA-MM', () => {
+    expect(listInvoicesQuerySchema.parse({})).toEqual({});
+    expect(listInvoicesQuerySchema.safeParse({ from: '2026-01', to: '2026-12' }).success).toBe(true);
+  });
+
+  it('recusa mês fora do formato AAAA-MM', () => {
+    expect(listInvoicesQuerySchema.safeParse({ from: '2026-13' }).success).toBe(false);
+    expect(listInvoicesQuerySchema.safeParse({ to: '2026/11' }).success).toBe(false);
   });
 });

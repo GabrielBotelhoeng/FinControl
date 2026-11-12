@@ -22,7 +22,11 @@ export function createAccountsService(deps: AccountsServiceDeps) {
     if (await repo.findActiveByName(userId, name, exceptId)) throw new ConflictError('Já existe uma conta ativa com esse nome.');
   }
 
-  /** Conta pagadora: do próprio usuário (404 se não encontrada), não arquivada e que não é cartão (spec C2). */
+  /**
+   * Conta pagadora: do próprio usuário (404 se não encontrada), não arquivada e que não é cartão (spec C2).
+   * Exposta no service (decisão R14): o pagamento de fatura (Tarefa 7) reaproveita a mesma regra para o
+   * `accountId` informado, em vez de duplicá-la no módulo `cards`.
+   */
   async function assertPayer(userId: string, paymentAccountId: string): Promise<void> {
     const payer = await getOwned(userId, paymentAccountId);
     if (payer.archivedAt) throw new UnprocessableError('A conta pagadora não pode estar arquivada.');
@@ -159,6 +163,8 @@ export function createAccountsService(deps: AccountsServiceDeps) {
       const account = await getOwned(userId, id);
       if (account.archivedAt) throw new UnprocessableError('Não é possível lançar em uma conta arquivada.');
     },
+
+    assertPayer,
   };
 }
 

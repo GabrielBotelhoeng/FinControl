@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { MAX_CENTS } from '../money';
-import { centsSchema, colorSchema, dateOnlySchema, idSchema, nameSchema, NON_EMPTY_MESSAGE, nonEmpty } from './common';
+import { centsSchema, colorSchema, dateOnlySchema, idSchema, nameSchema, NON_EMPTY_MESSAGE, nonEmpty, yearMonthSchema } from './common';
 
 export const accountTypeSchema = z.enum(['checking', 'savings', 'wallet', 'investment', 'credit_card']);
 export type AccountType = z.infer<typeof accountTypeSchema>;
@@ -89,3 +89,7 @@ export type InvoiceDTO = {
   paid: number;
   status: 'open' | 'closed' | 'paid' | 'overdue';
 };
+
+/** Recorta a lista de faturas do cartão (Tarefa 7, decisão do controlador); from/to são AAAA-MM opcionais. */
+export const listInvoicesQuerySchema = z.object({ from: yearMonthSchema.optional(), to: yearMonthSchema.optional() });
+export type ListInvoicesQuery = z.output<typeof listInvoicesQuerySchema>;
