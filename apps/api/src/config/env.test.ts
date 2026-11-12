@@ -19,4 +19,8 @@ describe('loadConfig', () => {
   it('rejeita WEB_PREVIEW_ORIGIN_PATTERN que não é regex válida', () => {
     expect(() => loadConfig({ ...process.env, WEB_PREVIEW_ORIGIN_PATTERN: '([' })).toThrow(/WEB_PREVIEW_ORIGIN_PATTERN/);
   });
+
+  it('DATABASE_CA_CERT, se vier, precisa ser um certificado PEM', () => {
+    expect(() => loadConfig({ ...process.env, DATABASE_CA_CERT: 'não é pem' })).toThrow(/DATABASE_CA_CERT/);
+  });
 });

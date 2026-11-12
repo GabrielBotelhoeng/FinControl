@@ -13,7 +13,7 @@ export const logger = createLogger(config.LOG_LEVEL);
 const app: Express = createApp({
   config,
   logger,
-  db: createPrisma(config.DATABASE_URL),
+  db: createPrisma(config.DATABASE_URL, config.DATABASE_CA_CERT),
   verifier: createSupabaseVerifier(config.SUPABASE_URL),
   authAdmin: createSupabaseAuthAdmin(config.SUPABASE_URL, config.SUPABASE_SERVICE_ROLE_KEY),
   clock: () => new Date(),
