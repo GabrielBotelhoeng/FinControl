@@ -69,6 +69,11 @@ Resolvidas em 2026-11-11, cada uma com teste RED→GREEN:
 - **Cron:** registrado na Vercel (`0 6 * * *`). Testado em produção: 401 sem segredo e `{"deleted":0}` com segredo.
 - **Google:** login testado de ponta a ponta pelo usuário em 2026-11-12.
 
+## Skills de finanças (2026-11-12)
+
+- Há 25 skills em `.claude/skills/`, escolhidas entre 696 e auditadas. O mapa de onde cada uma entra no produto está em `docs/skills-no-fincontrol.md`.
+- CodeRabbit (app do GitHub) está instalado só no repositório FinControl e revisa as PRs.
+
 ## Como rodar
 
 Ver o `README.md` (`npm run db:up`, `npm run db:migrate`, `npm run dev:api`, `npm test`).
