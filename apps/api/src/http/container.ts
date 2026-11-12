@@ -12,7 +12,7 @@ import { createProvisioner } from '../modules/profile/provisioning';
 import { createRecurrencesRepository } from '../modules/recurrences/recurrences.repository';
 import { createRecurrencesService } from '../modules/recurrences/recurrences.service';
 import { createRefsValidator } from '../modules/transactions/transactions.refs';
-import { createTransactionsRepository } from '../modules/transactions/transactions.repository';
+import { createTransactionsRepository, type NewTransaction, type TransactionRow } from '../modules/transactions/transactions.repository';
 import { createTransactionsService } from '../modules/transactions/transactions.service';
 import type { AppDeps } from './deps';
 
@@ -27,7 +27,19 @@ export function buildContainer(deps: AppDeps) {
   const validateRefs = createRefsValidator(accounts, categories);
   const recurrencesRepo = createRecurrencesRepository(deps.db);
   const recurrences = createRecurrencesService({ repo: recurrencesRepo, transactions: transactionsRepo, validateRefs, clock: deps.clock });
-  const transactions = createTransactionsService({ repo: transactionsRepo, validateRefs, recurrences, clock: deps.clock });
+  const transactions = createTransactionsService({
+    repo: transactionsRepo, validateRefs, recurrences, clock: deps.clock,
+    // As N parcelas de uma compra no cartão são gravadas numa única transação do banco (decisão R10), no mesmo
+    // estilo usado abaixo para o seed da demo: repositório recriado sobre o client da transação interativa.
+    async createInstallments(userId: string, rows: NewTransaction[]): Promise<TransactionRow[]> {
+      return deps.db.$transaction(async (tx) => {
+        const scoped = createTransactionsRepository(tx);
+        const created: TransactionRow[] = [];
+        for (const row of rows) created.push(await scoped.create(userId, row));
+        return created;
+      });
+    },
+  });
   const dashboard = createDashboardService({ repo: createDashboardRepository(deps.db), transactions: transactionsRepo, recurrences, clock: deps.clock });
   const demo = createDemoService({
     repo: createDemoRepository(deps.db), categories: categoriesRepo, profile, clock: deps.clock,

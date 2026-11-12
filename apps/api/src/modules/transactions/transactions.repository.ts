@@ -1,4 +1,7 @@
-import { monthOf, startOfMonth, type DateOnly, type TransactionNature, type TransactionStatus, type TransactionType, type YearMonth } from '@fincontrol/shared';
+import {
+  monthOf, startOfMonth,
+  type AccountType, type DateOnly, type TransactionNature, type TransactionStatus, type TransactionType, type YearMonth,
+} from '@fincontrol/shared';
 import type { Prisma } from '../../generated/prisma/client';
 import { fromDateOnly, toDateOnly } from '../../infra/date-mapping';
 import type { DbClient } from '../../infra/prisma';
@@ -21,8 +24,13 @@ export type TransactionRow = {
   invoiceMonth: YearMonth | null;
   installmentNumber: number | null;
   installmentTotal: number | null;
+  /** Agrupa as N parcelas de uma mesma compra (decisão R10); `null` fora de compra parcelada. */
+  installmentGroupId: string | null;
   createdAt: Date;
 };
+
+/** Tipo e dias de fatura de uma conta, para as regras de cartão nos caminhos de lançamentos (decisão R10/R11). */
+export type AccountCardInfo = { type: AccountType; closingDay: number | null; dueDay: number | null };
 
 export type NewTransaction = Omit<TransactionRow, 'id' | 'createdAt'>;
 
@@ -69,6 +77,7 @@ export const toTransactionRow = (t: TransactionRecord): TransactionRow => ({
   invoiceMonth: optYm(t.invoiceMonth),
   installmentNumber: t.installmentNumber,
   installmentTotal: t.installmentTotal,
+  installmentGroupId: t.installmentGroupId,
   createdAt: t.createdAt,
 });
 
@@ -146,6 +155,11 @@ export function createTransactionsRepository(db: DbClient) {
     async insertMany(userId: string, rows: NewTransaction[]): Promise<void> {
       if (rows.length === 0) return;
       await db.transaction.createMany({ data: rows.map((r) => toCreateData(userId, r)), skipDuplicates: true });
+    },
+
+    /** Tipo e dias de fatura da conta (`accountId`), para as regras de cartão em `transactions.service.ts`. */
+    async findAccountCardInfo(userId: string, accountId: string): Promise<AccountCardInfo | null> {
+      return db.account.findFirst({ where: { id: accountId, userId }, select: { type: true, closingDay: true, dueDay: true } });
     },
 
     /** Pendentes até `until` em contas não arquivadas, vencimento mais próximo primeiro. */

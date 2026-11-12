@@ -89,6 +89,7 @@ export function createDemoService(deps: DemoServiceDeps) {
             invoiceMonth: null,
             installmentNumber: null,
             installmentTotal: null,
+            installmentGroupId: null,
           })),
         );
 

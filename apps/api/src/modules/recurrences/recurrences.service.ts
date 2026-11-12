@@ -50,7 +50,7 @@ export function createRecurrencesService(deps: RecurrencesServiceDeps) {
         if (skipped?.has(date)) continue;
         rows.push({
           ...templateOf(rec), status: 'pending', dueDate: date, paidDate: null, recurrenceId: rec.id, occurrenceDate: date,
-          invoiceMonth: null, installmentNumber: null, installmentTotal: null,
+          invoiceMonth: null, installmentNumber: null, installmentTotal: null, installmentGroupId: null,
         });
       }
     }
@@ -68,7 +68,7 @@ export function createRecurrencesService(deps: RecurrencesServiceDeps) {
     const rec = await repo.create(userId, { ...template, frequency, startDate: input.dueDate, endDate });
     return transactions.create(userId, {
       ...template, status: input.status, dueDate: input.dueDate, paidDate, recurrenceId: rec.id, occurrenceDate: input.dueDate,
-      invoiceMonth: null, installmentNumber: null, installmentTotal: null,
+      invoiceMonth: null, installmentNumber: null, installmentTotal: null, installmentGroupId: null,
     });
   }
 

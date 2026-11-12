@@ -5,9 +5,21 @@ import { fromDateOnly } from '../src/infra/date-mapping';
 import { buildTestApp } from './helpers/app';
 import { newUser } from './helpers/auth';
 import { resetDb, testDb } from './helpers/db';
-import { createAccount } from './helpers/factories';
+import { categoryId, createAccount, createTransaction } from './helpers/factories';
 
 const { app } = buildTestApp();
+
+/** Usuário com corrente (500000), cartão (limite 800000, fecha 26, vence 5, pagadora = corrente) e categoria "Alimentação". */
+async function cardScenario() {
+  const user = await newUser();
+  const checking = await createAccount(app, user, { name: 'Corrente', initialBalance: 500000 });
+  const card = await createAccount(app, user, {
+    name: 'Cartão', type: 'credit_card', color: '#7c3aed',
+    creditLimit: 800000, closingDay: 26, dueDay: 5, paymentAccountId: checking.id,
+  });
+  const food = await categoryId(app, user, 'Alimentação', 'expense');
+  return { user, card, checking, food };
+}
 
 describe('cartões (contas credit_card)', () => {
   beforeEach(resetDb);
@@ -195,5 +207,175 @@ describe('cartões (contas credit_card)', () => {
     const byId = Object.fromEntries((res.body as AccountDTO[]).map((a) => [a.id, a.card]));
     expect(byId[checking.id]).toBeNull();
     expect(byId[card.id]).toMatchObject({ limitAvailable: 800000 });
+  });
+});
+
+describe('compras no cartão e parceladas', () => {
+  beforeEach(resetDb);
+
+  it('compra à vista no cartão: paga na data, cai na fatura certa e não mexe na conta corrente', async () => {
+    const { user, card, checking, food } = await cardScenario();
+    const tx = await createTransaction(app, user, {
+      type: 'expense', amount: 30000, description: 'Mercado', accountId: card.id, categoryId: food, nature: 'variable', dueDate: '2026-11-01',
+    });
+    expect(tx).toMatchObject({ status: 'paid', paidDate: '2026-11-01', invoiceMonth: '2026-12', installmentNumber: null });
+    const accounts = (await request(app).get('/api/v1/accounts').set(user.auth)).body;
+    expect(accounts.find((a: { id: string }) => a.id === checking.id).balance).toBe(500000);
+    expect(accounts.find((a: { id: string }) => a.id === card.id)).toMatchObject({ balance: -30000, card: { limitAvailable: 770000 } });
+  });
+
+  it('parcelada em 3x: soma exata, faturas consecutivas, 1ª leva o resto, limite consome o total', async () => {
+    const { user, card, food } = await cardScenario();
+    // Compra em 27/10 (depois do fechamento de 26/10) → 1ª parcela na fatura 2026-12. Parcelas 2 e 3 têm data futura: só o sistema pode gerá-las.
+    const res = await request(app).post('/api/v1/transactions').set(user.auth).send({
+      type: 'expense', amount: 100000, description: 'Celular', accountId: card.id, categoryId: food, nature: 'variable', dueDate: '2026-10-27', installments: 3,
+    });
+    expect(res.status).toBe(201);
+    expect(
+      res.body.installments.map((t: { amount: number; invoiceMonth: string; paidDate: string; installmentNumber: number }) => [
+        t.amount, t.invoiceMonth, t.paidDate, t.installmentNumber,
+      ]),
+    ).toEqual([
+      [33334, '2026-12', '2026-10-27', 1],
+      [33333, '2027-01', '2026-11-27', 2],
+      [33333, '2027-02', '2026-12-27', 3],
+    ]);
+    expect(res.body).toMatchObject(res.body.installments[0]);
+    const accounts = (await request(app).get('/api/v1/accounts').set(user.auth)).body;
+    expect(accounts.find((a: { id: string }) => a.id === card.id).card.limitAvailable).toBe(700000);
+
+    // Decisão R10: as 3 parcelas compartilham installmentGroupId (não exposto no DTO) e installmentTotal.
+    const rows = await testDb.transaction.findMany({ where: { accountId: card.id }, orderBy: { installmentNumber: 'asc' } });
+    expect(rows).toHaveLength(3);
+    expect(rows.every((r) => r.installmentGroupId !== null)).toBe(true);
+    expect(new Set(rows.map((r) => r.installmentGroupId)).size).toBe(1);
+    expect(rows.every((r) => r.installmentTotal === 3)).toBe(true);
+  });
+
+  it('compra no cartão com data futura dá 422 (mesma regra dos lançamentos pagos)', async () => {
+    const { user, card, food } = await cardScenario();
+    const res = await request(app).post('/api/v1/transactions').set(user.auth).send({
+      type: 'expense', amount: 1000, description: 'x', accountId: card.id, categoryId: food, nature: 'variable', dueDate: '2026-11-30',
+    });
+    expect(res.status).toBe(422);
+    expect(res.body.detail).toBe('A data de pagamento não pode estar no futuro.');
+  });
+
+  it('receita em cartão dá 422 mesmo com categoria de receita válida (decisão R12)', async () => {
+    const { user, card } = await cardScenario();
+    const salary = await categoryId(app, user, 'Salário', 'income');
+    const res = await request(app).post('/api/v1/transactions').set(user.auth).send({
+      type: 'income', amount: 100, description: 'x', accountId: card.id, categoryId: salary, nature: 'variable', dueDate: '2026-11-01',
+    });
+    expect(res.status).toBe(422);
+    expect(res.body.detail).toBe('Cartão de crédito não recebe receita.');
+  });
+
+  it('cartão com recorrência dá 422', async () => {
+    const { user, card, food } = await cardScenario();
+    const res = await request(app).post('/api/v1/transactions').set(user.auth).send({
+      type: 'expense', amount: 1000, description: 'Netflix', accountId: card.id, categoryId: food, nature: 'fixed',
+      dueDate: '2026-11-01', recurrence: { frequency: 'monthly' },
+    });
+    expect(res.status).toBe(422);
+  });
+
+  it('parcelamento em conta que não é cartão dá 422', async () => {
+    const { user, checking, food } = await cardScenario();
+    const res = await request(app).post('/api/v1/transactions').set(user.auth).send({
+      type: 'expense', amount: 90000, description: 'TV', accountId: checking.id, categoryId: food, nature: 'variable',
+      dueDate: '2026-11-01', installments: 3,
+    });
+    expect(res.status).toBe(422);
+  });
+
+  it('transferência comum com origem no cartão dá 422 e orienta usar "Pagar fatura"', async () => {
+    const { user, card, checking } = await cardScenario();
+    const res = await request(app).post('/api/v1/transactions').set(user.auth).send({
+      type: 'transfer', amount: 1000, description: 'x', accountId: card.id, destinationAccountId: checking.id, dueDate: '2026-11-01',
+    });
+    expect(res.status).toBe(422);
+    expect(res.body.detail).toMatch(/Pagar fatura/);
+  });
+
+  it('transferência comum com destino no cartão dá 422 e orienta usar "Pagar fatura"', async () => {
+    const { user, card, checking } = await cardScenario();
+    const res = await request(app).post('/api/v1/transactions').set(user.auth).send({
+      type: 'transfer', amount: 1000, description: 'x', accountId: checking.id, destinationAccountId: card.id, dueDate: '2026-11-01',
+    });
+    expect(res.status).toBe(422);
+    expect(res.body.detail).toMatch(/Pagar fatura/);
+  });
+
+  it('pagar ou desfazer pagamento de um lançamento de cartão dá 422', async () => {
+    const { user, card, food } = await cardScenario();
+    const tx = await createTransaction(app, user, {
+      type: 'expense', amount: 5000, description: 'Compra', accountId: card.id, categoryId: food, nature: 'variable', dueDate: '2026-11-01',
+    });
+    const pay = await request(app).post(`/api/v1/transactions/${tx.id}/pay`).set(user.auth);
+    expect(pay.status).toBe(422);
+    expect(pay.body.detail).toBe('Lançamentos de cartão são sempre pagos.');
+    const unpay = await request(app).post(`/api/v1/transactions/${tx.id}/unpay`).set(user.auth);
+    expect(unpay.status).toBe(422);
+    expect(unpay.body.detail).toBe('Lançamentos de cartão são sempre pagos.');
+  });
+
+  it('mover um lançamento comum para o cartão por PATCH dá 422', async () => {
+    const { user, card, checking, food } = await cardScenario();
+    const tx = await createTransaction(app, user, {
+      type: 'expense', amount: 5000, description: 'Mercado', accountId: checking.id, categoryId: food, nature: 'variable', dueDate: '2026-11-01',
+    });
+    const res = await request(app).patch(`/api/v1/transactions/${tx.id}`).set(user.auth).send({ accountId: card.id });
+    expect(res.status).toBe(422);
+  });
+
+  it('mover um lançamento do cartão para outra conta por PATCH dá 422', async () => {
+    const { user, card, checking, food } = await cardScenario();
+    const tx = await createTransaction(app, user, {
+      type: 'expense', amount: 5000, description: 'Mercado', accountId: card.id, categoryId: food, nature: 'variable', dueDate: '2026-11-01',
+    });
+    const res = await request(app).patch(`/api/v1/transactions/${tx.id}`).set(user.auth).send({ accountId: checking.id });
+    expect(res.status).toBe(422);
+  });
+
+  it('mudar a data de um lançamento de cartão por PATCH dá 422', async () => {
+    const { user, card, food } = await cardScenario();
+    const tx = await createTransaction(app, user, {
+      type: 'expense', amount: 5000, description: 'Mercado', accountId: card.id, categoryId: food, nature: 'variable', dueDate: '2026-11-01',
+    });
+    const res = await request(app).patch(`/api/v1/transactions/${tx.id}`).set(user.auth).send({ dueDate: '2026-11-02' });
+    expect(res.status).toBe(422);
+  });
+
+  it('reenviar a mesma data de um lançamento de cartão por PATCH é permitido', async () => {
+    const { user, card, food } = await cardScenario();
+    const tx = await createTransaction(app, user, {
+      type: 'expense', amount: 5000, description: 'Mercado', accountId: card.id, categoryId: food, nature: 'variable', dueDate: '2026-11-01',
+    });
+    const res = await request(app).patch(`/api/v1/transactions/${tx.id}`).set(user.auth).send({ dueDate: '2026-11-01', description: 'Mercado 2' });
+    expect(res.status).toBe(200);
+  });
+
+  it('editar descrição, categoria, natureza e valor de um lançamento de cartão é permitido', async () => {
+    const { user, card, food } = await cardScenario();
+    const tx = await createTransaction(app, user, {
+      type: 'expense', amount: 5000, description: 'Mercado', accountId: card.id, categoryId: food, nature: 'variable', dueDate: '2026-11-01',
+    });
+    const lazer = await categoryId(app, user, 'Lazer', 'expense');
+    const res = await request(app).patch(`/api/v1/transactions/${tx.id}`).set(user.auth).send({
+      description: 'Mercadinho', categoryId: lazer, nature: 'fixed', amount: 6000,
+    });
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({ description: 'Mercadinho', categoryId: lazer, nature: 'fixed', amount: 6000 });
+  });
+
+  it('PATCH com scope=future movendo uma recorrência comum para o cartão dá 422 antes de ramificar', async () => {
+    const { user, card, checking, food } = await cardScenario();
+    const created = await createTransaction(app, user, {
+      type: 'expense', amount: 5000, description: 'Assinatura', accountId: checking.id, categoryId: food, nature: 'fixed',
+      dueDate: '2026-11-01', recurrence: { frequency: 'monthly' },
+    });
+    const res = await request(app).patch(`/api/v1/transactions/${created.id}?scope=future`).set(user.auth).send({ accountId: card.id });
+    expect(res.status).toBe(422);
   });
 });
