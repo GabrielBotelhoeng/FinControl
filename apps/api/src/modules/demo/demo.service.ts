@@ -51,12 +51,17 @@ export function createDemoService(deps: DemoServiceDeps) {
         const plan = buildDemoData(today);
 
         const accountIds = new Map<DemoAccountKey, string>();
-        for (const { key, ...data } of plan.accounts) accountIds.set(key, (await tx.accounts.create(userId, data)).id);
         const accountId = (key: DemoAccountKey): string => {
           const id = accountIds.get(key);
           if (!id) throw new Error(`Conta demo ausente: ${key}`);
           return id;
         };
+        // `paymentAccountKey` (ex.: o cartão aponta para a conta corrente) só existe como chave abstrata no
+        // plano; aqui é resolvido para o id real já gravado, na mesma ordem em que `plan.accounts` declara.
+        for (const { key, paymentAccountKey, ...data } of plan.accounts) {
+          const payload = { ...data, ...(paymentAccountKey ? { paymentAccountId: accountId(paymentAccountKey) } : {}) };
+          accountIds.set(key, (await tx.accounts.create(userId, payload)).id);
+        }
 
         const categoryId = (name: string, type: CategoryType): string => {
           const found = categories.find((c) => c.name === name && c.type === type);
@@ -86,10 +91,10 @@ export function createDemoService(deps: DemoServiceDeps) {
             paidDate: t.paidDate,
             recurrenceId: null,
             occurrenceDate: null,
-            invoiceMonth: null,
-            installmentNumber: null,
-            installmentTotal: null,
-            installmentGroupId: null,
+            invoiceMonth: t.invoiceMonth,
+            installmentNumber: t.installmentNumber,
+            installmentTotal: t.installmentTotal,
+            installmentGroupId: t.installmentGroupId,
           })),
         );
 

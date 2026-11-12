@@ -23,12 +23,24 @@ describe('conta demo', () => {
     expect((await request(app).post('/api/v1/demo/seed').set(visitor.auth)).body).toEqual({ seeded: false });
 
     const accounts = await request(app).get('/api/v1/accounts').set(visitor.auth);
-    expect(accounts.body).toHaveLength(3);
+    expect(accounts.body).toHaveLength(4);
+
+    // Cartão "Cartão principal" (Tarefa 9): limite consumido (há compras não pagas) e nenhuma fatura vencida.
+    const card = (accounts.body as { id: string; type: string; card: { limitAvailable: number } | null }[]).find(
+      (a) => a.type === 'credit_card',
+    );
+    expect(card?.card?.limitAvailable).toBeLessThan(800000);
 
     const summary = await request(app).get('/api/v1/dashboard/summary').set(visitor.auth);
     expect(summary.body.totalBalance).toBeGreaterThan(0);
     expect(summary.body.overdueCount).toBe(1);
     expect(summary.body.upcoming.some((t: { description: string }) => t.description === 'IPVA (parcela)')).toBe(true);
+    // Comprometimento de renda (decisão R15): a parcela da compra em 10x que cai na fatura do mês corrente.
+    expect(summary.body.health.debtCommitment).toBeGreaterThan(0);
+
+    const invoices = await request(app).get(`/api/v1/cards/${card!.id}/invoices`).set(visitor.auth);
+    expect(invoices.body.length).toBeGreaterThan(0);
+    expect(invoices.body.some((i: { status: string }) => i.status === 'overdue')).toBe(false);
 
     const evolution = await request(app).get('/api/v1/dashboard/evolution?months=6').set(visitor.auth);
     for (const point of evolution.body as { income: number; expense: number }[]) {
@@ -68,7 +80,7 @@ describe('limpeza agendada das demos', () => {
     expect((await request(flaky).get('/api/v1/accounts').set(visitor.auth)).body).toEqual([]);
     expect(await testDb.transaction.count({ where: { userId: visitor.id } })).toBe(0);
     expect((await request(flaky).post('/api/v1/demo/seed').set(visitor.auth)).body).toEqual({ seeded: true });
-    expect((await request(flaky).get('/api/v1/accounts').set(visitor.auth)).body).toHaveLength(3);
+    expect((await request(flaky).get('/api/v1/accounts').set(visitor.auth)).body).toHaveLength(4);
   });
 
   it('dois seeds simultâneos do mesmo visitante geram a demo uma única vez', async () => {
@@ -77,7 +89,7 @@ describe('limpeza agendada das demos', () => {
     const results = await Promise.all([1, 2, 3].map(() => request(app).post('/api/v1/demo/seed').set(visitor.auth)));
     expect(results.map((r) => r.status)).toEqual([200, 200, 200]);
     expect(results.filter((r) => r.body.seeded === true)).toHaveLength(1);
-    expect((await request(app).get('/api/v1/accounts').set(visitor.auth)).body).toHaveLength(3);
+    expect((await request(app).get('/api/v1/accounts').set(visitor.auth)).body).toHaveLength(4);
   });
 
   it('apaga só demos com mais de 7 dias', async () => {
