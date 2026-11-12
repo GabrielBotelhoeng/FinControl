@@ -69,6 +69,11 @@ Resolvidas em 2026-11-11, cada uma com teste RED→GREEN:
 - **Cron:** registrado na Vercel (`0 6 * * *`). Testado em produção: 401 sem segredo e `{"deleted":0}` com segredo.
 - **Google:** login testado de ponta a ponta pelo usuário em 2026-11-12.
 
+## Termos e região (2026-11-12)
+
+- Os termos de uso estão em `/termos`, com idade mínima de 18 anos. A tela de entrada avisa e liga para os termos.
+- A API está fixada em São Paulo (`apps/api/vercel.json` → `regions: ["gru1"]`). Antes rodava em `iad1` (EUA), e cada consulta ao banco cruzava o continente.
+
 ## Skills de finanças (2026-11-12)
 
 - Há 25 skills em `.claude/skills/`, escolhidas entre 696 e auditadas. O mapa de onde cada uma entra no produto está em `docs/skills-no-fincontrol.md`.
