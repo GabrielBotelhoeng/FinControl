@@ -78,7 +78,7 @@ export type AccountDTO = {
 };
 
 /** Pagamento de fatura: sempre em dinheiro (centavos inteiros positivos), de uma conta e numa data (spec C2). */
-export const payInvoiceSchema = z.object({ amount: z.int().positive(), accountId: idSchema, paidDate: dateOnlySchema });
+export const payInvoiceSchema = z.object({ amount: centsSchema, accountId: idSchema, paidDate: dateOnlySchema });
 export type PayInvoiceInput = z.output<typeof payInvoiceSchema>;
 
 export type InvoiceDTO = {

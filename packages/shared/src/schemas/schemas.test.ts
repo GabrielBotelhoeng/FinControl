@@ -128,4 +128,9 @@ describe('payInvoiceSchema', () => {
     expect(payInvoiceSchema.safeParse({ amount: 10000, accountId: ACC, paidDate: '2026-11-10' }).success).toBe(true);
     expect(payInvoiceSchema.safeParse({ amount: 0, accountId: ACC, paidDate: '2026-11-10' }).success).toBe(false);
   });
+
+  it('usa a mensagem em pt-BR de centsSchema para valor zero', () => {
+    const r = payInvoiceSchema.safeParse({ amount: 0, accountId: ACC, paidDate: '2026-11-10' });
+    expect(r.error?.issues[0]?.message).toBe('Valor deve ser maior que zero');
+  });
 });
