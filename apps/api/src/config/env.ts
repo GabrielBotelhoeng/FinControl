@@ -5,6 +5,8 @@ const envSchema = z.object({
   PORT: z.coerce.number().int().positive().default(3333),
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
   DATABASE_URL: z.url(),
+  // PEM da CA do Supabase (prod-ca-2021.crt). Com ela, a conexão com o banco valida certificado e host.
+  DATABASE_CA_CERT: z.string().includes('-----BEGIN CERTIFICATE-----').optional(),
   SUPABASE_URL: z.url(),
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
   WEB_ORIGIN: z.url(),
