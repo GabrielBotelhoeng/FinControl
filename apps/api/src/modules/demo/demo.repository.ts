@@ -1,10 +1,10 @@
 import type { DateOnly } from '@fincontrol/shared';
 import { fromDateOnly } from '../../infra/date-mapping';
-import type { Db } from '../../infra/prisma';
+import type { DbClient } from '../../infra/prisma';
 
 const NO_ID = '00000000-0000-0000-0000-000000000000';
 
-export function createDemoRepository(db: Db) {
+export function createDemoRepository(db: DbClient) {
   return {
     countAccounts(userId: string): Promise<number> {
       return db.account.count({ where: { userId } });

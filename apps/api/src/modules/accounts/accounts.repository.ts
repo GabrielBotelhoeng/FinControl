@@ -1,6 +1,6 @@
 import type { AccountType } from '@fincontrol/shared';
 import { ZERO_FLOWS, type AccountFlows } from '../../domain/balance';
-import type { Db } from '../../infra/prisma';
+import type { DbClient } from '../../infra/prisma';
 
 export type AccountRow = {
   id: string;
@@ -20,7 +20,7 @@ const toRow = (a: AccountRecord): AccountRow => ({
   initialBalance: Number(a.initialBalance), archivedAt: a.archivedAt, createdAt: a.createdAt,
 });
 
-export function createAccountsRepository(db: Db) {
+export function createAccountsRepository(db: DbClient) {
   return {
     async list(userId: string, includeArchived: boolean): Promise<AccountRow[]> {
       const rows = await db.account.findMany({

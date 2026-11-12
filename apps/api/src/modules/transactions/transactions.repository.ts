@@ -1,7 +1,7 @@
 import type { DateOnly, TransactionNature, TransactionStatus, TransactionType } from '@fincontrol/shared';
 import type { Prisma } from '../../generated/prisma/client';
 import { fromDateOnly, toDateOnly } from '../../infra/date-mapping';
-import type { Db } from '../../infra/prisma';
+import type { DbClient } from '../../infra/prisma';
 
 export type TransactionRow = {
   id: string;
@@ -81,7 +81,10 @@ function toUpdateData(p: Partial<NewTransaction>): Prisma.TransactionUncheckedUp
   };
 }
 
-export function createTransactionsRepository(db: Db) {
+/** O Prisma monta `ILIKE '%…%'` sem escapar o termo; sem isto, `%` e `_` da busca virariam curingas. */
+const escapeLike = (term: string) => term.replace(/[\\%_]/g, (c) => `\\${c}`);
+
+export function createTransactionsRepository(db: DbClient) {
   return {
     async list(userId: string, f: TransactionFilters, cursor: Cursor | undefined, take: number): Promise<TransactionRow[]> {
       const and: Prisma.TransactionWhereInput[] = [];
@@ -91,7 +94,7 @@ export function createTransactionsRepository(db: Db) {
       if (f.categoryId) and.push({ categoryId: f.categoryId });
       if (f.type) and.push({ type: f.type });
       if (f.status) and.push({ status: f.status });
-      if (f.q) and.push({ description: { contains: f.q, mode: 'insensitive' } });
+      if (f.q) and.push({ description: { contains: escapeLike(f.q), mode: 'insensitive' } });
       if (cursor) {
         const d = fromDateOnly(cursor.dueDate);
         and.push({ OR: [{ dueDate: { lt: d } }, { dueDate: d, id: { lt: cursor.id } }] });

@@ -83,6 +83,20 @@ describe('lançamentos', () => {
     expect(await list('from=2026-11-01&type=expense')).toHaveLength(1);
   });
 
+  it('busca trata %, _ e barra invertida como texto, não como curinga', async () => {
+    const user = await newUser();
+    const { expense } = await setup(user);
+    for (const description of ['Desconto 50%', 'Desconto 500', 'Taxa_extra', 'TaxaXextra', String.raw`Pasta C:\docs`]) {
+      await createTransaction(app, user, expense({ description }));
+    }
+    const search = (q: string) =>
+      request(app).get('/api/v1/transactions').query({ q }).set(user.auth).then((r) => (r.body.items as { description: string }[]).map((t) => t.description));
+    expect(await search('50%')).toEqual(['Desconto 50%']);
+    expect(await search('a_e')).toEqual(['Taxa_extra']);
+    expect(await search('%')).toEqual(['Desconto 50%']);
+    expect(await search(String.raw`C:\docs`)).toEqual([String.raw`Pasta C:\docs`]);
+  });
+
   it('pagina por cursor sem repetir nem pular', async () => {
     const user = await newUser();
     const { expense } = await setup(user);

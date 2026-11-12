@@ -53,14 +53,19 @@ _Atualizado em 2026-11-11._
   - Deploy na Vercel (web + API), com Supabase (Auth: e-mail, Google, anônimo) e Google OAuth.
   - E2E com Playwright: feito (`e2e/`, 7 cenários no CI, com o provedor de identidade simulado em `e2e/fake-auth.ts`).
   - README de vitrine: feito (as imagens vêm de `SCREENSHOTS=1 npm run test:e2e -- screenshots`).
-- **Revisão final da Parte 2:** feita como autorrevisão. Corrigido o logout com token expirado, que deixava a sessão presa (teste RED→GREEN). Pendências menores: se a geração da demo falhar depois do login anônimo, um novo clique cria outro usuário anônimo; e o `readEnv` falha com tela em branco quando faltam variáveis no build.
+- **Revisão final da Parte 2:** feita como autorrevisão. Corrigido o logout com token expirado, que deixava a sessão presa (teste RED→GREEN). As pendências menores estão na seção abaixo.
 
 ## Pendências registradas na revisão final (menores)
 
-- Seed da demo não é atômico. Quem recarrega a página durante o seed vê dados pela metade (reproduzido no E2E).
-- Corrigido: criar um item enquanto a lista ainda carregava pela primeira vez não o mostrava (corrida do React Query). Agora `useFinanceMutation` cancela antes de invalidar.
-- A busca `q` trata `%` e `_` como curingas.
-- `updateFuture` com data coincidente de outra ocorrência paga pode dar 500 (caso raro).
+Resolvidas em 2026-11-11, cada uma com teste RED→GREEN:
+
+- **Seed da demo atômico.** Roda numa transação do Postgres (`inTransaction` no container). Quem recarrega no meio não vê dados pela metade, e uma falha não trava mais a demo.
+- **Busca:** `%`, `_` e `\` são tratados como texto (`escapeLike` no repositório de lançamentos).
+- **"Esta e as próximas":** mover uma ocorrência paga para a data de outra paga da mesma série dá 422 com mensagem clara, antes de qualquer escrita. Antes dava 500.
+- **Build sem variáveis:** mostra a tela "O FinControl não está configurado", com os nomes das variáveis, em vez da tela em branco (`checkEnv` + `ConfigErrorScreen`).
+- **Corrigido antes:** criar um item enquanto a lista ainda carregava pela primeira vez não o mostrava (corrida do React Query). Agora `useFinanceMutation` cancela antes de invalidar.
+
+Ainda em aberto (menor): se a geração da demo falhar depois do login anônimo, um novo clique cria outro usuário anônimo.
 
 ## Como rodar
 
