@@ -28,4 +28,11 @@ describe('HealthTiles', () => {
     expect(screen.getByRole('group', { name: 'Taxa de poupança' })).toHaveTextContent('Sem receitas pagas neste mês');
     expect(screen.getByRole('group', { name: 'Reserva de emergência' })).toHaveTextContent('Lance suas despesas por um mês completo');
   });
+
+  it('o status segue o número exibido (19,5% aparece como 20% e está na meta)', () => {
+    render(<HealthTiles health={{ ...base, savingsRate: 0.195, reserveMonths: 3 }} />);
+    expect(screen.getByRole('group', { name: 'Taxa de poupança' })).toHaveTextContent('20%');
+    expect(screen.getByRole('group', { name: 'Taxa de poupança' })).toHaveTextContent('Na meta');
+    expect(screen.getByRole('group', { name: 'Reserva de emergência' })).toHaveTextContent(/Hoje: /);
+  });
 });

@@ -13,8 +13,10 @@ const decimal = new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 1 });
 
 /** Meta de 20% (referências de mercado e skill `savings-goals`; mínimo recomendado 10%). */
 function savingsStatus(rate: number): Status {
-  if (rate >= 0.2) return { label: 'Na meta', tone: 'good', icon: CheckCircle2 };
-  if (rate >= 0) return { label: 'Abaixo da meta', tone: 'warning', icon: AlertTriangle };
+  // Mesmo arredondamento do número exibido (inteiro), para o rótulo nunca contradizer a tela (ex.: 19,5% mostra "20%").
+  const shown = Math.round(rate * 100);
+  if (shown >= 20) return { label: 'Na meta', tone: 'good', icon: CheckCircle2 };
+  if (shown >= 0) return { label: 'Abaixo da meta', tone: 'warning', icon: AlertTriangle };
   return { label: 'Gastou mais do que ganhou', tone: 'critical', icon: CircleSlash };
 }
 
@@ -31,7 +33,9 @@ function Tile({ label, value, status, goal, detail }: { label: string; value: st
   return (
     <Panel role="group" aria-label={label} className="flex min-w-0 flex-col gap-2 p-5">
       <span className="text-sm text-muted">{label}</span>
-      <span className="tabular font-display text-3xl font-bold tracking-tight text-text">{value}</span>
+      <span data-metric-value className="tabular font-display text-3xl font-bold tracking-tight text-text">
+        {value}
+      </span>
       {status && Icon && (
         <span className={`inline-flex items-center gap-1.5 text-sm font-medium ${TONE[status.tone]}`}>
           <Icon aria-hidden className="h-4 w-4" strokeWidth={2} />
@@ -66,7 +70,7 @@ export function HealthTiles({ health }: { health: FinancialHealthDTO }) {
         detail={
           averageMonthlyExpense === null
             ? 'Lance suas despesas por um mês completo para calcular.'
-            : `${formatBRL(liquidBalance)} em conta corrente, poupança e carteira ÷ gasto médio de ${formatBRL(averageMonthlyExpense)} nos últimos 3 meses.`
+            : `Hoje: ${formatBRL(liquidBalance)} em conta corrente, poupança e carteira ÷ gasto médio de ${formatBRL(averageMonthlyExpense)} nos últimos 3 meses.`
         }
       />
     </div>
