@@ -31,6 +31,31 @@ async function scenario(user: TestUser) {
 describe('dashboard', () => {
   beforeEach(resetDb);
 
+  it('saúde financeira: taxa de poupança do mês e meses de reserva só com contas líquidas', async () => {
+    const user = await newUser();
+    const checking = await createAccount(app, user, { name: 'Corrente', initialBalance: 600000 });
+    await createAccount(app, user, { name: 'Corretora', type: 'investment', initialBalance: 1000000 });
+    const food = await categoryId(app, user, 'Alimentação', 'expense');
+    const salary = await categoryId(app, user, 'Salário', 'income');
+    const paid = (type: 'income' | 'expense', amount: number, date: string, categoryId: string) =>
+      createTransaction(app, user, { type, amount, description: `${type} ${date}`, accountId: checking.id, categoryId, nature: 'variable', dueDate: date, status: 'paid', paidDate: date });
+    for (const date of ['2026-08-10', '2026-09-10', '2026-10-10']) await paid('expense', 100000, date, food);
+    await paid('income', 500000, '2026-11-01', salary);
+    await paid('expense', 100000, '2026-11-05', food);
+
+    const res = await request(app).get('/api/v1/dashboard/summary').set(user.auth);
+    expect(res.status).toBe(200);
+    // Líquido: 6.000 − 3.000 + 5.000 − 1.000 = 7.000 (a corretora fica de fora). Média de ago–out: 1.000.
+    expect(res.body.health).toEqual({ savingsRate: 0.8, reserveMonths: 7, liquidBalance: 700000, averageMonthlyExpense: 100000 });
+  });
+
+  it('saúde financeira de quem acabou de começar: sem histórico, sem receita', async () => {
+    const user = await newUser();
+    await createAccount(app, user, { name: 'Carteira', type: 'wallet', initialBalance: 5000 });
+    const res = await request(app).get('/api/v1/dashboard/summary').set(user.auth);
+    expect(res.body.health).toEqual({ savingsRate: null, reserveMonths: null, liquidBalance: 5000, averageMonthlyExpense: null });
+  });
+
   it('resumo do mês: saldo, previsão, comparação, pendentes e vencidas', async () => {
     const user = await newUser();
     await scenario(user);

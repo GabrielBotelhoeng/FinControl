@@ -17,6 +17,15 @@ export type DashboardSummaryDTO = {
   pendingCount: number;
   overdueCount: number;
   upcoming: TransactionDTO[];
+  health: FinancialHealthDTO;
+};
+
+/** Indicadores de saúde financeira. Valores em centavos; `savingsRate` é fração (0,2 = 20%). */
+export type FinancialHealthDTO = {
+  savingsRate: number | null;
+  reserveMonths: number | null;
+  liquidBalance: number;
+  averageMonthlyExpense: number | null;
 };
 
 export type EvolutionPointDTO = { month: string; income: number; expense: number; endBalance: number };
