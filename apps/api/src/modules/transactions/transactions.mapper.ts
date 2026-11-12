@@ -16,6 +16,9 @@ export function toTransactionDTO(row: TransactionRow, today: DateOnly): Transact
     paidDate: row.paidDate,
     recurrenceId: row.recurrenceId,
     occurrenceDate: row.occurrenceDate,
+    invoiceMonth: row.invoiceMonth,
+    installmentNumber: row.installmentNumber,
+    installmentTotal: row.installmentTotal,
     overdue: row.status === 'pending' && row.dueDate < today,
     createdAt: row.createdAt.toISOString(),
   };

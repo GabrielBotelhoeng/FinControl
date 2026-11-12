@@ -86,6 +86,9 @@ export function createDemoService(deps: DemoServiceDeps) {
             paidDate: t.paidDate,
             recurrenceId: null,
             occurrenceDate: null,
+            invoiceMonth: null,
+            installmentNumber: null,
+            installmentTotal: null,
           })),
         );
 

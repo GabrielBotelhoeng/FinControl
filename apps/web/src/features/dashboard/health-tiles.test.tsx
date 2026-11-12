@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { HealthTiles } from './health-tiles';
 
-const base = { liquidBalance: 700000, averageMonthlyExpense: 100000 };
+const base = { liquidBalance: 700000, averageMonthlyExpense: 100000, debtCommitment: null, debtPayments: 0 };
 
 describe('HealthTiles', () => {
   it('mostra taxa de poupança e meses de reserva com status escrito e a meta', () => {
@@ -24,7 +24,7 @@ describe('HealthTiles', () => {
   });
 
   it('explica quando ainda não dá para calcular', () => {
-    render(<HealthTiles health={{ liquidBalance: 0, averageMonthlyExpense: null, savingsRate: null, reserveMonths: null }} />);
+    render(<HealthTiles health={{ liquidBalance: 0, averageMonthlyExpense: null, savingsRate: null, reserveMonths: null, debtCommitment: null, debtPayments: 0 }} />);
     expect(screen.getByRole('group', { name: 'Taxa de poupança' })).toHaveTextContent('Sem receitas pagas neste mês');
     expect(screen.getByRole('group', { name: 'Reserva de emergência' })).toHaveTextContent('Lance suas despesas por um mês completo');
   });

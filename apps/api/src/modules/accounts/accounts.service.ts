@@ -12,6 +12,12 @@ const toDTO = (a: AccountRow, flows: AccountFlows = ZERO_FLOWS): AccountDTO => (
   balance: computeBalance(a.initialBalance, flows),
   archivedAt: a.archivedAt?.toISOString() ?? null,
   createdAt: a.createdAt.toISOString(),
+  creditLimit: a.creditLimit,
+  closingDay: a.closingDay,
+  dueDay: a.dueDay,
+  paymentAccountId: a.paymentAccountId,
+  // Cálculo de limite disponível, fatura aberta e próximo vencimento fica para a Tarefa 5.
+  card: null,
 });
 
 export function createAccountsService(repo: AccountsRepository) {

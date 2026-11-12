@@ -20,12 +20,14 @@ export type DashboardSummaryDTO = {
   health: FinancialHealthDTO;
 };
 
-/** Indicadores de saúde financeira. Valores em centavos; `savingsRate` é fração (0,2 = 20%). */
+/** Indicadores de saúde financeira. Valores em centavos; `savingsRate` e `debtCommitment` são fração (0,2 = 20%). */
 export type FinancialHealthDTO = {
   savingsRate: number | null;
   reserveMonths: number | null;
   liquidBalance: number;
   averageMonthlyExpense: number | null;
+  debtCommitment: number | null;
+  debtPayments: number;
 };
 
 export type EvolutionPointDTO = { month: string; income: number; expense: number; endBalance: number };

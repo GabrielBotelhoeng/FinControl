@@ -46,14 +46,18 @@ describe('dashboard', () => {
     const res = await request(app).get('/api/v1/dashboard/summary').set(user.auth);
     expect(res.status).toBe(200);
     // Líquido: 6.000 − 3.000 + 5.000 − 1.000 = 7.000 (a corretora fica de fora). Média de ago–out: 1.000.
-    expect(res.body.health).toEqual({ savingsRate: 0.8, reserveMonths: 7, liquidBalance: 700000, averageMonthlyExpense: 100000 });
+    expect(res.body.health).toEqual({
+      savingsRate: 0.8, reserveMonths: 7, liquidBalance: 700000, averageMonthlyExpense: 100000, debtCommitment: null, debtPayments: 0,
+    });
   });
 
   it('saúde financeira de quem acabou de começar: sem histórico, sem receita', async () => {
     const user = await newUser();
     await createAccount(app, user, { name: 'Carteira', type: 'wallet', initialBalance: 5000 });
     const res = await request(app).get('/api/v1/dashboard/summary').set(user.auth);
-    expect(res.body.health).toEqual({ savingsRate: null, reserveMonths: null, liquidBalance: 5000, averageMonthlyExpense: null });
+    expect(res.body.health).toEqual({
+      savingsRate: null, reserveMonths: null, liquidBalance: 5000, averageMonthlyExpense: null, debtCommitment: null, debtPayments: 0,
+    });
   });
 
   it('resumo do mês: saldo, previsão, comparação, pendentes e vencidas', async () => {

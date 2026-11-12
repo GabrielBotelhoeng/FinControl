@@ -56,6 +56,9 @@ export function createTransactionsService(deps: TransactionsServiceDeps) {
         paidDate,
         recurrenceId: null,
         occurrenceDate: null,
+        invoiceMonth: null,
+        installmentNumber: null,
+        installmentTotal: null,
       });
       return toTransactionDTO(row, today());
     },

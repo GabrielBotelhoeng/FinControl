@@ -8,16 +8,32 @@ export type AccountRow = {
   type: AccountType;
   color: string;
   initialBalance: number;
+  creditLimit: number | null;
+  closingDay: number | null;
+  dueDay: number | null;
+  paymentAccountId: string | null;
   archivedAt: Date | null;
   createdAt: Date;
 };
 
-type AccountRecord = Omit<AccountRow, 'initialBalance'> & { initialBalance: bigint };
-type AccountData = { name: string; type: AccountType; color: string; initialBalance: number };
+type AccountRecord = Omit<AccountRow, 'initialBalance' | 'creditLimit'> & { initialBalance: bigint; creditLimit: bigint | null };
+type AccountData = {
+  name: string;
+  type: AccountType;
+  color: string;
+  initialBalance: number;
+  creditLimit?: number | null;
+  closingDay?: number | null;
+  dueDay?: number | null;
+  paymentAccountId?: string | null;
+};
 
 const toRow = (a: AccountRecord): AccountRow => ({
   id: a.id, name: a.name, type: a.type, color: a.color,
-  initialBalance: Number(a.initialBalance), archivedAt: a.archivedAt, createdAt: a.createdAt,
+  initialBalance: Number(a.initialBalance),
+  creditLimit: a.creditLimit === null ? null : Number(a.creditLimit),
+  closingDay: a.closingDay, dueDay: a.dueDay, paymentAccountId: a.paymentAccountId,
+  archivedAt: a.archivedAt, createdAt: a.createdAt,
 });
 
 export function createAccountsRepository(db: DbClient) {

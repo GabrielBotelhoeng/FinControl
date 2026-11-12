@@ -64,6 +64,9 @@ export function createDashboardService(deps: DashboardServiceDeps) {
           reserveMonths: reserve.months,
           liquidBalance,
           averageMonthlyExpense: reserve.averageExpense,
+          // Comprometimento de renda (parcelas de cartão + faturas vencidas) entra na Tarefa 8.
+          debtCommitment: null,
+          debtPayments: 0,
         },
       };
     },

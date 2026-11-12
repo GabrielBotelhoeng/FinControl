@@ -41,6 +41,11 @@ export function transactionShapeIssues(t: ShapeInput): FieldIssue[] {
 
 const descriptionSchema = z.string().trim().min(1, 'Obrigatório').max(120, 'Máximo de 120 caracteres');
 const recurrenceSchema = z.object({ frequency: frequencySchema, endDate: dateOnlySchema.nullable().default(null) });
+const installmentsSchema = z
+  .number('Informe um número')
+  .int('Quantidade de parcelas deve ser um número inteiro')
+  .min(2, 'Parcelamento deve ser de 2 a 48 vezes')
+  .max(48, 'Parcelamento deve ser de 2 a 48 vezes');
 
 export const createTransactionSchema = z
   .object({
@@ -55,11 +60,16 @@ export const createTransactionSchema = z
     dueDate: dateOnlySchema,
     paidDate: dateOnlySchema.nullable().default(null),
     recurrence: recurrenceSchema.nullable().default(null),
+    installments: installmentsSchema.optional(),
   })
   .superRefine((v, ctx) => {
     for (const issue of transactionShapeIssues(v)) ctx.addIssue({ code: 'custom', path: [issue.path], message: issue.message });
     if (v.recurrence?.endDate && v.recurrence.endDate < v.dueDate)
       ctx.addIssue({ code: 'custom', path: ['recurrence', 'endDate'], message: 'O fim da recorrência deve ser depois do vencimento' });
+    if (v.installments !== undefined) {
+      if (v.type !== 'expense') ctx.addIssue({ code: 'custom', path: ['installments'], message: 'Parcelamento só é permitido em despesas' });
+      if (v.recurrence) ctx.addIssue({ code: 'custom', path: ['installments'], message: 'Parcelamento não combina com recorrência' });
+    }
   });
 
 export const updateTransactionSchema = z
@@ -110,6 +120,9 @@ export type TransactionDTO = {
   paidDate: string | null;
   recurrenceId: string | null;
   occurrenceDate: string | null;
+  invoiceMonth: string | null;
+  installmentNumber: number | null;
+  installmentTotal: number | null;
   overdue: boolean;
   createdAt: string;
 };
