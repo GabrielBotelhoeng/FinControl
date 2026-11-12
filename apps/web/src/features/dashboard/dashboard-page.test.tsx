@@ -16,7 +16,7 @@ const summary = {
   overdueCount: 1,
   health: { savingsRate: 0.25, reserveMonths: 4.2, liquidBalance: 420000, averageMonthlyExpense: 100000 },
   upcoming: [
-    { id: 't1', type: 'expense', amount: 11990, description: 'Internet', accountId: 'a1', destinationAccountId: null, categoryId: 'c1', nature: 'fixed', status: 'pending', dueDate: '2026-10-15', paidDate: null, recurrenceId: 'r1', occurrenceDate: '2026-10-15', overdue: true, createdAt: '' },
+    { kind: 'transaction', id: 't1', type: 'expense', amount: 11990, description: 'Internet', accountId: 'a1', destinationAccountId: null, categoryId: 'c1', nature: 'fixed', status: 'pending', dueDate: '2026-10-15', paidDate: null, recurrenceId: 'r1', occurrenceDate: '2026-10-15', overdue: true, createdAt: '' },
   ],
 };
 
@@ -38,6 +38,27 @@ describe('DashboardPage', () => {
     expect(screen.getByLabelText('Variação das despesas')).toHaveTextContent('12,2%');
     expect(screen.getByRole('listitem', { name: /Internet/ })).toHaveTextContent('Vencido');
     expect(screen.getByText('Moradia')).toBeInTheDocument();
+  });
+
+  it('fatura de cartão aparece em "A pagar" com ícone de cartão, vencimento, valor e situação (Tarefa 8)', async () => {
+    const withInvoices = routes({
+      'GET /dashboard/summary': {
+        ...summary,
+        upcoming: [
+          { kind: 'invoice', cardId: 'c1', cardName: 'Cartão Nubank', month: '2026-10', dueDate: '2024-01-05', remaining: 45000 },
+          { kind: 'invoice', cardId: 'c2', cardName: 'Cartão Inter', month: '2026-11', dueDate: '2099-01-20', remaining: 12000 },
+        ],
+      },
+    });
+    renderApp(<DashboardPage />, { api: fakeApi(withInvoices) });
+
+    const overdueRow = await screen.findByRole('listitem', { name: /Fatura do Cartão Nubank/ });
+    expect(overdueRow).toHaveTextContent('Vencida');
+    expect(overdueRow).toHaveTextContent('450,00');
+
+    const closedRow = screen.getByRole('listitem', { name: /Fatura do Cartão Inter/ });
+    expect(closedRow).toHaveTextContent('Fechada');
+    expect(closedRow).toHaveTextContent('120,00');
   });
 
   it('API fora do ar mostra o estado de erro e "Tentar de novo" refaz a busca', async () => {

@@ -42,9 +42,11 @@ export function buildContainer(deps: AppDeps) {
       });
     },
   });
-  const dashboard = createDashboardService({ repo: createDashboardRepository(deps.db), transactions: transactionsRepo, recurrences, clock: deps.clock });
   const cardsRepo = createCardsRepository(deps.db);
   const cards = createCardsService({ repo: cardsRepo, accountsRepo, accounts, transactionsRepo, clock: deps.clock });
+  const dashboard = createDashboardService({
+    repo: createDashboardRepository(deps.db), transactions: transactionsRepo, recurrences, accountsRepo, cards, clock: deps.clock,
+  });
   const demo = createDemoService({
     repo: createDemoRepository(deps.db), categories: categoriesRepo, profile, clock: deps.clock,
     // O seed grava ~170 linhas; o limite de 5 s padrão do Prisma é apertado no plano gratuito.
