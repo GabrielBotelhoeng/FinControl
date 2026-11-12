@@ -7,17 +7,19 @@ type Status = { label: string; tone: 'warning' | 'critical'; icon: LucideIcon };
 // Mesmo vocabulário ícone+tom de health-tiles.tsx (status nunca só por cor).
 const TONE: Record<Status['tone'], string> = { warning: 'text-warning', critical: 'text-expense' };
 
-function invoiceStatus(overdue: boolean): Status {
-  return overdue ? { label: 'Vencida', tone: 'critical', icon: CircleSlash } : { label: 'Fechada', tone: 'warning', icon: AlertTriangle };
-}
+const STATUS: Record<UpcomingInvoiceDTO['status'], Status> = {
+  overdue: { label: 'Vencida', tone: 'critical', icon: CircleSlash },
+  closed: { label: 'Fechada', tone: 'warning', icon: AlertTriangle },
+};
 
 /**
  * Item de fatura em "A pagar" (decisão R16): ícone de cartão, "Fatura do <cartão> · <mês>", vencimento, valor
  * restante e a situação com ícone — "Vencida" ou "Fechada". Sem link por enquanto (entra na Tarefa 11).
- * `overdue` vem de quem chama (compara `dueDate` com "hoje"): o DTO não traz a situação, só os valores (R16).
+ * A situação vem de `item.status`, calculado pelo servidor (spec C4, `invoiceStatus`) — fonte única; a web
+ * não recalcula comparando `dueDate` com "hoje" (decisão R26).
  */
-export function InvoiceRow({ item, overdue }: { item: UpcomingInvoiceDTO; overdue: boolean }) {
-  const status = invoiceStatus(overdue);
+export function InvoiceRow({ item }: { item: UpcomingInvoiceDTO }) {
+  const status = STATUS[item.status];
   const title = `Fatura do ${item.cardName} · ${formatMonthLabel(item.month)}`;
   return (
     <li aria-label={title} className="flex items-center gap-3 px-4 py-3 sm:gap-4 sm:px-5">

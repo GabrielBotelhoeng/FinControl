@@ -45,8 +45,8 @@ describe('DashboardPage', () => {
       'GET /dashboard/summary': {
         ...summary,
         upcoming: [
-          { kind: 'invoice', cardId: 'c1', cardName: 'Cartão Nubank', month: '2026-10', dueDate: '2024-01-05', remaining: 45000 },
-          { kind: 'invoice', cardId: 'c2', cardName: 'Cartão Inter', month: '2026-11', dueDate: '2099-01-20', remaining: 12000 },
+          { kind: 'invoice', cardId: 'c1', cardName: 'Cartão Nubank', month: '2026-10', dueDate: '2026-10-05', remaining: 45000, status: 'overdue' },
+          { kind: 'invoice', cardId: 'c2', cardName: 'Cartão Inter', month: '2026-11', dueDate: '2026-11-20', remaining: 12000, status: 'closed' },
         ],
       },
     });

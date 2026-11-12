@@ -174,6 +174,7 @@ describe('dashboard', () => {
       const invoiceItem = res.body.upcoming.find((i: { kind: string }) => i.kind === 'invoice');
       expect(invoiceItem).toMatchObject({
         kind: 'invoice', cardId: card.id, cardName: card.name, month: '2026-11', dueDate: '2026-11-20', remaining: 30000,
+        status: 'closed', // situação vem do servidor (R26), não é recalculada pela web a partir de dueDate
       });
     });
 
@@ -220,6 +221,7 @@ describe('dashboard', () => {
       expect(res.body.health.debtPayments).toBe(25000); // 40000 − 15000
       const invoiceItem = res.body.upcoming.find((i: { kind: string; month?: string }) => i.kind === 'invoice' && i.month === '2026-10');
       expect(invoiceItem.remaining).toBe(25000);
+      expect(invoiceItem.status).toBe('overdue'); // continua vencida mesmo paga em parte
     });
 
     it('sem receita nos últimos 3 meses: debtCommitment é null, mas debtPayments é calculado', async () => {

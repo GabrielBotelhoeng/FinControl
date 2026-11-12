@@ -122,7 +122,7 @@ export default function DashboardPage() {
             <ul className="mt-2 divide-y divide-border">
               {summary.data.upcoming.map((item) =>
                 item.kind === 'invoice' ? (
-                  <InvoiceRow key={`${item.cardId}-${item.month}`} item={item} overdue={item.dueDate < today} />
+                  <InvoiceRow key={`${item.cardId}-${item.month}`} item={item} />
                 ) : (
                   <TransactionRow
                     key={item.id}

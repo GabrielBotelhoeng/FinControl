@@ -49,7 +49,7 @@ export async function cardDebt(deps: CardDebtDeps, userId: string, current: Year
       if (remaining <= 0) continue;
 
       pendingCount += 1;
-      items.push({ kind: 'invoice', cardId: card.id, cardName: card.name, month: inv.month, dueDate: inv.dueDate, remaining });
+      items.push({ kind: 'invoice', cardId: card.id, cardName: card.name, month: inv.month, dueDate: inv.dueDate, remaining, status: inv.status });
 
       if (inv.status === 'overdue') {
         overdueCount += 1;

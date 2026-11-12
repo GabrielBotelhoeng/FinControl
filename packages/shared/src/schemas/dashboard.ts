@@ -25,7 +25,9 @@ export type UpcomingTransactionDTO = TransactionDTO & { kind: 'transaction' };
 
 /**
  * Item de fatura de cartão em "A pagar" (decisão R16): faturas `closed` ou `overdue` com restante > 0,
- * inclusive de cartão arquivado. `remaining` é `amount − paid` (já líquido, mínimo 0).
+ * inclusive de cartão arquivado. `remaining` é `amount − paid` (já líquido, mínimo 0). `status` vem do
+ * servidor (spec C4, `invoiceStatus`) — fonte única da situação; a web não recalcula a partir de `dueDate`
+ * (decisão R26).
  */
 export type UpcomingInvoiceDTO = {
   kind: 'invoice';
@@ -34,6 +36,7 @@ export type UpcomingInvoiceDTO = {
   month: string;
   dueDate: string;
   remaining: number;
+  status: 'closed' | 'overdue';
 };
 
 export type UpcomingItemDTO = UpcomingTransactionDTO | UpcomingInvoiceDTO;
