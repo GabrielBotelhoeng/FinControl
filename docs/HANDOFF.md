@@ -16,7 +16,7 @@ _Atualizado em 2026-11-11._
 - **Projeto:** `fincontrol` (ref `ojywswdjhjmwnfhalntl`, região sa-east-1, plano gratuito), criado pela CLI (`npx supabase`, já autenticada na conta do usuário).
 - **Segredos:** em `.secrets/`, que é gitignored: senha do banco, chaves da API, `api.production.env` e `web.production.env`. O `apps/web/.env.local` já aponta para o Supabase.
 - **Banco:** migrations aplicadas pelo pooler `aws-0-sa-east-1.pooler.supabase.com` (5432 para migrations, 6543 em runtime com `sslmode=require&uselibpqcompat=true`).
-  - Melhoria pendente: usar o certificado CA do Supabase em vez do modo libpq.
+  - Em produção, a conexão valida a cadeia e o host contra a CA oficial do Supabase (`DATABASE_CA_CERT` na Vercel; cópia em `.secrets/supabase-prod-ca-2021.crt`). A CA vale até 2031-04-26. Com a CA, `pgConfig` tira os parâmetros SSL da URL, porque no `pg` eles sobrescreveriam a validação.
 - **Auth:** login anônimo ligado e confirmação de e-mail ligada, via `supabase config push`. O `site_url` é http://localhost:5173 e deve ser trocado pela URL da Vercel no deploy. O Google OAuth está ligado desde 2026-11-11 e foi verificado: o redirect do Supabase leva ao client certo.
 - **Config versionada:** `supabase/config.toml` (projeto já vinculado com `supabase link`) espelha o remoto. `echo n | npx supabase config push` mostra o diff sem aplicar nada e hoje dá "up to date" em todos os serviços. Os redirects permitidos são `localhost:5173` e `localhost:4173`. O Google está `enabled = true`. O client id e o secret ficam em `.secrets/google-oauth.env` e precisam ser exportados antes de qualquer `config push`, senão o push manda valores vazios.
 - **Google Cloud:** projeto `fincontrol-514416`, OAuth client "FinControl Web (Supabase)" com o callback `https://ojywswdjhjmwnfhalntl.supabase.co/auth/v1/callback`.
@@ -65,7 +65,9 @@ Resolvidas em 2026-11-11, cada uma com teste RED→GREEN:
 - **Build sem variáveis:** mostra a tela "O FinControl não está configurado", com os nomes das variáveis, em vez da tela em branco (`checkEnv` + `ConfigErrorScreen`).
 - **Corrigido antes:** criar um item enquanto a lista ainda carregava pela primeira vez não o mostrava (corrida do React Query). Agora `useFinanceMutation` cancela antes de invalidar.
 
-Ainda em aberto (menor): se a geração da demo falhar depois do login anônimo, um novo clique cria outro usuário anônimo.
+- **Nova tentativa da demo:** depois de uma falha no seed, a nova tentativa reaproveita o usuário anônimo existente.
+- **Cron:** registrado na Vercel (`0 6 * * *`). Testado em produção: 401 sem segredo e `{"deleted":0}` com segredo.
+- **Google:** login testado de ponta a ponta pelo usuário em 2026-11-12.
 
 ## Como rodar
 
