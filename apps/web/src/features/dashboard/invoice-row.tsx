@@ -1,5 +1,6 @@
 import type { UpcomingInvoiceDTO } from '@fincontrol/shared';
 import { AlertTriangle, CircleSlash, CreditCard, type LucideIcon } from 'lucide-react';
+import { Link } from 'react-router';
 import { formatBRL, formatDate, formatMonthLabel } from '../../lib/format';
 
 type Status = { label: string; tone: 'warning' | 'critical'; icon: LucideIcon };
@@ -14,9 +15,9 @@ const STATUS: Record<UpcomingInvoiceDTO['status'], Status> = {
 
 /**
  * Item de fatura em "A pagar" (decisão R16): ícone de cartão, "Fatura do <cartão> · <mês>", vencimento, valor
- * restante e a situação com ícone — "Vencida" ou "Fechada". Sem link por enquanto (entra na Tarefa 11).
- * A situação vem de `item.status`, calculado pelo servidor (spec C4, `invoiceStatus`) — fonte única; a web
- * não recalcula comparando `dueDate` com "hoje" (decisão R26).
+ * restante, a situação com ícone — "Vencida" ou "Fechada" — e o link "Ver fatura" para a página de faturas
+ * do cartão (Tarefa 11). A situação vem de `item.status`, calculado pelo servidor (spec C4, `invoiceStatus`)
+ * — fonte única; a web não recalcula comparando `dueDate` com "hoje" (decisão R26).
  */
 export function InvoiceRow({ item }: { item: UpcomingInvoiceDTO }) {
   const status = STATUS[item.status];
@@ -39,7 +40,12 @@ export function InvoiceRow({ item }: { item: UpcomingInvoiceDTO }) {
           </span>
         </span>
       </div>
-      <span className="tabular font-semibold text-expense">{formatBRL(item.remaining)}</span>
+      <div className="flex shrink-0 flex-col items-end gap-1">
+        <span className="tabular font-semibold text-expense">{formatBRL(item.remaining)}</span>
+        <Link to={`/cartoes/${item.cardId}`} className="text-xs font-medium text-primary hover:underline">
+          Ver fatura
+        </Link>
+      </div>
     </li>
   );
 }

@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import { ApiError } from '../../lib/api-client';
@@ -55,10 +55,12 @@ describe('DashboardPage', () => {
     const overdueRow = await screen.findByRole('listitem', { name: /Fatura do Cartão Nubank/ });
     expect(overdueRow).toHaveTextContent('Vencida');
     expect(overdueRow).toHaveTextContent('450,00');
+    expect(within(overdueRow).getByRole('link', { name: 'Ver fatura' })).toHaveAttribute('href', '/cartoes/c1');
 
     const closedRow = screen.getByRole('listitem', { name: /Fatura do Cartão Inter/ });
     expect(closedRow).toHaveTextContent('Fechada');
     expect(closedRow).toHaveTextContent('120,00');
+    expect(within(closedRow).getByRole('link', { name: 'Ver fatura' })).toHaveAttribute('href', '/cartoes/c2');
   });
 
   it('API fora do ar mostra o estado de erro e "Tentar de novo" refaz a busca', async () => {

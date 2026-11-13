@@ -11,6 +11,7 @@ import { ApiError } from '../../lib/api-client';
 import { useAccounts } from '../accounts/api';
 import { useCategories } from '../categories/api';
 import { useCreateTransaction, useDeleteTransaction, useUpdateTransaction, type TransactionFields } from './api';
+import { CardPurchaseFields } from './card-purchase-fields';
 import { ScopeDialog } from './scope-dialog';
 
 type Props = { open: boolean; onOpenChange: (o: boolean) => void; transaction?: TransactionDTO; defaultType?: TransactionType };
@@ -47,6 +48,7 @@ export function TransactionForm({ open, onOpenChange, transaction, defaultType =
   const [repeat, setRepeat] = useState(false);
   const [frequency, setFrequency] = useState<Frequency>('monthly');
   const [endDate, setEndDate] = useState('');
+  const [installments, setInstallments] = useState(1);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [pendingScope, setPendingScope] = useState<null | { action: 'edit' | 'delete'; fields?: TransactionFields }>(null);
 
@@ -56,6 +58,10 @@ export function TransactionForm({ open, onOpenChange, transaction, defaultType =
   const effectiveAccount = accountId || firstAccount;
   const effectiveCategory = type === 'transfer' ? null : categoryId || categoryList[0]?.id || null;
   const isTransfer = type === 'transfer';
+  const selectedAccount = accountList.find((a) => a.id === effectiveAccount);
+  // Compra no cartão (decisão R19): só type "expense" é um lançamento de cartão válido (receita/transferência
+  // num cartão são 422 na API). Trava conta+data na edição e esconde pago/recorrência e mostra "Parcelar em".
+  const isCardPurchase = type === 'expense' && selectedAccount?.type === 'credit_card';
 
   function fields(): TransactionFields | null {
     const next: Record<string, string> = {};
@@ -114,7 +120,14 @@ export function TransactionForm({ open, onOpenChange, transaction, defaultType =
       return;
     }
     try {
-      await create.mutateAsync({ ...data, type, status: paid ? 'paid' : 'pending', recurrence: repeat ? { frequency, endDate: endDate || null } : null });
+      await create.mutateAsync({
+        ...data,
+        type,
+        status: paid ? 'paid' : 'pending',
+        recurrence: repeat ? { frequency, endDate: endDate || null } : null,
+        // 1x é à vista e não envia `installments` (decisão R19); a API só aceita o campo numa compra de cartão.
+        ...(isCardPurchase && installments > 1 ? { installments } : {}),
+      });
       toast.success(isTransfer ? 'Transferência registrada.' : 'Lançamento criado.');
       onOpenChange(false);
     } catch (err) {
@@ -146,7 +159,11 @@ export function TransactionForm({ open, onOpenChange, transaction, defaultType =
           </Field>
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label={isTransfer ? 'De' : 'Conta'} error={errors.accountId}>
-              <Select value={effectiveAccount} onChange={(e) => setAccountId(e.target.value)}>
+              <Select
+                value={effectiveAccount}
+                onChange={(e) => setAccountId(e.target.value)}
+                disabled={editing && isCardPurchase}
+              >
                 {accountList.map((a) => (
                   <option key={a.id} value={a.id}>
                     {a.name}
@@ -180,8 +197,8 @@ export function TransactionForm({ open, onOpenChange, transaction, defaultType =
             )}
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Vencimento">
-              <Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+            <Field label={isCardPurchase ? 'Data da compra' : 'Vencimento'}>
+              <Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} disabled={editing && isCardPurchase} />
             </Field>
             {!isTransfer && (
               <div className="grid gap-2">
@@ -198,7 +215,16 @@ export function TransactionForm({ open, onOpenChange, transaction, defaultType =
               </div>
             )}
           </div>
-          {!editing && (
+          {!editing && isCardPurchase && selectedAccount && (
+            <CardPurchaseFields
+              card={selectedAccount}
+              amount={amount}
+              purchaseDate={dueDate}
+              installments={installments}
+              onInstallmentsChange={setInstallments}
+            />
+          )}
+          {!editing && !isCardPurchase && (
             <div className="grid gap-3 rounded-[var(--radius-control)] border border-border p-4">
               <label className="flex items-center gap-3 text-sm">
                 <input type="checkbox" className="h-4 w-4 accent-[var(--primary)]" checked={paid} onChange={(e) => setPaid(e.target.checked)} />

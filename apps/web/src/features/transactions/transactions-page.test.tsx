@@ -49,4 +49,26 @@ describe('TransactionsPage', () => {
     renderApp(<TransactionsPage />, { api: api({ overdue: true, dueDate: '2026-11-03' }) });
     expect(await screen.findByText('Vencido')).toBeInTheDocument();
   });
+
+  it('lançamento de cartão não mostra o botão de pagar/desfazer, e a parcela mostra "k/N" (decisão R19, Tarefa 11)', async () => {
+    const client = fakeApi({
+      'GET /transactions': {
+        items: [{ ...base, id: 't1', accountId: 'card1', invoiceMonth: '2026-12', installmentNumber: 3, installmentTotal: 10 }],
+        nextCursor: null,
+      },
+      'GET /accounts': [
+        { id: 'a1', name: 'Nubank', type: 'checking', color: '#6366F1', initialBalance: 0, balance: 0, archivedAt: null, createdAt: '' },
+        {
+          id: 'card1', name: 'Cartão principal', type: 'credit_card', color: '#7c3aed', initialBalance: 0, balance: -30000,
+          archivedAt: null, createdAt: '', creditLimit: 800000, closingDay: 26, dueDay: 5, paymentAccountId: 'a1',
+          card: { limitAvailable: 770000, openInvoice: null, nextDue: null },
+        },
+      ],
+      'GET /categories': [{ id: 'c1', name: 'Contas', type: 'expense', icon: 'receipt', color: '#64748B' }],
+    });
+    renderApp(<TransactionsPage />, { api: client });
+    const row = await screen.findByRole('listitem', { name: /Internet/ });
+    expect(within(row).queryByRole('button', { name: /pago/ })).not.toBeInTheDocument();
+    expect(row).toHaveTextContent('3/10');
+  });
 });

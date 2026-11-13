@@ -20,7 +20,8 @@ export function useAccounts(includeArchived = false) {
   });
 }
 
-const FINANCE_KEYS = ['accounts', 'transactions', 'dashboard', 'categories'];
+// 'cards': faturas (Tarefa 11) — limite, totais e lançamentos de uma fatura também dependem de saldo/lançamentos.
+const FINANCE_KEYS = ['accounts', 'transactions', 'dashboard', 'categories', 'cards'];
 
 /**
  * Mutação que, ao terminar, invalida tudo que depende de saldo.
