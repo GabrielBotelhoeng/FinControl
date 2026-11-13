@@ -10,8 +10,10 @@ import { useTransfer } from './api';
 
 export function TransferForm({ open, onOpenChange, accounts }: { open: boolean; onOpenChange: (o: boolean) => void; accounts: AccountDTO[] }) {
   const transfer = useTransfer();
-  const [from, setFrom] = useState(accounts[0]?.id ?? '');
-  const [to, setTo] = useState(accounts[1]?.id ?? '');
+  // Decisão R18: cartão não entra como origem nem destino (a API recusa com 422); pagar fatura é na tela de faturas.
+  const eligible = accounts.filter((a) => a.type !== 'credit_card');
+  const [from, setFrom] = useState(eligible[0]?.id ?? '');
+  const [to, setTo] = useState(eligible[1]?.id ?? '');
   const [amount, setAmount] = useState<number | null>(null);
   const [date, setDate] = useState(todayInSaoPaulo());
   const [error, setError] = useState<string | null>(null);
@@ -35,7 +37,7 @@ export function TransferForm({ open, onOpenChange, accounts }: { open: boolean; 
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="De">
             <Select value={from} onChange={(e) => setFrom(e.target.value)}>
-              {accounts.map((a) => (
+              {eligible.map((a) => (
                 <option key={a.id} value={a.id}>
                   {a.name}
                 </option>
@@ -44,7 +46,7 @@ export function TransferForm({ open, onOpenChange, accounts }: { open: boolean; 
           </Field>
           <Field label="Para">
             <Select value={to} onChange={(e) => setTo(e.target.value)}>
-              {accounts.map((a) => (
+              {eligible.map((a) => (
                 <option key={a.id} value={a.id}>
                   {a.name}
                 </option>
