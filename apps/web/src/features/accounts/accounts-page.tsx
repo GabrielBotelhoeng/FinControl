@@ -93,6 +93,8 @@ export default function AccountsPage() {
   const [editing, setEditing] = useState<AccountDTO | 'new' | null>(null);
   const [transferOpen, setTransferOpen] = useState(false);
   const active = (accounts.data ?? []).filter((a) => a.archivedAt === null);
+  // Cartão não entra como origem nem destino (decisão R18): o botão só aparece havendo para onde transferir.
+  const transferable = active.filter((a) => a.type !== 'credit_card');
   const total = active.reduce((sum, a) => sum + a.balance, 0);
 
   const newButton = (
@@ -110,7 +112,7 @@ export default function AccountsPage() {
         description="Cada conta guarda o próprio saldo. A soma das ativas é o seu saldo total."
         actions={
           <>
-            {active.length >= 2 && (
+            {transferable.length >= 2 && (
               <Button variant="secondary" onClick={() => setTransferOpen(true)}>
                 <ArrowLeftRight aria-hidden className="h-4 w-4" strokeWidth={1.75} />
                 Transferir

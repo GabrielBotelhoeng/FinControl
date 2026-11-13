@@ -156,15 +156,26 @@ describe('AccountsPage', () => {
     expect(within(typeSelect).queryByText('Cartão de crédito')).not.toBeInTheDocument();
   });
 
-  it('a transferência não oferece cartões como origem nem destino', async () => {
+  it('o botão "Transferir" não aparece havendo só uma conta ativa que não é cartão', async () => {
     const checking = account();
     const card = cardAccount();
     renderApp(<AccountsPage />, { api: fakeApi({ 'GET /accounts': [checking, card] }) });
+    await screen.findByRole('article', { name: 'Nubank' });
+    expect(screen.queryByRole('button', { name: 'Transferir' })).not.toBeInTheDocument();
+  });
+
+  it('com duas contas comuns e um cartão, a transferência não oferece cartões e começa com contas elegíveis distintas', async () => {
+    const checking = account();
+    const savings = account({ id: 'a2', name: 'Poupança', type: 'savings' });
+    const card = cardAccount();
+    renderApp(<AccountsPage />, { api: fakeApi({ 'GET /accounts': [checking, savings, card] }) });
     await userEvent.click(await screen.findByRole('button', { name: 'Transferir' }));
     const dialog = await screen.findByRole('dialog');
     const fromSelect = within(dialog).getByLabelText('De');
     const toSelect = within(dialog).getByLabelText('Para');
     expect(within(fromSelect).queryByText('Cartão principal')).not.toBeInTheDocument();
     expect(within(toSelect).queryByText('Cartão principal')).not.toBeInTheDocument();
+    expect(fromSelect).toHaveValue(checking.id);
+    expect(toSelect).toHaveValue(savings.id);
   });
 });

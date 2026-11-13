@@ -11,9 +11,11 @@ import { useTransfer } from './api';
 export function TransferForm({ open, onOpenChange, accounts }: { open: boolean; onOpenChange: (o: boolean) => void; accounts: AccountDTO[] }) {
   const transfer = useTransfer();
   // Decisão R18: cartão não entra como origem nem destino (a API recusa com 422); pagar fatura é na tela de faturas.
+  // accounts-page.tsx só mostra "Transferir" havendo 2+ elegíveis; o fallback abaixo é só salvaguarda (ex.: a
+  // lista mudar entre abrir o diálogo e este estado inicial) — nunca deixa `to` num valor sem <option> igual.
   const eligible = accounts.filter((a) => a.type !== 'credit_card');
   const [from, setFrom] = useState(eligible[0]?.id ?? '');
-  const [to, setTo] = useState(eligible[1]?.id ?? '');
+  const [to, setTo] = useState(eligible[1]?.id ?? eligible[0]?.id ?? '');
   const [amount, setAmount] = useState<number | null>(null);
   const [date, setDate] = useState(todayInSaoPaulo());
   const [error, setError] = useState<string | null>(null);
