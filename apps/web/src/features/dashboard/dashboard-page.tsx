@@ -15,6 +15,7 @@ import { TransactionRow } from '../transactions/transaction-row';
 import { useByCategory, useEvolution, useSummary } from './api';
 import { CategoryDonut } from './category-donut';
 import { EvolutionChart } from './evolution-chart';
+import { InvoiceRow } from './invoice-row';
 
 const pct = new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 1 });
 
@@ -40,7 +41,8 @@ function Comparison({ label, kind, data }: { label: string; kind: 'income' | 'ex
 }
 
 export default function DashboardPage() {
-  const [month, setMonth] = useState<YearMonth>(monthOf(todayInSaoPaulo()));
+  const today = todayInSaoPaulo();
+  const [month, setMonth] = useState<YearMonth>(monthOf(today));
   const [editing, setEditing] = useState<TransactionDTO | 'new' | null>(null);
   const summary = useSummary(month);
   const evolution = useEvolution(6);
@@ -118,16 +120,20 @@ export default function DashboardPage() {
           )}
           {summary.data && summary.data.upcoming.length > 0 && (
             <ul className="mt-2 divide-y divide-border">
-              {summary.data.upcoming.map((tx) => (
-                <TransactionRow
-                  key={tx.id}
-                  tx={tx}
-                  account={accountById.get(tx.accountId)}
-                  destination={tx.destinationAccountId ? accountById.get(tx.destinationAccountId) : undefined}
-                  category={tx.categoryId ? categoryById.get(tx.categoryId) : undefined}
-                  onEdit={() => setEditing(tx)}
-                />
-              ))}
+              {summary.data.upcoming.map((item) =>
+                item.kind === 'invoice' ? (
+                  <InvoiceRow key={`${item.cardId}-${item.month}`} item={item} />
+                ) : (
+                  <TransactionRow
+                    key={item.id}
+                    tx={item}
+                    account={accountById.get(item.accountId)}
+                    destination={item.destinationAccountId ? accountById.get(item.destinationAccountId) : undefined}
+                    category={item.categoryId ? categoryById.get(item.categoryId) : undefined}
+                    onEdit={() => setEditing(item)}
+                  />
+                ),
+              )}
             </ul>
           )}
         </Panel>

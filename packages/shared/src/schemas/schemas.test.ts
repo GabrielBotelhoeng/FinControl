@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
-  centsSchema, createAccountSchema, createTransactionSchema, listTransactionsQuerySchema,
-  updateAccountSchema, updateTransactionSchema,
+  centsSchema, createAccountSchema, createTransactionSchema, listInvoicesQuerySchema, listTransactionsQuerySchema,
+  payInvoiceSchema, updateAccountSchema, updateTransactionSchema,
 } from './index';
 
 const ACC = '0b9f6f3a-1d2e-4c5b-8a7f-111111111111';
@@ -40,6 +40,23 @@ describe('createAccountSchema / updateAccountSchema', () => {
   it('rejeita cor inválida', () => {
     expect(paths(createAccountSchema.safeParse({ name: 'A', type: 'wallet', color: 'red' }))).toContain('color');
   });
+
+  it('cartão exige limite, fechamento, vencimento e conta pagadora', () => {
+    const base = { name: 'Cartão', type: 'credit_card', color: '#7c3aed', initialBalance: 0 };
+    expect(createAccountSchema.safeParse(base).success).toBe(false);
+    expect(createAccountSchema.safeParse({ ...base, creditLimit: 800000, closingDay: 26, dueDay: 5, paymentAccountId: '00000000-0000-4000-8000-000000000000' }).success).toBe(true);
+    expect(createAccountSchema.safeParse({ ...base, creditLimit: 800000, closingDay: 32, dueDay: 5, paymentAccountId: '00000000-0000-4000-8000-000000000000' }).success).toBe(false);
+  });
+
+  it('recusa campo de cartão em conta comum', () => {
+    const r = createAccountSchema.safeParse({ name: 'Carteira', type: 'wallet', color: '#000000', initialBalance: 0, creditLimit: 100000 });
+    expect(paths(r)).toContain('creditLimit');
+  });
+
+  it('updateAccountSchema aceita os campos de cartão com a mesma faixa', () => {
+    expect(updateAccountSchema.safeParse({ closingDay: 0 }).success).toBe(false);
+    expect(updateAccountSchema.safeParse({ creditLimit: 500000, closingDay: 10, dueDay: 20, paymentAccountId: ACC }).success).toBe(true);
+  });
 });
 
 describe('createTransactionSchema', () => {
@@ -69,6 +86,23 @@ describe('createTransactionSchema', () => {
     const r = createTransactionSchema.safeParse({ ...expense, recurrence: { frequency: 'monthly', endDate: '2026-11-01' } });
     expect(paths(r)).toContain('recurrence.endDate');
   });
+
+  it('parcelamento só de 2 a 48', () => {
+    const tx = { type: 'expense', amount: 120000, description: 'TV', accountId: '00000000-0000-4000-8000-000000000000', categoryId: '00000000-0000-4000-8000-000000000001', nature: 'variable', dueDate: '2026-11-10' };
+    expect(createTransactionSchema.safeParse({ ...tx, installments: 10 }).success).toBe(true);
+    expect(createTransactionSchema.safeParse({ ...tx, installments: 1 }).success).toBe(false);
+    expect(createTransactionSchema.safeParse({ ...tx, installments: 49 }).success).toBe(false);
+  });
+
+  it('recusa parcelamento fora de despesa', () => {
+    const income = { type: 'income', amount: 500000, description: 'Salário', accountId: ACC, categoryId: CAT, nature: 'fixed', dueDate: '2026-11-10', installments: 3 };
+    expect(paths(createTransactionSchema.safeParse(income))).toContain('installments');
+  });
+
+  it('recusa parcelamento junto com recorrência', () => {
+    const r = createTransactionSchema.safeParse({ ...expense, installments: 3, recurrence: { frequency: 'monthly' } });
+    expect(paths(r)).toContain('installments');
+  });
 });
 
 describe('updateTransactionSchema', () => {
@@ -86,5 +120,29 @@ describe('listTransactionsQuerySchema', () => {
 
   it('rejeita período invertido', () => {
     expect(listTransactionsQuerySchema.safeParse({ from: '2026-12-01', to: '2026-11-01' }).success).toBe(false);
+  });
+});
+
+describe('payInvoiceSchema', () => {
+  it('aceita valor inteiro positivo e recusa zero', () => {
+    expect(payInvoiceSchema.safeParse({ amount: 10000, accountId: ACC, paidDate: '2026-11-10' }).success).toBe(true);
+    expect(payInvoiceSchema.safeParse({ amount: 0, accountId: ACC, paidDate: '2026-11-10' }).success).toBe(false);
+  });
+
+  it('usa a mensagem em pt-BR de centsSchema para valor zero', () => {
+    const r = payInvoiceSchema.safeParse({ amount: 0, accountId: ACC, paidDate: '2026-11-10' });
+    expect(r.error?.issues[0]?.message).toBe('Valor deve ser maior que zero');
+  });
+});
+
+describe('listInvoicesQuerySchema', () => {
+  it('from e to são opcionais e aceitam AAAA-MM', () => {
+    expect(listInvoicesQuerySchema.parse({})).toEqual({});
+    expect(listInvoicesQuerySchema.safeParse({ from: '2026-01', to: '2026-12' }).success).toBe(true);
+  });
+
+  it('recusa mês fora do formato AAAA-MM', () => {
+    expect(listInvoicesQuerySchema.safeParse({ from: '2026-13' }).success).toBe(false);
+    expect(listInvoicesQuerySchema.safeParse({ to: '2026/11' }).success).toBe(false);
   });
 });

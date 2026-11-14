@@ -1,6 +1,7 @@
 import type { AccountDTO } from '@fincontrol/shared';
-import { Archive, ArchiveRestore, ArrowLeftRight, Landmark, PiggyBank, Pencil, Plus, TrendingUp, Wallet } from 'lucide-react';
+import { Archive, ArchiveRestore, ArrowLeftRight, ArrowRight, Landmark, PiggyBank, Pencil, Plus, TrendingUp, Wallet, type LucideIcon } from 'lucide-react';
 import { useState } from 'react';
+import { Link } from 'react-router';
 import { toast } from 'sonner';
 import { Button } from '../../components/ui/button';
 import { HeroAmount } from '../../components/ui/money';
@@ -8,15 +9,43 @@ import { PageHeader } from '../../components/ui/page-header';
 import { Panel } from '../../components/ui/panel';
 import { EmptyState, ErrorState, Skeleton } from '../../components/ui/states';
 import { cn } from '../../lib/cn';
+import { formatBRL } from '../../lib/format';
 import { AccountForm } from './account-form';
 import { accountTypeLabel, useAccounts, useArchiveAccount } from './api';
 import { TransferForm } from './transfer-form';
 
-const TYPE_ICON = { checking: Landmark, savings: PiggyBank, wallet: Wallet, investment: TrendingUp } as const;
+// Record<string, ...> (não Record<AccountType, ...>): cobre tipos ainda sem ícone dedicado (ex.: credit_card, Tarefa 10) com o fallback abaixo.
+const TYPE_ICON: Record<string, LucideIcon> = { checking: Landmark, savings: PiggyBank, wallet: Wallet, investment: TrendingUp };
+
+/** Limite usado e disponível e a fatura aberta do cartão (spec §6); só quando a conta é um cartão (AccountDTO.card). */
+function CardSummary({ account }: { account: AccountDTO }) {
+  if (!account.card) return null;
+  const { card, creditLimit } = account;
+  const used = (creditLimit ?? 0) - card.limitAvailable;
+  return (
+    <div className="flex flex-col gap-1.5 border-t border-border pt-4 text-sm text-muted">
+      <p>
+        Disponível <span className="tabular font-semibold text-text">{formatBRL(card.limitAvailable)}</span> de <span className="tabular">{formatBRL(creditLimit ?? 0)}</span>
+      </p>
+      <p>
+        Usado <span className="tabular">{formatBRL(used)}</span>
+      </p>
+      {card.openInvoice && (
+        <p>
+          Fatura aberta: <span className="tabular font-medium text-text">{formatBRL(card.openInvoice.amount)}</span>
+        </p>
+      )}
+      <Link to={`/cartoes/${account.id}`} className="mt-1 inline-flex w-fit items-center gap-1 text-sm font-medium text-primary hover:underline">
+        Ver faturas
+        <ArrowRight aria-hidden className="h-3.5 w-3.5" strokeWidth={1.75} />
+      </Link>
+    </div>
+  );
+}
 
 function AccountItem({ account, onEdit }: { account: AccountDTO; onEdit: () => void }) {
   const archive = useArchiveAccount();
-  const Icon = TYPE_ICON[account.type];
+  const Icon = TYPE_ICON[account.type] ?? Wallet;
   const archived = account.archivedAt !== null;
   return (
     <Panel aria-label={account.name} role="article" className={cn('flex flex-col gap-6 p-6', archived && 'opacity-60')}>
@@ -53,6 +82,7 @@ function AccountItem({ account, onEdit }: { account: AccountDTO; onEdit: () => v
         </div>
       </div>
       <HeroAmount cents={account.balance} className={cn('text-3xl', account.balance < 0 && 'text-expense')} />
+      <CardSummary account={account} />
     </Panel>
   );
 }
@@ -63,6 +93,8 @@ export default function AccountsPage() {
   const [editing, setEditing] = useState<AccountDTO | 'new' | null>(null);
   const [transferOpen, setTransferOpen] = useState(false);
   const active = (accounts.data ?? []).filter((a) => a.archivedAt === null);
+  // Cartão não entra como origem nem destino (decisão R18): o botão só aparece havendo para onde transferir.
+  const transferable = active.filter((a) => a.type !== 'credit_card');
   const total = active.reduce((sum, a) => sum + a.balance, 0);
 
   const newButton = (
@@ -80,7 +112,7 @@ export default function AccountsPage() {
         description="Cada conta guarda o próprio saldo. A soma das ativas é o seu saldo total."
         actions={
           <>
-            {active.length >= 2 && (
+            {transferable.length >= 2 && (
               <Button variant="secondary" onClick={() => setTransferOpen(true)}>
                 <ArrowLeftRight aria-hidden className="h-4 w-4" strokeWidth={1.75} />
                 Transferir
@@ -125,7 +157,9 @@ export default function AccountsPage() {
         </>
       )}
 
-      {editing && <AccountForm open onOpenChange={(o) => !o && setEditing(null)} {...(editing === 'new' ? {} : { account: editing })} />}
+      {editing && (
+        <AccountForm open onOpenChange={(o) => !o && setEditing(null)} accounts={accounts.data ?? []} {...(editing === 'new' ? {} : { account: editing })} />
+      )}
       {transferOpen && <TransferForm open onOpenChange={setTransferOpen} accounts={active} />}
     </>
   );
