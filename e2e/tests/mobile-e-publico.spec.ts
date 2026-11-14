@@ -6,8 +6,10 @@ test.describe('tela de 360 px', () => {
 
   test('nenhuma página tem rolagem horizontal', async ({ page }) => {
     await enterDemo(page);
+    await page.goto('/contas');
+    const faturas = await page.getByRole('article', { name: 'Cartão principal' }).getByRole('link', { name: 'Ver faturas' }).getAttribute('href');
 
-    for (const path of ['/', '/lancamentos', '/contas', '/categorias', '/perfil', '/privacidade', '/termos']) {
+    for (const path of ['/', '/lancamentos', '/contas', faturas!, '/categorias', '/perfil', '/privacidade', '/termos']) {
       await page.goto(path);
       await page.waitForLoadState('networkidle');
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
