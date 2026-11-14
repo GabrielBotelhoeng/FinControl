@@ -35,4 +35,32 @@ describe('HealthTiles', () => {
     expect(screen.getByRole('group', { name: 'Taxa de poupança' })).toHaveTextContent('Na meta');
     expect(screen.getByRole('group', { name: 'Reserva de emergência' })).toHaveTextContent(/Hoje: /);
   });
+
+  it('mostra o comprometimento de renda com a meta de 30% e a faixa escrita', () => {
+    const { rerender } = render(<HealthTiles health={{ ...base, savingsRate: 0.2, reserveMonths: 3, debtCommitment: 0.06, debtPayments: 30000 }} />);
+    const tile = () => screen.getByRole('group', { name: 'Comprometimento de renda' });
+    expect(tile()).toHaveTextContent('6%');
+    expect(tile()).toHaveTextContent('Na meta');
+    expect(tile()).toHaveTextContent('Meta: até 30% da renda');
+
+    rerender(<HealthTiles health={{ ...base, savingsRate: 0.2, reserveMonths: 3, debtCommitment: 0.35, debtPayments: 30000 }} />);
+    expect(tile()).toHaveTextContent('Atenção');
+
+    rerender(<HealthTiles health={{ ...base, savingsRate: 0.2, reserveMonths: 3, debtCommitment: 0.5, debtPayments: 30000 }} />);
+    expect(tile()).toHaveTextContent('Alto');
+  });
+
+  it('comprometimento sem receitas mostra "—" e explica', () => {
+    render(<HealthTiles health={{ ...base, savingsRate: null, reserveMonths: 3, debtCommitment: null, debtPayments: 0 }} />);
+    const tile = screen.getByRole('group', { name: 'Comprometimento de renda' });
+    expect(tile).toHaveTextContent('—');
+    expect(tile).toHaveTextContent('Sem receitas nos últimos 3 meses.');
+  });
+
+  it('o status do comprometimento segue o número exibido (30,5% aparece como 31% e pede atenção)', () => {
+    render(<HealthTiles health={{ ...base, savingsRate: 0.2, reserveMonths: 3, debtCommitment: 0.305, debtPayments: 30000 }} />);
+    const tile = screen.getByRole('group', { name: 'Comprometimento de renda' });
+    expect(tile).toHaveTextContent('31%');
+    expect(tile).toHaveTextContent('Atenção');
+  });
 });
