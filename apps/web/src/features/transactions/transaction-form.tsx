@@ -52,7 +52,12 @@ export function TransactionForm({ open, onOpenChange, transaction, defaultType =
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [pendingScope, setPendingScope] = useState<null | { action: 'edit' | 'delete'; fields?: TransactionFields }>(null);
 
-  const accountList = (accounts.data ?? []).filter((a) => a.archivedAt === null || a.id === transaction?.accountId);
+  // A trava da edição depende da conta original, não da escolhida agora: uma despesa comum não vira compra de cartão
+  // (a API recusa), então na edição dela os cartões nem aparecem; já a compra de cartão fica com conta e data travadas.
+  const editingCardPurchase = editing && (accounts.data ?? []).some((a) => a.id === transaction?.accountId && a.type === 'credit_card');
+  const accountList = (accounts.data ?? [])
+    .filter((a) => a.archivedAt === null || a.id === transaction?.accountId)
+    .filter((a) => !editing || editingCardPurchase || transaction?.type === 'transfer' || a.type !== 'credit_card');
   const categoryList = (categories.data ?? []).filter((c) => c.type === type);
   const firstAccount = accountList[0]?.id ?? '';
   const effectiveAccount = accountId || firstAccount;
@@ -124,7 +129,8 @@ export function TransactionForm({ open, onOpenChange, transaction, defaultType =
         ...data,
         type,
         status: paid ? 'paid' : 'pending',
-        recurrence: repeat ? { frequency, endDate: endDate || null } : null,
+        // Os controles de recorrência somem numa compra de cartão, mas `repeat` pode ter ficado marcado antes da troca de conta.
+        recurrence: repeat && !isCardPurchase ? { frequency, endDate: endDate || null } : null,
         // 1x é à vista e não envia `installments` (decisão R19); a API só aceita o campo numa compra de cartão.
         ...(isCardPurchase && installments > 1 ? { installments } : {}),
       });
@@ -162,7 +168,7 @@ export function TransactionForm({ open, onOpenChange, transaction, defaultType =
               <Select
                 value={effectiveAccount}
                 onChange={(e) => setAccountId(e.target.value)}
-                disabled={editing && isCardPurchase}
+                disabled={editingCardPurchase}
               >
                 {accountList.map((a) => (
                   <option key={a.id} value={a.id}>
@@ -198,7 +204,7 @@ export function TransactionForm({ open, onOpenChange, transaction, defaultType =
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label={isCardPurchase ? 'Data da compra' : 'Vencimento'}>
-              <Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} disabled={editing && isCardPurchase} />
+              <Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} disabled={editingCardPurchase} />
             </Field>
             {!isTransfer && (
               <div className="grid gap-2">

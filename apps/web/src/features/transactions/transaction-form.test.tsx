@@ -115,4 +115,25 @@ describe('TransactionForm — compra no cartão (Tarefa 11)', () => {
     expect(within(dialog).getByLabelText('Data da compra')).toBeDisabled();
     expect(within(dialog).queryByLabelText('Parcelar em')).not.toBeInTheDocument();
   });
+
+  it('marcar "Repetir" numa conta comum e depois escolher o cartão não envia recorrência', async () => {
+    const client = api();
+    renderApp(<TransactionForm open onOpenChange={() => {}} />, { api: client });
+    const dialog = await screen.findByRole('dialog');
+    await within(dialog).findByRole('option', { name: 'Cartão principal' });
+    await userEvent.click(within(dialog).getByLabelText('Repetir este lançamento'));
+    await userEvent.selectOptions(within(dialog).getByLabelText('Conta'), 'c1');
+    await userEvent.type(within(dialog).getByLabelText('Valor'), '5000');
+    await userEvent.type(within(dialog).getByLabelText('Descrição'), 'Mercado');
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Salvar lançamento' }));
+    expect(client.post).toHaveBeenCalledWith('/transactions', expect.objectContaining({ accountId: 'c1', recurrence: null }));
+  });
+
+  it('ao editar uma despesa comum, a conta fica livre e os cartões não aparecem como destino', async () => {
+    renderApp(<TransactionForm open onOpenChange={() => {}} transaction={baseTx} />, { api: api() });
+    const dialog = await screen.findByRole('dialog');
+    await within(dialog).findByRole('option', { name: 'Nubank' });
+    expect(within(dialog).getByLabelText('Conta')).toBeEnabled();
+    expect(within(dialog).queryByRole('option', { name: 'Cartão principal' })).not.toBeInTheDocument();
+  });
 });

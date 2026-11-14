@@ -13,7 +13,7 @@ _Atualizado em 2026-11-13._
   - o tile "Comprometimento de renda" (C13: ≤ 30% "Na meta", até 40% "Atenção", acima disso "Alto"), com o status seguindo o número arredondado exibido;
   - a demo com "Cartão principal", faturas pagas, uma fechada, a aberta e um notebook em 10x;
   - a página `/cartoes/:id` e o link "Ver faturas" em Contas.
-- **Testes:** 60 em shared, 171 na API e 92 na web, além de 9 E2E (novo: `e2e/tests/cartao.spec.ts`). O teste de 360 px passou a cobrir a página de faturas. Lint e typecheck limpos.
+- **Testes:** 60 em shared, 172 na API e 95 na web, além de 9 E2E (novo: `e2e/tests/cartao.spec.ts`). O teste de 360 px passou a cobrir a página de faturas. Lint e typecheck limpos.
 - **Migration nova:** colunas de cartão, fatura e parcelas. Ela precisa ser aplicada no Supabase antes do deploy da API (`npx prisma migrate deploy` pelo pooler na porta 5432).
 - **Próximo:** PR da `feat/cartoes` (via @devops), CI e CodeRabbit, merge e deploy. Depois, a **Parte B** (empréstimos e financiamentos: taxa real, saldo devedor, quitação estimada e as taxas do Banco Central), com plano próprio.
 

@@ -122,8 +122,10 @@ export default function InvoicesPage() {
 
       {(accounts.isPending || invoices.isPending) && <ListSkeleton />}
       {invoices.isError && <ErrorState message={invoices.error.message} onRetry={() => invoices.refetch()} />}
+      {!invoices.isError && accounts.isError && <ErrorState message={accounts.error.message} onRetry={() => accounts.refetch()} />}
 
-      {invoices.data && (
+      {/* Só com as contas carregadas: o diálogo de pagamento escolhe a conta pagadora padrão uma única vez, ao abrir. */}
+      {invoices.data && accounts.data && (
         <>
           {card?.card && (
             <Panel className="mb-6 flex flex-wrap gap-6 p-5 text-sm text-muted">

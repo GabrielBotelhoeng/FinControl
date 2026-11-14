@@ -410,6 +410,18 @@ describe('faturas do cartão e pagamento por transferência', () => {
     expect(summary.expense.current).toBe(0); // o pagamento não conta como gasto em novembro (a compra foi em outubro)
   });
 
+  it('a fatura aberta continua na lista quando só sobram parcelas em faturas futuras', async () => {
+    const { user, card, food } = await cardScenario();
+    // Compra em 05/11 em 3x: parcelas nas faturas 2026-12 (a aberta), 2027-01 e 2027-02.
+    await request(app).post('/api/v1/transactions').set(user.auth).send({
+      type: 'expense', amount: 90000, description: 'Fone', accountId: card.id, categoryId: food, nature: 'variable', dueDate: '2026-11-05', installments: 3,
+    });
+    await testDb.transaction.deleteMany({ where: { accountId: card.id, installmentNumber: 1 } });
+    const res = await request(app).get(`/api/v1/cards/${card.id}/invoices`).set(user.auth);
+    expect(res.status).toBe(200);
+    expect(res.body.map((i: { month: string; status: string }) => [i.month, i.status])).toEqual([['2026-12', 'open']]);
+  });
+
   it('pagar mais do que a fatura reduz a dívida do cartão sem erro', async () => {
     const { user, card, checking } = await cardScenario();
     const pay = await request(app).post(`/api/v1/cards/${card.id}/invoices/2026-11/payments`).set(user.auth).send({ amount: 5000, accountId: checking.id, paidDate: '2026-11-10' });

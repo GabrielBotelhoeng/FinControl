@@ -42,14 +42,9 @@ export function createDashboardService(deps: DashboardServiceDeps) {
 
       // A reserva é medida "agora": saldo líquido atual ÷ gasto médio dos meses completos antes do mês corrente.
       const reserveWindow = Array.from({ length: RESERVE_WINDOW_MONTHS }, (_, i) => addMonthsToYm(current, -(i + 1)));
-      // Dívida de cartão (Tarefa 8): disparada em paralelo com o restante, já que depende das próprias
-      // consultas de cartão/fatura (dashboard.cards.ts), não das linhas abaixo.
-      const debtPromise = cardDebt(
-        { accountsRepo: deps.accountsRepo, cards: deps.cards, installmentTotalsByAccount: repo.installmentTotalsByAccount },
-        userId,
-        current,
-      );
-      const [now, before, totalBalance, pending, pendingCount, overdueCount, upcomingTx, liquidBalance, recent] = await Promise.all([
+      // A dívida de cartão (dashboard.cards.ts) entra no mesmo Promise.all: roda em paralelo e, se falhar,
+      // a rejeição é tratada junto com as demais (nunca fica uma promise solta sem handler).
+      const [now, before, totalBalance, pending, pendingCount, overdueCount, upcomingTx, liquidBalance, recent, debt] = await Promise.all([
         repo.paidTotalsByType(userId, startOfMonth(m), monthEnd),
         repo.paidTotalsByType(userId, startOfMonth(previous), endOfMonth(previous)),
         repo.balanceAt(userId),
@@ -59,9 +54,13 @@ export function createDashboardService(deps: DashboardServiceDeps) {
         deps.transactions.listPendingUntil(userId, monthEnd, UPCOMING_LIMIT),
         repo.balanceAt(userId, undefined, LIQUID_TYPES),
         Promise.all(reserveWindow.map((rm) => repo.paidTotalsByType(userId, startOfMonth(rm), endOfMonth(rm)))),
+        cardDebt(
+          { accountsRepo: deps.accountsRepo, cards: deps.cards, installmentTotalsByAccount: repo.installmentTotalsByAccount },
+          userId,
+          current,
+        ),
       ]);
       const reserve = reserveCoverage(liquidBalance, recent.map((r) => r.expense));
-      const debt = await debtPromise;
 
       // "A pagar" (decisão R16): lançamentos pendentes e faturas fechadas/vencidas mesclados por vencimento,
       // respeitando o mesmo limite de sempre. As faturas entram independente do mês consultado (`m`).

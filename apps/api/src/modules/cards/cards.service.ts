@@ -60,7 +60,9 @@ export function createCardsService(deps: CardsServiceDeps) {
     async listInvoices(userId: string, cardId: string, from?: YearMonth, to?: YearMonth): Promise<InvoiceDTO[]> {
       const card = await getOwnedCard(userId, cardId);
       const open = invoiceFor(today(), card.closingDay, card.dueDay).invoiceMonth;
-      const earliest = (await repo.earliestPurchaseMonth(userId, cardId)) ?? open;
+      // A aberta sempre entra, mesmo quando só sobraram parcelas em faturas futuras.
+      const purchased = (await repo.earliestPurchaseMonth(userId, cardId)) ?? open;
+      const earliest = purchased < open ? purchased : open;
       const start = from && from > earliest ? from : earliest;
       const end = to && to < open ? to : open;
       if (start > end) return [];

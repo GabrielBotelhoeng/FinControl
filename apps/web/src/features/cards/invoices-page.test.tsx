@@ -93,6 +93,13 @@ describe('InvoicesPage', () => {
     expect(await screen.findByText('Cartão não encontrado(a).')).toBeInTheDocument();
   });
 
+  it('se as contas não carregam, não oferece "Pagar fatura" e mostra o erro com "Tentar de novo"', async () => {
+    renderPage(api({ 'GET /accounts': new Error('Falha ao carregar as contas.') }));
+    expect(await screen.findByText('Falha ao carregar as contas.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /tentar/i })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Pagar fatura' })).not.toBeInTheDocument();
+  });
+
   it('abre o diálogo de pagamento com o valor restante e a conta pagadora padrão, e envia o pagamento', async () => {
     const client = api();
     renderApp(<InvoicesPage />, { route: '/cartoes/c1', path: '/cartoes/:id', api: client });
