@@ -10,11 +10,13 @@ export type LoanSummary = {
 
 const presentValue = (installment: number, i: number, n: number) => (i === 0 ? installment * n : (installment * (1 - (1 + i) ** -n)) / i);
 
-/** Taxa mensal que faz `principal = PV(parcela, i, n)`. Bisseção em [0, 100% a.m.], precisão de 1e-10; sem juros → 0. */
+/** Taxa mensal que faz `principal = PV(parcela, i, n)`. Bisseção com o teto dobrado até cercar a raiz, precisão de 1e-10; sem juros → 0. */
 export function impliedMonthlyRate(principal: number, installment: number, n: number): number {
   if (installment * n <= principal) return 0;
   let lo = 0;
   let hi = 1;
+  // PV cai com a taxa: dobra o teto até PV(teto) ≤ principal (ex.: R$ 100 em 1x de R$ 300 = 200% a.m.).
+  while (presentValue(installment, hi, n) > principal) hi *= 2;
   while (hi - lo > 1e-10) {
     const mid = (lo + hi) / 2;
     if (presentValue(installment, mid, n) > principal) lo = mid;

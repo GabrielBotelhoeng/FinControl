@@ -57,6 +57,22 @@ describe('taxas do Banco Central', () => {
     expect(res.status).toBe(401);
   });
 
+  it('CodeRabbit: posição e total contam só as linhas guardadas (linha inválida antes do banco não gera "7º de 38")', async () => {
+    const raw = JSON.parse(readFixture('bcb-veiculos-2026-10-23.json')) as { value: { Posicao: number; TaxaJurosAoMes: number | null }[] };
+    const dirty = { value: raw.value.map((r) => (r.Posicao === 1 ? { ...r, TaxaJurosAoMes: null } : r)) };
+    const fetchFn = vi.fn(async (input: string | URL | Request) => {
+      const url = decodeURIComponent(String(input));
+      if (!url.includes(VEHICLES)) return json({ value: [] });
+      if (url.includes('$select=')) return json({ value: [{ InicioPeriodo: '2026-10-23', FimPeriodo: '2026-10-29' }] });
+      return json(dirty);
+    });
+    const { app, deps } = buildTestApp({ fetchFn });
+    await request(app).get('/api/v1/internal/cron/sync-bank-rates').set('Authorization', `Bearer ${SECRET}`);
+    const { buildContainer } = await import('../src/http/container');
+    const comparison = await buildContainer(deps).bankRates.comparison(VEHICLES, '00000000');
+    expect(comparison!.bank).toMatchObject({ position: 6, of: 38 });
+  });
+
   it('comparison: banco na lista, banco fora da lista e modalidade sem dados', async () => {
     await seedBankRatesFromFixture('bcb-veiculos-2026-10-23.json');
     const { deps } = buildTestApp();

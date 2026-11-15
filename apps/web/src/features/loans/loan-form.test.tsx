@@ -71,6 +71,15 @@ describe('LoanForm', () => {
     );
   });
 
+  it('se as contas não carregam, mostra o erro com "Tentar de novo" em vez de pedir para cadastrar uma conta', async () => {
+    renderApp(<LoanForm open onOpenChange={() => {}} />, { api: api({ 'GET /accounts': new Error('Falha ao carregar as contas.') }) });
+    const dialog = await screen.findByRole('dialog', { name: 'Novo empréstimo' });
+    expect(await within(dialog).findByText('Falha ao carregar as contas.')).toBeInTheDocument();
+    expect(within(dialog).getByRole('button', { name: /tentar/i })).toBeInTheDocument();
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Salvar empréstimo' }));
+    expect(within(dialog).queryByText(/Cadastre uma conta/)).not.toBeInTheDocument();
+  });
+
   it('banco fora da lista: aceita o nome digitado, sem CNPJ', async () => {
     const client = api({ 'GET /banks': [] });
     const dialog = await open(client);

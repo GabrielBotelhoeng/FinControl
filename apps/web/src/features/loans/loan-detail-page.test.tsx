@@ -1,4 +1,5 @@
-import { screen, within } from '@testing-library/react';
+import { fireEvent, screen, within } from '@testing-library/react';
+import { useNavigate } from 'react-router';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import { fakeApi } from '../../test/fakes';
@@ -79,6 +80,28 @@ describe('LoanDetailPage', () => {
     await userEvent.type(within(dialog).getByLabelText('Nome'), 'Carro');
     await userEvent.click(within(dialog).getByRole('button', { name: 'Salvar' }));
     expect(client.patch).toHaveBeenCalledWith('/loans/l1', { name: 'Carro' });
+  });
+
+  it('CodeRabbit: trocar de empréstimo (histórico do navegador) com o diálogo de excluir aberto fecha o diálogo', async () => {
+    function GoToL2() {
+      const navigate = useNavigate();
+      return <button onClick={() => navigate('/emprestimos/l2')}>ir para l2</button>;
+    }
+    const client = fakeApi({ 'GET /loans/l1': detail(), 'GET /loans/l2': detail({ id: 'l2', name: 'Outro' }), 'DELETE /loans': undefined });
+    renderApp(
+      <>
+        <LoanDetailPage />
+        <GoToL2 />
+      </>,
+      { route: '/emprestimos/l1', path: '/emprestimos/:id', api: client },
+    );
+    await userEvent.click(await screen.findByRole('button', { name: 'Excluir empréstimo' }));
+    await screen.findByRole('dialog', { name: 'Excluir empréstimo?' });
+    // fireEvent: o diálogo modal bloqueia o ponteiro na página, como acontece de verdade; a navegação vem "de fora".
+    fireEvent.click(screen.getByText('ir para l2', { ignore: false }));
+    await screen.findByRole('heading', { name: /Outro/ });
+    expect(screen.queryByRole('dialog', { name: 'Excluir empréstimo?' })).not.toBeInTheDocument();
+    expect(client.del).not.toHaveBeenCalled();
   });
 
   it('excluir pede confirmação explicando o que acontece com as parcelas e envia o DELETE', async () => {

@@ -41,5 +41,7 @@ test('cadastro de empréstimo mostra a taxa real, gera as parcelas e excluir apa
   await expect(page.getByRole('heading', { name: 'Nenhum empréstimo ainda' })).toBeVisible();
 
   await page.goto('/lancamentos');
+  // Espera a lista carregar (estado vazio do mês) antes de afirmar a ausência; senão passaria ainda carregando.
+  await expect(page.getByRole('heading', { name: 'Nenhum lançamento neste mês' })).toBeVisible();
   await expect(page.getByText('Empréstimo pessoal (1/24)')).toHaveCount(0);
 });

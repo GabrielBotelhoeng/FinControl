@@ -8,6 +8,10 @@ describe('impliedMonthlyRate', () => {
   it('R$ 30.000 em 48x de R$ 950 → 1,858% a.m.', () => {
     expect(impliedMonthlyRate(3000000, 95000, 48)).toBeCloseTo(0.0185795, 6);
   });
+  it('taxa acima de 100% ao mês (R$ 100 em 1x de R$ 300 → 200%): a busca amplia o intervalo', () => {
+    expect(impliedMonthlyRate(10000, 30000, 1)).toBeCloseTo(2, 7);
+    expect(loanSummary({ principal: 10000, installmentAmount: 30000, installmentsTotal: 1, installmentsPaid: 0 }).outstanding).toBe(10000);
+  });
   it('parcela × n ≤ valor recebido → taxa 0, sem divisão por zero', () => {
     expect(impliedMonthlyRate(100000, 1000, 100)).toBe(0);
     expect(impliedMonthlyRate(100000, 900, 100)).toBe(0);

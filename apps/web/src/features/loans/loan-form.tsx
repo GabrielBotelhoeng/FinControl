@@ -7,6 +7,7 @@ import { Button } from '../../components/ui/button';
 import { Dialog } from '../../components/ui/dialog';
 import { Field, Input, Select } from '../../components/ui/field';
 import { MoneyInput } from '../../components/ui/money-input';
+import { ErrorState } from '../../components/ui/states';
 import { ApiError } from '../../lib/api-client';
 import { formatBRL, formatRate } from '../../lib/format';
 import { useAccounts } from '../accounts/api';
@@ -63,7 +64,8 @@ export function LoanForm({ open, onOpenChange }: Props) {
     if (!(n >= 1 && n <= 480)) next.installmentsTotal = 'Informe de 1 a 480 parcelas.';
     if (!(paid >= 0)) next.installmentsPaidBefore = 'Informe um número inteiro.';
     else if (n >= 1 && paid >= n) next.installmentsPaidBefore = 'Já pagas precisa ser menor que o total de parcelas';
-    if (!effectiveAccount) next.accountId = 'Cadastre uma conta (que não seja cartão) para pagar as parcelas.';
+    if (!accounts.data) next.accountId = 'As contas ainda não carregaram.';
+    else if (!effectiveAccount) next.accountId = 'Cadastre uma conta (que não seja cartão) para pagar as parcelas.';
     if (informed !== undefined && !(informed > 0 && informed <= 1)) next.informedMonthlyRate = 'Informe a taxa em % ao mês, por exemplo 2,5.';
     setErrors(next);
     if (Object.keys(next).length > 0 || !principal || !installmentAmount) return;
@@ -122,8 +124,8 @@ export function LoanForm({ open, onOpenChange }: Props) {
           <Field label="Vencimento da 1ª parcela" error={errors.firstDueDate}>
             <Input type="date" value={firstDueDate} onChange={(e) => setFirstDueDate(e.target.value)} />
           </Field>
-          <Field label="Conta que paga" error={errors.accountId}>
-            <Select value={effectiveAccount} onChange={(e) => setAccountId(e.target.value)}>
+          <Field label="Conta que paga" error={accounts.isError ? undefined : errors.accountId}>
+            <Select value={effectiveAccount} onChange={(e) => setAccountId(e.target.value)} disabled={!accounts.data}>
               {payers.map((a) => (
                 <option key={a.id} value={a.id}>
                   {a.name}
@@ -132,6 +134,7 @@ export function LoanForm({ open, onOpenChange }: Props) {
             </Select>
           </Field>
         </div>
+        {accounts.isError && <ErrorState message={accounts.error.message} onRetry={() => accounts.refetch()} />}
         <Field label="Taxa informada (opcional)" hint="Em % ao mês, como está no contrato. Serve só para conferir." error={errors.informedMonthlyRate}>
           <Input inputMode="decimal" value={rate} onChange={(e) => setRate(e.target.value)} placeholder="Ex.: 2,5" />
         </Field>

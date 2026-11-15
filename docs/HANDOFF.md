@@ -27,7 +27,7 @@ _Atualizado em 2026-11-15._
   - as parcelas do mês no comprometimento de renda;
   - na demo, um financiamento de veículo com 12 de 48 parcelas pagas;
   - as páginas `/emprestimos` e `/emprestimos/:id` e o item "Empréstimos" no menu. A barra do celular, agora com 6 itens, usa fonte de 10 px.
-- **Testes:** 76 em shared, 194 na API e 109 na web, além de 10 E2E (novo: `e2e/tests/emprestimo.spec.ts`).
+- **Testes:** 77 em shared, 195 na API e 112 na web, além de 10 E2E (novo: `e2e/tests/emprestimo.spec.ts`).
 - **Antes do deploy da API:**
   1. Aplicar a migration `20261115195644_emprestimos` no Supabase (`npx prisma migrate deploy` pelo pooler na porta 5432). Ela cria `loans` e `bank_rates` e dá a categoria nova a todos os perfis.
   2. Depois do deploy, rodar o sync uma vez para não esperar a segunda-feira: `MSYS_NO_PATHCONV=1 vercel curl /api/v1/internal/cron/sync-bank-rates` com `Authorization: Bearer <CRON_SECRET>`. Até lá, a comparação mostra "Ainda não há taxas do Banco Central".

@@ -45,14 +45,17 @@ export function createBankRatesService(deps: { repo: BankRatesRepository; bcb: B
     async comparison(modality: string, cnpj8: string | null): Promise<LoanComparisonDTO | null> {
       const rows = await deps.repo.listByModality(modality);
       if (rows.length === 0) return null;
-      const bank = cnpj8 ? rows.find((r) => r.cnpj8 === cnpj8) : undefined;
+      // Posição recontada entre as linhas guardadas (já em ordem de posição): uma linha descartada no sync
+      // não pode gerar "7º de 38".
+      const index = cnpj8 ? rows.findIndex((r) => r.cnpj8 === cnpj8) : -1;
+      const bank = index >= 0 ? rows[index] : undefined;
       return {
         modality,
         periodStart: rows[0]!.periodStart,
         periodEnd: rows[0]!.periodEnd,
         source: 'Banco Central do Brasil',
         bank: bank
-          ? { name: bank.institution, monthlyRate: fraction(bank.monthlyRate), annualRate: fraction(bank.annualRate), position: bank.position, of: rows.length }
+          ? { name: bank.institution, monthlyRate: fraction(bank.monthlyRate), annualRate: fraction(bank.annualRate), position: index + 1, of: rows.length }
           : null,
         market: { monthlyRate: fraction(median(rows.map((r) => r.monthlyRate))), annualRate: fraction(median(rows.map((r) => r.annualRate))) },
       };

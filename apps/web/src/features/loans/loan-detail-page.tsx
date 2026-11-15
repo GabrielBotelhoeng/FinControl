@@ -94,8 +94,16 @@ function DeleteDialog({ loan, onOpenChange }: { loan: LoanDetailDTO; onOpenChang
   );
 }
 
+/**
+ * Uma instância por empréstimo (`key` = id da rota): trocar de empréstimo pelo histórico do navegador com um
+ * diálogo aberto não pode levar o "Excluir" para o outro empréstimo (revisão do CodeRabbit).
+ */
 export default function LoanDetailPage() {
   const { id = '' } = useParams();
+  return <LoanDetail key={id} id={id} />;
+}
+
+function LoanDetail({ id }: { id: string }) {
   const loan = useLoan(id);
   const [dialog, setDialog] = useState<'rename' | 'delete' | null>(null);
   const l = loan.data;
