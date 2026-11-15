@@ -9,6 +9,11 @@ const MINUS = '−';
 // ambiente) para um formato que precisa ser exatamente "dez/2026" (decisão do controlador, Tarefa 11).
 const MONTH_ABBREV = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'] as const;
 
+const rateFormatter = new Intl.NumberFormat('pt-BR', { style: 'percent', minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+/** Taxa como fração (0,0315) → "3,15%", sempre com 2 casas (spec, critério de aceite 4). */
+export const formatRate = (fraction: number) => rateFormatter.format(fraction).replace(/\s/g, '');
+
 export function formatDate(d: DateOnly): string {
   const [y, m, day] = d.split('-');
   return `${day}/${m}/${y}`;

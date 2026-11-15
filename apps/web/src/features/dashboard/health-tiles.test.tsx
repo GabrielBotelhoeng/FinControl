@@ -42,6 +42,7 @@ describe('HealthTiles', () => {
     expect(tile()).toHaveTextContent('6%');
     expect(tile()).toHaveTextContent('Na meta');
     expect(tile()).toHaveTextContent('Meta: até 30% da renda');
+    expect(tile()).toHaveTextContent('em parcelas de empréstimos e do cartão e faturas vencidas');
 
     rerender(<HealthTiles health={{ ...base, savingsRate: 0.2, reserveMonths: 3, debtCommitment: 0.35, debtPayments: 30000 }} />);
     expect(tile()).toHaveTextContent('Atenção');

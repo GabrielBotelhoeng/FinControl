@@ -28,4 +28,11 @@ describe('AppShell', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'Criar conta de verdade' }));
     expect(gateway.signOut).toHaveBeenCalled();
   });
+
+  it('"Empréstimos" está nas duas navegações e aponta para /emprestimos', async () => {
+    renderApp(<AppShell />, { path: '/*' });
+    const links = await screen.findAllByRole('link', { name: 'Empréstimos' });
+    expect(links).toHaveLength(2);
+    links.forEach((l) => expect(l).toHaveAttribute('href', '/emprestimos'));
+  });
 });
