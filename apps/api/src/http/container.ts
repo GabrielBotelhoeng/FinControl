@@ -11,6 +11,8 @@ import { createDashboardRepository } from '../modules/dashboard/dashboard.reposi
 import { createDashboardService } from '../modules/dashboard/dashboard.service';
 import { createDemoRepository } from '../modules/demo/demo.repository';
 import { createDemoService } from '../modules/demo/demo.service';
+import { createLoansRepository } from '../modules/loans/loans.repository';
+import { createLoansService } from '../modules/loans/loans.service';
 import { createProfileRepository } from '../modules/profile/profile.repository';
 import { createProfileService } from '../modules/profile/profile.service';
 import { createProvisioner } from '../modules/profile/provisioning';
@@ -48,6 +50,8 @@ export function buildContainer(deps: AppDeps) {
   const bankRates = createBankRatesService({
     repo: createBankRatesRepository(deps.db), bcb: createBcbClient(deps.fetchFn ?? fetch), logger: deps.logger,
   });
+  const loansRepo = createLoansRepository(deps.db);
+  const loans = createLoansService({ repo: loansRepo, accountsRepo, categoriesRepo, bankRates });
   const cardsRepo = createCardsRepository(deps.db);
   const cards = createCardsService({ repo: cardsRepo, accountsRepo, accounts, transactionsRepo, clock: deps.clock });
   const dashboard = createDashboardService({
@@ -75,7 +79,7 @@ export function buildContainer(deps: AppDeps) {
   return {
     provisioner, profile, accountsRepo, accounts, categoriesRepo, categories,
     transactionsRepo, validateRefs, recurrencesRepo, recurrences, transactions, dashboard, demo,
-    cardsRepo, cards, bankRates,
+    cardsRepo, cards, bankRates, loansRepo, loans,
   };
 }
 
