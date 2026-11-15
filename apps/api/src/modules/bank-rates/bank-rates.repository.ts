@@ -11,16 +11,25 @@ export type BankRateRow = {
 export function createBankRatesRepository(db: Db) {
   return {
     /** Troca o período guardado da modalidade pelo novo, numa transação (D1: só o período mais recente). */
-    async replace(p: BcbPeriodRates): Promise<void> {
+    async replace(p: BcbPeriodRates): Promise<number> {
+      // Linha sem taxa ou CNPJ repetido no mesmo período não podem travar a modalidade inteira toda semana.
+      const seen = new Set<string>();
+      const rows = p.rows.filter((r) => {
+        if (!/^\d{8}$/.test(r.cnpj8) || !Number.isFinite(r.monthlyRate) || !Number.isFinite(r.annualRate) || seen.has(r.cnpj8)) return false;
+        seen.add(r.cnpj8);
+        return true;
+      });
+      if (rows.length === 0) return 0; // nada válido: mantém o período guardado
       await db.$transaction([
         db.bankRate.deleteMany({ where: { modality: p.modality } }),
         db.bankRate.createMany({
-          data: p.rows.map((r) => ({
+          data: rows.map((r) => ({
             modality: p.modality, periodStart: fromDateOnly(p.periodStart), periodEnd: fromDateOnly(p.periodEnd),
             institution: r.institution, cnpj8: r.cnpj8, monthlyRate: r.monthlyRate, annualRate: r.annualRate, position: r.position,
           })),
         }),
       ]);
+      return rows.length;
     },
 
     async listByModality(modality: string): Promise<BankRateRow[]> {

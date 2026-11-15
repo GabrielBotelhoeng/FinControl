@@ -4,6 +4,12 @@ import {
   type TransactionDTO, type TransactionPage, type TransactionStatus, type UpdateTransactionInput,
 } from '@fincontrol/shared';
 import { NotFoundError, UnprocessableError } from '../../http/errors';
+
+/** Parcelas de empréstimo nos caminhos de lançamentos: o contrato é gerido pela página do empréstimo. */
+export const LOAN_INSTALLMENT_MESSAGES = {
+  remove: 'Esta é uma parcela de empréstimo. Para apagá-la, exclua o empréstimo na página Empréstimos.',
+  amount: 'O valor de uma parcela de empréstimo vem do contrato. Para mudar, exclua e cadastre o empréstimo de novo.',
+} as const;
 import type { RecurrencesService } from '../recurrences/recurrences.service';
 import { assertCardCreateRules, assertCardEditRules, assertNotCardTransaction, buildCardPurchaseRows } from './transactions.cards';
 import { decodeCursor, encodeCursor } from './transactions.cursor';
@@ -112,6 +118,11 @@ export function createTransactionsService(deps: TransactionsServiceDeps) {
 
     async update(userId: string, id: string, input: UpdateTransactionInput, scope: Scope): Promise<TransactionDTO> {
       const current = await getOwned(userId, id);
+      // Parcela de empréstimo (revisão da Parte B): o valor vem do contrato; mudá-lo aqui faria o saldo devedor
+      // e o comprometimento discordarem. Reenviar o mesmo valor (o formulário sempre envia) é permitido.
+      if (current.loanId && input.amount !== undefined && input.amount !== current.amount) {
+        throw new UnprocessableError(LOAN_INSTALLMENT_MESSAGES.amount);
+      }
       // Guarda de cartão (decisão R11): antes de ramificar por escopo, para também bloquear mover uma
       // recorrência comum para um cartão via scope=future. Só bloqueia accountId/destinationAccountId que
       // realmente mudam de valor — reenviar o mesmo valor (como o formulário da web sempre faz) é permitido.
@@ -149,6 +160,8 @@ export function createTransactionsService(deps: TransactionsServiceDeps) {
 
     async remove(userId: string, id: string, scope: Scope): Promise<void> {
       const current = await getOwned(userId, id);
+      // Sem esta guarda, o empréstimo ficaria "47 de 48" para sempre, sem como religar a parcela (revisão da Parte B).
+      if (current.loanId) throw new UnprocessableError(LOAN_INSTALLMENT_MESSAGES.remove);
       if (!current.recurrenceId) {
         await repo.delete(userId, id);
         return;

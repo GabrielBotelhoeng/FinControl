@@ -126,8 +126,13 @@ export function createAccountsRepository(db: DbClient) {
     /** Conta referenciada por lançamento ou recorrência (como origem ou destino). */
     async isReferenced(userId: string, id: string): Promise<boolean> {
       const where = { userId, OR: [{ accountId: id }, { destinationAccountId: id }] };
-      const [transactions, recurrences] = await Promise.all([db.transaction.count({ where }), db.recurrence.count({ where })]);
-      return transactions + recurrences > 0;
+      const [transactions, recurrences, loans] = await Promise.all([
+        db.transaction.count({ where }),
+        db.recurrence.count({ where }),
+        // Empréstimo pago por esta conta (FK NO ACTION): sem isto, excluir a conta daria 500 em vez de 409.
+        db.loan.count({ where: { userId, accountId: id } }),
+      ]);
+      return transactions + recurrences + loans > 0;
     },
 
     async flowsByAccount(userId: string): Promise<Map<string, AccountFlows>> {

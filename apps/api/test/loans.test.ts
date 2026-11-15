@@ -98,4 +98,24 @@ describe('empréstimos', () => {
     });
     expect(post.status).toBe(404);
   });
+
+  it('revisão: excluir a conta que paga um empréstimo dá 409, não 500', async () => {
+    const { user, checking, res } = await loanScenario();
+    await testDb.transaction.deleteMany({ where: { loanId: res.body.id } });
+    const del = await request(app).delete(`/api/v1/accounts/${checking.id}`).set(user.auth);
+    expect(del.status).toBe(409);
+  });
+
+  it('revisão: parcela de empréstimo não pode ser excluída nem ter o valor mudado em Lançamentos (422)', async () => {
+    const { user, res } = await loanScenario();
+    const first = await testDb.transaction.findFirst({ where: { loanId: res.body.id }, orderBy: { dueDate: 'asc' } });
+    const del = await request(app).delete(`/api/v1/transactions/${first!.id}`).set(user.auth);
+    expect(del.status).toBe(422);
+    expect(del.body.detail).toMatch(/empréstimo/);
+    expect((await request(app).patch(`/api/v1/transactions/${first!.id}`).set(user.auth).send({ amount: 90000 })).status).toBe(422);
+    // Reenviar o mesmo valor (o formulário da web sempre envia) e mudar a descrição continuam liberados.
+    const ok = await request(app).patch(`/api/v1/transactions/${first!.id}`).set(user.auth).send({ amount: 95000, description: 'Carro (13/48) — boleto' });
+    expect(ok.status).toBe(200);
+    expect(await testDb.transaction.count({ where: { loanId: res.body.id } })).toBe(36);
+  });
 });

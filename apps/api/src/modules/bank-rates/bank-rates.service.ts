@@ -30,8 +30,9 @@ export function createBankRatesService(deps: { repo: BankRatesRepository; bcb: B
             results.push({ modality: m.name, status: 'kept', rows: 0 });
             continue;
           }
-          await deps.repo.replace(latest);
-          results.push({ modality: m.name, status: 'updated', rows: latest.rows.length });
+          const rows = await deps.repo.replace(latest);
+          if (rows === 0) deps.logger.warn({ modality: m.name }, 'Nenhuma linha válida do Banco Central; dados anteriores mantidos');
+          results.push({ modality: m.name, status: rows > 0 ? 'updated' : 'kept', rows });
         } catch (err) {
           deps.logger.warn({ modality: m.name, err: (err as Error).message }, 'Falha ao sincronizar taxas; dados anteriores mantidos');
           results.push({ modality: m.name, status: 'kept', rows: 0 });

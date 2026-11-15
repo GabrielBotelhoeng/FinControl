@@ -84,4 +84,18 @@ describe('taxas do Banco Central', () => {
     expect(caixa.filter((b: { cnpj8: string }) => b.cnpj8 === '00360305')).toHaveLength(1);
     expect((await request(app).get('/api/v1/banks?q=brasil')).status).toBe(401);
   });
+
+  it('revisão: linha repetida ou sem taxa no Banco Central não trava a modalidade', async () => {
+    const raw = JSON.parse(readFixture('bcb-veiculos-2026-10-23.json')) as { value: Record<string, unknown>[] };
+    const dirty = { value: [...raw.value, { ...raw.value[0]! }, { ...raw.value[1]!, cnpj8: '12345678', TaxaJurosAoMes: null }] };
+    const fetchFn = vi.fn(async (input: string | URL | Request) => {
+      const url = decodeURIComponent(String(input));
+      if (!url.includes(VEHICLES)) return json({ value: [] });
+      if (url.includes('$select=')) return json({ value: [{ InicioPeriodo: '2026-10-23', FimPeriodo: '2026-10-29' }] });
+      return json(dirty);
+    });
+    const res = await request(buildTestApp({ fetchFn }).app).get('/api/v1/internal/cron/sync-bank-rates').set('Authorization', `Bearer ${SECRET}`);
+    expect(res.body).toContainEqual({ modality: VEHICLES, status: 'updated', rows: 39 });
+    expect(await testDb.bankRate.count({ where: { modality: VEHICLES } })).toBe(39);
+  });
 });
