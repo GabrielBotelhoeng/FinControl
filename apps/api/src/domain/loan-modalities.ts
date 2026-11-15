@@ -1,5 +1,4 @@
-/** Tipos de empréstimo (D2). Trocado pelo `LoanKind` de `@fincontrol/shared` na Tarefa 3. */
-type LoanKind = 'personal' | 'payroll_inss' | 'payroll_public' | 'payroll_private' | 'vehicle' | 'mortgage' | 'other';
+import type { LoanKind } from '@fincontrol/shared';
 
 /** Modalidade do Banco Central e de onde ela vem: `weekly` = `TaxasJurosDiariaPorInicioPeriodo`; `monthly` = `TaxasJurosMensalPorMes` (D1). */
 export type BcbModality = { name: string; source: 'weekly' | 'monthly' };

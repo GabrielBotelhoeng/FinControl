@@ -5,3 +5,4 @@ export * from './transactions';
 export * from './dashboard';
 export * from './profile';
 export * from './problem';
+export * from './loans';

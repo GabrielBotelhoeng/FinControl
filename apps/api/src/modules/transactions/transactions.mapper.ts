@@ -19,6 +19,7 @@ export function toTransactionDTO(row: TransactionRow, today: DateOnly): Transact
     invoiceMonth: row.invoiceMonth,
     installmentNumber: row.installmentNumber,
     installmentTotal: row.installmentTotal,
+    loanId: null, // ligado à coluna `loan_id` na Tarefa 6 (a coluna nasce na migration da Tarefa 4)
     overdue: row.status === 'pending' && row.dueDate < today,
     createdAt: row.createdAt.toISOString(),
   };
