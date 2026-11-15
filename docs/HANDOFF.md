@@ -17,9 +17,20 @@ _Atualizado em 2026-11-15._
 - **No ar desde 2026-11-15:** PR #11 mergeado (`ebc6d58`). A migration `20261112151556_cartoes` foi aplicada no Supabase antes do merge. A produção foi conferida com Playwright pela demo, a 1440 px e a 360 px: painel, Contas e faturas sem erros e sem rolagem horizontal.
 - **Revisão do CodeRabbit:** 5 correções, cada uma com teste. A regra da média do comprometimento (meses sem receita ficam fora) foi mantida e registrada na spec C13.
 
-## Sub-projeto 2, Parte B: empréstimos (planejada, branch feat/emprestimos)
+## Sub-projeto 2, Parte B: empréstimos (2026-11-15, branch feat/emprestimos)
 
-- **Plano:** `docs/superpowers/plans/2026-11-15-fincontrol-sp2-parte-b-emprestimos.md` (11 tarefas). Ele espera o aceite do usuário para os desvios D1–D6 da spec.
+- **Plano executado:** `docs/superpowers/plans/2026-11-15-fincontrol-sp2-parte-b-emprestimos.md` (11 tarefas). Os desvios D1–D6 da spec foram aceitos pelo usuário em 2026-11-15.
+- **Entregue:**
+  - empréstimos com taxa real (Price), custo total, juros, saldo devedor e quitação estimada;
+  - parcelas restantes como lançamentos pendentes (`loanId`), na categoria nova "Empréstimos e financiamentos";
+  - comparação com o banco e com a mediana do mercado (Banco Central), com fonte e período;
+  - as parcelas do mês no comprometimento de renda;
+  - na demo, um financiamento de veículo com 12 de 48 parcelas pagas;
+  - as páginas `/emprestimos` e `/emprestimos/:id` e o item "Empréstimos" no menu. A barra do celular, agora com 6 itens, usa fonte de 10 px.
+- **Testes:** 76 em shared, 191 na API e 109 na web, além de 10 E2E (novo: `e2e/tests/emprestimo.spec.ts`).
+- **Antes do deploy da API:**
+  1. Aplicar a migration `20261115195644_emprestimos` no Supabase (`npx prisma migrate deploy` pelo pooler na porta 5432). Ela cria `loans` e `bank_rates` e dá a categoria nova a todos os perfis.
+  2. Depois do deploy, rodar o sync uma vez para não esperar a segunda-feira: `MSYS_NO_PATHCONV=1 vercel curl /api/v1/internal/cron/sync-bank-rates` com `Authorization: Bearer <CRON_SECRET>`. Até lá, a comparação mostra "Ainda não há taxas do Banco Central".
 - **Leitura da API do Banco Central (2026-11-15):** só o imobiliário é mensal. Crédito pessoal, consignado e veículos vêm por semana, em `TaxasJurosDiariaPorInicioPeriodo`. As respostas gravadas para os testes ficam em `apps/api/test/fixtures/`.
 
 ## Onde estamos (sub-projeto 1)
