@@ -1,5 +1,6 @@
-import type { AccountType } from '@fincontrol/shared';
+import { monthOf, startOfMonth, type AccountType, type YearMonth } from '@fincontrol/shared';
 import { ZERO_FLOWS, type AccountFlows } from '../../domain/balance';
+import { fromDateOnly, toDateOnly } from '../../infra/date-mapping';
 import type { DbClient } from '../../infra/prisma';
 
 export type AccountRow = {
@@ -8,19 +9,74 @@ export type AccountRow = {
   type: AccountType;
   color: string;
   initialBalance: number;
+  creditLimit: number | null;
+  closingDay: number | null;
+  dueDay: number | null;
+  paymentAccountId: string | null;
   archivedAt: Date | null;
   createdAt: Date;
 };
 
-type AccountRecord = Omit<AccountRow, 'initialBalance'> & { initialBalance: bigint };
-type AccountData = { name: string; type: AccountType; color: string; initialBalance: number };
+type AccountRecord = Omit<AccountRow, 'initialBalance' | 'creditLimit'> & { initialBalance: bigint; creditLimit: bigint | null };
+type AccountData = {
+  name: string;
+  type: AccountType;
+  color: string;
+  initialBalance: number;
+  creditLimit?: number | null;
+  closingDay?: number | null;
+  dueDay?: number | null;
+  paymentAccountId?: string | null;
+};
 
 const toRow = (a: AccountRecord): AccountRow => ({
   id: a.id, name: a.name, type: a.type, color: a.color,
-  initialBalance: Number(a.initialBalance), archivedAt: a.archivedAt, createdAt: a.createdAt,
+  initialBalance: Number(a.initialBalance),
+  creditLimit: a.creditLimit === null ? null : Number(a.creditLimit),
+  closingDay: a.closingDay, dueDay: a.dueDay, paymentAccountId: a.paymentAccountId,
+  archivedAt: a.archivedAt, createdAt: a.createdAt,
 });
 
 export function createAccountsRepository(db: DbClient) {
+  /**
+   * Valor e pago de faturas de cartão entre dois meses, inclusive, agrupados por `invoiceMonth` (decisão R13):
+   * valor = soma das despesas pagas do cartão naquele mês; pago = soma das transferências pagas para o cartão
+   * no mesmo mês. Consulta única reaproveitada pelo DTO de conta (Tarefa 5) e pelas faturas (Tarefa 7, lista e
+   * detalhe, via `invoiceTotals` abaixo); a Tarefa 8 usa para o painel.
+   */
+  async function invoiceTotalsByMonth(
+    userId: string,
+    cardAccountId: string,
+    fromMonth: YearMonth,
+    toMonth: YearMonth,
+  ): Promise<Map<YearMonth, { amount: number; paid: number }>> {
+    const range = { gte: fromDateOnly(startOfMonth(fromMonth)), lte: fromDateOnly(startOfMonth(toMonth)) };
+    const [spent, paid] = await Promise.all([
+      db.transaction.groupBy({
+        by: ['invoiceMonth'],
+        where: { userId, accountId: cardAccountId, type: 'expense', status: 'paid', invoiceMonth: range },
+        _sum: { amount: true },
+      }),
+      db.transaction.groupBy({
+        by: ['invoiceMonth'],
+        where: { userId, destinationAccountId: cardAccountId, type: 'transfer', status: 'paid', invoiceMonth: range },
+        _sum: { amount: true },
+      }),
+    ]);
+    const result = new Map<YearMonth, { amount: number; paid: number }>();
+    const at = (ym: YearMonth): { amount: number; paid: number } => {
+      let v = result.get(ym);
+      if (!v) {
+        v = { amount: 0, paid: 0 };
+        result.set(ym, v);
+      }
+      return v;
+    };
+    for (const g of spent) if (g.invoiceMonth) at(monthOf(toDateOnly(g.invoiceMonth))).amount = Number(g._sum.amount ?? 0n);
+    for (const g of paid) if (g.invoiceMonth) at(monthOf(toDateOnly(g.invoiceMonth))).paid = Number(g._sum.amount ?? 0n);
+    return result;
+  }
+
   return {
     async list(userId: string, includeArchived: boolean): Promise<AccountRow[]> {
       const rows = await db.account.findMany({
@@ -107,6 +163,18 @@ export function createAccountsRepository(db: DbClient) {
         if (g.destinationAccountId) get(g.destinationAccountId).transferInPaid += Number(g._sum.amount ?? 0n);
       }
       return flows;
+    },
+
+    invoiceTotalsByMonth,
+
+    /**
+     * Valor e pago de UMA fatura de cartão num mês (decisão R13): atalho de `invoiceTotalsByMonth` para um
+     * único mês, usado pelo DTO de conta (limite/fatura aberta/próximo vencimento) e pelo detalhe de fatura
+     * (Tarefa 7).
+     */
+    async invoiceTotals(userId: string, cardAccountId: string, invoiceMonth: YearMonth): Promise<{ amount: number; paid: number }> {
+      const totals = await invoiceTotalsByMonth(userId, cardAccountId, invoiceMonth, invoiceMonth);
+      return totals.get(invoiceMonth) ?? { amount: 0, paid: 0 };
     },
   };
 }

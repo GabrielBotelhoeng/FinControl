@@ -48,7 +48,10 @@ export function createRecurrencesService(deps: RecurrencesServiceDeps) {
       const skipped = skips.get(rec.id);
       for (const date of occurrenceDates({ frequency: rec.frequency, startDate: rec.startDate, endDate: rec.endDate, until: limit })) {
         if (skipped?.has(date)) continue;
-        rows.push({ ...templateOf(rec), status: 'pending', dueDate: date, paidDate: null, recurrenceId: rec.id, occurrenceDate: date });
+        rows.push({
+          ...templateOf(rec), status: 'pending', dueDate: date, paidDate: null, recurrenceId: rec.id, occurrenceDate: date,
+          invoiceMonth: null, installmentNumber: null, installmentTotal: null, installmentGroupId: null,
+        });
       }
     }
     await transactions.insertMany(userId, rows);
@@ -65,6 +68,7 @@ export function createRecurrencesService(deps: RecurrencesServiceDeps) {
     const rec = await repo.create(userId, { ...template, frequency, startDate: input.dueDate, endDate });
     return transactions.create(userId, {
       ...template, status: input.status, dueDate: input.dueDate, paidDate, recurrenceId: rec.id, occurrenceDate: input.dueDate,
+      invoiceMonth: null, installmentNumber: null, installmentTotal: null, installmentGroupId: null,
     });
   }
 

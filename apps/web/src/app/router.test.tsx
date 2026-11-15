@@ -9,4 +9,9 @@ describe('router', () => {
   it('serve /termos sem exigir login', () => {
     expect(router.routes.map((r) => r.path)).toContain('/termos');
   });
+
+  it('serve /cartoes/:id dentro do RequireAuth (Tarefa 11)', () => {
+    const protectedRoute = router.routes.find((r) => r.path === '/');
+    expect(protectedRoute?.children?.map((c) => c.path)).toContain('cartoes/:id');
+  });
 });

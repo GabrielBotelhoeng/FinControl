@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { reserveCoverage, savingsRate } from './health';
+import { debtCommitment, reserveCoverage, savingsRate } from './health';
 
 describe('savingsRate', () => {
   it('é a parte da receita que sobrou no mês, com 3 casas', () => {
@@ -33,4 +33,13 @@ describe('reserveCoverage', () => {
   it('saldo líquido zerado ou negativo cobre 0 meses', () => {
     expect(reserveCoverage(-5000, [100000])).toEqual({ months: 0, averageExpense: 100000 });
   });
+});
+
+describe('debtCommitment', () => {
+  it('é parcelas de dívida ÷ renda média dos meses com receita', () => {
+    expect(debtCommitment(150000, [500000, 500000, 500000])).toBe(0.3);
+    expect(debtCommitment(100000, [0, 300000, 300000])).toBe(0.333);
+  });
+  it('sem renda registrada, não há indicador', () => expect(debtCommitment(50000, [0, 0, 0])).toBeNull());
+  it('sem dívida é 0', () => expect(debtCommitment(0, [400000])).toBe(0));
 });

@@ -34,6 +34,23 @@ describe('banco de dados', () => {
     ).rejects.toThrow();
   });
 
+  it('cartão de crédito sem limite/dias de fechamento é recusado pelo CHECK', async () => {
+    const userId = randomUUID();
+    await testDb.profile.create({ data: { id: userId, name: 'Ana' } });
+    await expect(
+      testDb.account.create({ data: { userId, name: 'Cartão', type: 'credit_card', color: '#7c3aed' } }),
+    ).rejects.toThrow();
+  });
+
+  it('cartão de crédito com limite e dias válidos é aceito pelo CHECK', async () => {
+    const userId = randomUUID();
+    await testDb.profile.create({ data: { id: userId, name: 'Ana' } });
+    const card = await testDb.account.create({
+      data: { userId, name: 'Cartão', type: 'credit_card', color: '#7c3aed', creditLimit: 500000n, closingDay: 26, dueDay: 5 },
+    });
+    expect(card.creditLimit).toBe(500000n);
+  });
+
   it('apaga tudo em cascata ao excluir o perfil', async () => {
     const { userId, account } = await seedAccount();
     await testDb.transaction.create({

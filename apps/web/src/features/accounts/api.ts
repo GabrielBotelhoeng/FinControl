@@ -7,6 +7,7 @@ export const ACCOUNT_TYPES: { value: AccountType; label: string }[] = [
   { value: 'savings', label: 'Poupança' },
   { value: 'wallet', label: 'Carteira' },
   { value: 'investment', label: 'Investimento' },
+  { value: 'credit_card', label: 'Cartão de crédito' },
 ];
 
 export const accountTypeLabel = (t: AccountType) => ACCOUNT_TYPES.find((x) => x.value === t)?.label ?? t;
@@ -19,7 +20,8 @@ export function useAccounts(includeArchived = false) {
   });
 }
 
-const FINANCE_KEYS = ['accounts', 'transactions', 'dashboard', 'categories'];
+// 'cards': faturas (Tarefa 11) — limite, totais e lançamentos de uma fatura também dependem de saldo/lançamentos.
+const FINANCE_KEYS = ['accounts', 'transactions', 'dashboard', 'categories', 'cards'];
 
 /**
  * Mutação que, ao terminar, invalida tudo que depende de saldo.
@@ -37,7 +39,16 @@ export function useFinanceMutation<TVars, TData = unknown>(fn: (vars: TVars) => 
   });
 }
 
-export type AccountInput = { name: string; type: AccountType; color: string; initialBalance: number };
+export type AccountInput = {
+  name: string;
+  type: AccountType;
+  color: string;
+  initialBalance: number;
+  creditLimit?: number;
+  closingDay?: number;
+  dueDay?: number;
+  paymentAccountId?: string;
+};
 
 export function useSaveAccount() {
   const api = useApi();

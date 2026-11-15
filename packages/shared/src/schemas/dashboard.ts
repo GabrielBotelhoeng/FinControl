@@ -16,16 +16,39 @@ export type DashboardSummaryDTO = {
   expense: MonthComparison;
   pendingCount: number;
   overdueCount: number;
-  upcoming: TransactionDTO[];
+  upcoming: UpcomingItemDTO[];
   health: FinancialHealthDTO;
 };
 
-/** Indicadores de saúde financeira. Valores em centavos; `savingsRate` é fração (0,2 = 20%). */
+/** Item de lançamento em "A pagar" (decisão R16): o `TransactionDTO` de sempre, mais o discriminante. */
+export type UpcomingTransactionDTO = TransactionDTO & { kind: 'transaction' };
+
+/**
+ * Item de fatura de cartão em "A pagar" (decisão R16): faturas `closed` ou `overdue` com restante > 0,
+ * inclusive de cartão arquivado. `remaining` é `amount − paid` (já líquido, mínimo 0). `status` vem do
+ * servidor (spec C4, `invoiceStatus`) — fonte única da situação; a web não recalcula a partir de `dueDate`
+ * (decisão R26).
+ */
+export type UpcomingInvoiceDTO = {
+  kind: 'invoice';
+  cardId: string;
+  cardName: string;
+  month: string;
+  dueDate: string;
+  remaining: number;
+  status: 'closed' | 'overdue';
+};
+
+export type UpcomingItemDTO = UpcomingTransactionDTO | UpcomingInvoiceDTO;
+
+/** Indicadores de saúde financeira. Valores em centavos; `savingsRate` e `debtCommitment` são fração (0,2 = 20%). */
 export type FinancialHealthDTO = {
   savingsRate: number | null;
   reserveMonths: number | null;
   liquidBalance: number;
   averageMonthlyExpense: number | null;
+  debtCommitment: number | null;
+  debtPayments: number;
 };
 
 export type EvolutionPointDTO = { month: string; income: number; expense: number; endBalance: number };

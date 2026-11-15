@@ -28,6 +28,15 @@ function reserveStatus(months: number): Status {
   return { label: 'Reserva baixa', tone: 'critical', icon: CircleSlash };
 }
 
+/** Até 30% é a referência brasileira; acima de 40% é alto (spec C13; a skill `debt-management` usa 36%). */
+function commitmentStatus(rate: number): Status {
+  // Mesmo arredondamento do número exibido: 30,5% aparece como "31%" e já pede atenção.
+  const shown = Math.round(rate * 100);
+  if (shown <= 30) return { label: 'Na meta', tone: 'good', icon: CheckCircle2 };
+  if (shown <= 40) return { label: 'Atenção', tone: 'warning', icon: AlertTriangle };
+  return { label: 'Alto', tone: 'critical', icon: CircleSlash };
+}
+
 function Tile({ label, value, status, goal, detail }: { label: string; value: string; status: Status | null; goal: string; detail: string }) {
   const Icon = status?.icon;
   return (
@@ -52,9 +61,9 @@ function Tile({ label, value, status, goal, detail }: { label: string; value: st
 }
 
 export function HealthTiles({ health }: { health: FinancialHealthDTO }) {
-  const { savingsRate, reserveMonths, liquidBalance, averageMonthlyExpense } = health;
+  const { savingsRate, reserveMonths, liquidBalance, averageMonthlyExpense, debtCommitment, debtPayments } = health;
   return (
-    <div className="grid gap-4 sm:grid-cols-2">
+    <div className="grid gap-4 sm:grid-cols-3">
       <Tile
         label="Taxa de poupança"
         value={savingsRate === null ? '—' : percent.format(savingsRate)}
@@ -71,6 +80,17 @@ export function HealthTiles({ health }: { health: FinancialHealthDTO }) {
           averageMonthlyExpense === null
             ? 'Lance suas despesas por um mês completo para calcular.'
             : `Hoje: ${formatBRL(liquidBalance)} em conta corrente, poupança e carteira ÷ gasto médio de ${formatBRL(averageMonthlyExpense)} nos últimos 3 meses.`
+        }
+      />
+      <Tile
+        label="Comprometimento de renda"
+        value={debtCommitment === null ? '—' : percent.format(debtCommitment)}
+        status={debtCommitment === null ? null : commitmentStatus(debtCommitment)}
+        goal="Meta: até 30% da renda."
+        detail={
+          debtCommitment === null
+            ? 'Sem receitas nos últimos 3 meses.'
+            : `Hoje: ${formatBRL(debtPayments)} em parcelas do cartão e faturas vencidas ÷ renda média dos últimos 3 meses.`
         }
       />
     </div>

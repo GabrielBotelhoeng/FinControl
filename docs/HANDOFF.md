@@ -1,8 +1,23 @@
 # HANDOFF — FinControl
 
-_Atualizado em 2026-11-11._
+_Atualizado em 2026-11-13._
 
-## Onde estamos
+## Sub-projeto 2, Parte A: cartões de crédito (2026-11-13, branch feat/cartoes)
+
+- **Spec:** `docs/superpowers/specs/2026-11-12-fincontrol-sp2-credito-design.md`. **Plano executado:** `docs/superpowers/plans/2026-11-12-fincontrol-sp2-parte-a-cartoes.md` (13 tarefas, um commit por tarefa).
+- **Entregue:**
+  - cartão como conta `credit_card`, com limite, dia de fechamento e de vencimento, e a conta pagadora;
+  - compras à vista e parceladas (até 48x), com o mês da fatura gravado na transação;
+  - faturas (aberta, fechada, paga, vencida) e pagamento como transferência;
+  - "A pagar" no painel com as faturas, inclusive de cartão arquivado;
+  - o tile "Comprometimento de renda" (C13: ≤ 30% "Na meta", até 40% "Atenção", acima disso "Alto"), com o status seguindo o número arredondado exibido;
+  - a demo com "Cartão principal", faturas pagas, uma fechada, a aberta e um notebook em 10x;
+  - a página `/cartoes/:id` e o link "Ver faturas" em Contas.
+- **Testes:** 60 em shared, 172 na API e 95 na web, além de 9 E2E (novo: `e2e/tests/cartao.spec.ts`). O teste de 360 px passou a cobrir a página de faturas. Lint e typecheck limpos.
+- **Migration nova:** colunas de cartão, fatura e parcelas. Ela precisa ser aplicada no Supabase antes do deploy da API (`npx prisma migrate deploy` pelo pooler na porta 5432).
+- **Próximo:** PR da `feat/cartoes` (via @devops), CI e CodeRabbit, merge e deploy. Depois, a **Parte B** (empréstimos e financiamentos: taxa real, saldo devedor, quitação estimada e as taxas do Banco Central), com plano próprio.
+
+## Onde estamos (sub-projeto 1)
 
 - **Sub-projeto 1, Parte 1 (API): concluída** e na `main`.
   - 131 testes verdes: 39 em shared e 92 na API, contra Postgres real.

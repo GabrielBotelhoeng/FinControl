@@ -8,6 +8,7 @@ import { AppShell } from './app-shell';
 const DashboardPage = lazy(() => import('../features/dashboard/dashboard-page'));
 const TransactionsPage = lazy(() => import('../features/transactions/transactions-page'));
 const AccountsPage = lazy(() => import('../features/accounts/accounts-page'));
+const InvoicesPage = lazy(() => import('../features/cards/invoices-page'));
 const CategoriesPage = lazy(() => import('../features/categories/categories-page'));
 const ProfilePage = lazy(() => import('../features/profile/profile-page'));
 const PrivacyPage = lazy(() => import('../features/legal/privacy-page'));
@@ -30,6 +31,7 @@ export const router = createBrowserRouter([
       { index: true, element: page(<DashboardPage />) },
       { path: 'lancamentos', element: page(<TransactionsPage />) },
       { path: 'contas', element: page(<AccountsPage />) },
+      { path: 'cartoes/:id', element: page(<InvoicesPage />) },
       { path: 'categorias', element: page(<CategoriesPage />) },
       { path: 'perfil', element: page(<ProfilePage />) },
       { path: '*', element: <Navigate to="/" replace /> },

@@ -46,6 +46,8 @@ export type NewTransaction = TransactionFields & {
   type: TransactionType;
   status: 'pending' | 'paid';
   recurrence: { frequency: Frequency; endDate: string | null } | null;
+  /** Compra parcelada no cartão (2–48); 1x é à vista e não envia o campo (decisão R19, Tarefa 11). */
+  installments?: number;
 };
 
 export function useCreateTransaction() {

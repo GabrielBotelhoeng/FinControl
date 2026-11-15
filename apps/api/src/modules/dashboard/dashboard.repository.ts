@@ -1,4 +1,4 @@
-import type { AccountType, CategorySpendDTO, DateOnly, TransactionType } from '@fincontrol/shared';
+import { startOfMonth, type AccountType, type CategorySpendDTO, type DateOnly, type TransactionType, type YearMonth } from '@fincontrol/shared';
 import type { Prisma } from '../../generated/prisma/client';
 import { fromDateOnly } from '../../infra/date-mapping';
 import type { Db } from '../../infra/prisma';
@@ -79,6 +79,20 @@ export function createDashboardRepository(db: Db) {
           return c ? [{ categoryId: c.id, name: c.name, icon: c.icon, color: c.color, total: Number(g._sum.amount ?? 0n) }] : [];
         })
         .sort((x, y) => y.total - x.total);
+    },
+
+    /**
+     * Soma das parcelas (`installmentTotal >= 2`) de compras em cartão com `invoiceMonth = month`, por conta
+     * (decisão R15, Tarefa 8): usada só para a fatura do mês corrente que ainda não está vencida — a fatura
+     * já vencida entra pelo restante (valor − pago), não por aqui, para não contar a parcela duas vezes.
+     */
+    async installmentTotalsByAccount(userId: string, month: YearMonth): Promise<Map<string, number>> {
+      const groups = await db.transaction.groupBy({
+        by: ['accountId'],
+        where: { userId, type: 'expense', status: 'paid', invoiceMonth: fromDateOnly(startOfMonth(month)), installmentTotal: { gte: 2 } },
+        _sum: { amount: true },
+      });
+      return new Map(groups.map((g) => [g.accountId, Number(g._sum.amount ?? 0n)]));
     },
   };
 }

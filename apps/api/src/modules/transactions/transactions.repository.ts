@@ -1,4 +1,7 @@
-import type { DateOnly, TransactionNature, TransactionStatus, TransactionType } from '@fincontrol/shared';
+import {
+  monthOf, startOfMonth,
+  type AccountType, type DateOnly, type TransactionNature, type TransactionStatus, type TransactionType, type YearMonth,
+} from '@fincontrol/shared';
 import type { Prisma } from '../../generated/prisma/client';
 import { fromDateOnly, toDateOnly } from '../../infra/date-mapping';
 import type { DbClient } from '../../infra/prisma';
@@ -17,8 +20,17 @@ export type TransactionRow = {
   paidDate: DateOnly | null;
   recurrenceId: string | null;
   occurrenceDate: DateOnly | null;
+  /** Mês da fatura em que a compra cai (spec C3/C4); `null` fora de cartão. */
+  invoiceMonth: YearMonth | null;
+  installmentNumber: number | null;
+  installmentTotal: number | null;
+  /** Agrupa as N parcelas de uma mesma compra (decisão R10); `null` fora de compra parcelada. */
+  installmentGroupId: string | null;
   createdAt: Date;
 };
+
+/** Tipo e dias de fatura de uma conta, para as regras de cartão nos caminhos de lançamentos (decisão R10/R11). */
+export type AccountCardInfo = { type: AccountType; closingDay: number | null; dueDay: number | null };
 
 export type NewTransaction = Omit<TransactionRow, 'id' | 'createdAt'>;
 
@@ -34,15 +46,19 @@ export type TransactionFilters = {
 
 export type Cursor = { dueDate: DateOnly; id: string };
 
-type TransactionRecord = Omit<TransactionRow, 'amount' | 'dueDate' | 'paidDate' | 'occurrenceDate'> & {
+type TransactionRecord = Omit<TransactionRow, 'amount' | 'dueDate' | 'paidDate' | 'occurrenceDate' | 'invoiceMonth'> & {
   amount: bigint;
   dueDate: Date;
   paidDate: Date | null;
   occurrenceDate: Date | null;
+  invoiceMonth: Date | null;
 };
 
 const optDate = (d: Date | null): DateOnly | null => (d ? toDateOnly(d) : null);
 const optDateIn = (d: DateOnly | null): Date | null => (d ? fromDateOnly(d) : null);
+/** `invoice_month` é gravado como o 1º dia do mês (coluna `Date`); aqui só interessa o mês (spec C3). */
+const optYm = (d: Date | null): YearMonth | null => (d ? monthOf(toDateOnly(d)) : null);
+const optYmIn = (ym: YearMonth | null): Date | null => (ym ? fromDateOnly(startOfMonth(ym)) : null);
 
 export const toTransactionRow = (t: TransactionRecord): TransactionRow => ({
   id: t.id,
@@ -58,6 +74,10 @@ export const toTransactionRow = (t: TransactionRecord): TransactionRow => ({
   paidDate: optDate(t.paidDate),
   recurrenceId: t.recurrenceId,
   occurrenceDate: optDate(t.occurrenceDate),
+  invoiceMonth: optYm(t.invoiceMonth),
+  installmentNumber: t.installmentNumber,
+  installmentTotal: t.installmentTotal,
+  installmentGroupId: t.installmentGroupId,
   createdAt: t.createdAt,
 });
 
@@ -68,16 +88,18 @@ const toCreateData = (userId: string, t: NewTransaction): Prisma.TransactionCrea
   dueDate: fromDateOnly(t.dueDate),
   paidDate: optDateIn(t.paidDate),
   occurrenceDate: optDateIn(t.occurrenceDate),
+  invoiceMonth: optYmIn(t.invoiceMonth),
 });
 
 function toUpdateData(p: Partial<NewTransaction>): Prisma.TransactionUncheckedUpdateInput {
-  const { amount, dueDate, paidDate, occurrenceDate, ...rest } = p;
+  const { amount, dueDate, paidDate, occurrenceDate, invoiceMonth, ...rest } = p;
   return {
     ...rest,
     ...(amount !== undefined ? { amount: BigInt(amount) } : {}),
     ...(dueDate !== undefined ? { dueDate: fromDateOnly(dueDate) } : {}),
     ...(paidDate !== undefined ? { paidDate: optDateIn(paidDate) } : {}),
     ...(occurrenceDate !== undefined ? { occurrenceDate: optDateIn(occurrenceDate) } : {}),
+    ...(invoiceMonth !== undefined ? { invoiceMonth: optYmIn(invoiceMonth) } : {}),
   };
 }
 
@@ -133,6 +155,11 @@ export function createTransactionsRepository(db: DbClient) {
     async insertMany(userId: string, rows: NewTransaction[]): Promise<void> {
       if (rows.length === 0) return;
       await db.transaction.createMany({ data: rows.map((r) => toCreateData(userId, r)), skipDuplicates: true });
+    },
+
+    /** Tipo e dias de fatura da conta (`accountId`), para as regras de cartão em `transactions.service.ts`. */
+    async findAccountCardInfo(userId: string, accountId: string): Promise<AccountCardInfo | null> {
+      return db.account.findFirst({ where: { id: accountId, userId }, select: { type: true, closingDay: true, dueDay: true } });
     },
 
     /** Pendentes até `until` em contas não arquivadas, vencimento mais próximo primeiro. */

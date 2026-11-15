@@ -18,6 +18,7 @@ enum AccountType {
   savings
   wallet
   investment
+  credit_card
 }
 
 enum CategoryType {
@@ -64,20 +65,26 @@ model Profile {
 }
 
 model Account {
-  id                  String        @id @default(uuid()) @db.Uuid
-  userId              String        @map("user_id") @db.Uuid
-  name                String
-  type                AccountType
-  color               String
-  initialBalance      BigInt        @default(0) @map("initial_balance")
-  archivedAt          DateTime?     @map("archived_at") @db.Timestamptz
-  createdAt           DateTime      @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt           DateTime      @updatedAt @map("updated_at") @db.Timestamptz
-  user                Profile       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  transactions        Transaction[] @relation("TransactionAccount")
-  incomingTransfers   Transaction[] @relation("TransactionDestination")
-  recurrences         Recurrence[]  @relation("RecurrenceAccount")
-  incomingRecurrences Recurrence[]  @relation("RecurrenceDestination")
+  id                      String        @id @default(uuid()) @db.Uuid
+  userId                  String        @map("user_id") @db.Uuid
+  name                    String
+  type                    AccountType
+  color                   String
+  initialBalance          BigInt        @default(0) @map("initial_balance")
+  creditLimit             BigInt?       @map("credit_limit")
+  closingDay              Int?          @map("closing_day")
+  dueDay                  Int?          @map("due_day")
+  paymentAccountId        String?       @map("payment_account_id") @db.Uuid
+  archivedAt              DateTime?     @map("archived_at") @db.Timestamptz
+  createdAt               DateTime      @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt               DateTime      @updatedAt @map("updated_at") @db.Timestamptz
+  user                    Profile       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  paymentAccount          Account?      @relation("AccountPaymentAccount", fields: [paymentAccountId], references: [id], onDelete: SetNull)
+  transactions            Transaction[] @relation("TransactionAccount")
+  incomingTransfers       Transaction[] @relation("TransactionDestination")
+  recurrences             Recurrence[]  @relation("RecurrenceAccount")
+  incomingRecurrences     Recurrence[]  @relation("RecurrenceDestination")
+  cardsUsingThisAsPayment Account[]     @relation("AccountPaymentAccount")
 
   @@index([userId])
   @@map("accounts")
@@ -151,6 +158,10 @@ model Transaction {
   paidDate             DateTime?          @map("paid_date") @db.Date
   recurrenceId         String?            @map("recurrence_id") @db.Uuid
   occurrenceDate       DateTime?          @map("occurrence_date") @db.Date
+  invoiceMonth         DateTime?          @map("invoice_month") @db.Date
+  installmentGroupId   String?            @map("installment_group_id") @db.Uuid
+  installmentNumber    Int?               @map("installment_number")
+  installmentTotal     Int?               @map("installment_total")
   createdAt            DateTime           @default(now()) @map("created_at") @db.Timestamptz
   updatedAt            DateTime           @updatedAt @map("updated_at") @db.Timestamptz
   user                 Profile            @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -162,5 +173,6 @@ model Transaction {
   @@unique([recurrenceId, occurrenceDate])
   @@index([userId, dueDate])
   @@index([userId, paidDate])
+  @@index([accountId, invoiceMonth])
   @@map("transactions")
 }

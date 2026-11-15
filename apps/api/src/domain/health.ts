@@ -20,3 +20,14 @@ export function reserveCoverage(liquidBalance: number, monthlyExpenses: number[]
   const months = liquidBalance <= 0 ? 0 : Math.round((liquidBalance / averageExpense) * 10) / 10;
   return { months, averageExpense };
 }
+
+/**
+ * Parte da renda média comprometida com parcelas de dívida (spec C13).
+ * Meses sem receita ficam fora da média, como na reserva: quem começou a usar o app agora não vê o número triplicado.
+ */
+export function debtCommitment(debtPayments: number, monthlyIncomes: number[]): number | null {
+  const withIncome = monthlyIncomes.filter((v) => v > 0);
+  if (withIncome.length === 0) return null;
+  const average = withIncome.reduce((s, v) => s + v, 0) / withIncome.length;
+  return Math.round((debtPayments / average) * 1000) / 1000;
+}
