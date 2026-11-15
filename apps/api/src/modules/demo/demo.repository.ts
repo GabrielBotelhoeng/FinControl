@@ -1,4 +1,4 @@
-import type { DateOnly } from '@fincontrol/shared';
+import type { DateOnly, LoanKind } from '@fincontrol/shared';
 import { fromDateOnly } from '../../infra/date-mapping';
 import type { DbClient } from '../../infra/prisma';
 
@@ -30,6 +30,23 @@ export function createDemoRepository(db: DbClient) {
           AND "recurrence_id" IS NOT NULL
           AND "due_date" < ${today}::date
           AND "id" <> ${keep?.id ?? NO_ID}::uuid`;
+    },
+
+    /** Empréstimo da demo, dentro da transação do seed (as parcelas entram depois, com o `loanId` devolvido). */
+    async createLoan(
+      userId: string,
+      l: {
+        name: string; kind: LoanKind; bankName: string; bankCnpj8: string; principal: number; installmentAmount: number;
+        installmentsTotal: number; installmentsPaidBefore: number; firstDueDate: DateOnly; accountId: string;
+      },
+    ): Promise<string> {
+      const created = await db.loan.create({
+        data: {
+          ...l, userId, principal: BigInt(l.principal), installmentAmount: BigInt(l.installmentAmount), firstDueDate: fromDateOnly(l.firstDueDate),
+        },
+        select: { id: true },
+      });
+      return created.id;
     },
 
     async staleDemoProfileIds(cutoff: Date, limit: number): Promise<string[]> {

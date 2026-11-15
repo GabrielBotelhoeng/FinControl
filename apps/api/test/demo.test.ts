@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import request from 'supertest';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { buildTestApp, FIXED_NOW } from './helpers/app';
+import { seedBankRatesFromFixture } from './helpers/bank-rates';
 import { newUser } from './helpers/auth';
 import { resetDb, testDb } from './helpers/db';
 
@@ -41,6 +42,14 @@ describe('conta demo', () => {
     const invoices = await request(app).get(`/api/v1/cards/${card!.id}/invoices`).set(visitor.auth);
     expect(invoices.body.length).toBeGreaterThan(0);
     expect(invoices.body.some((i: { status: string }) => i.status === 'overdue')).toBe(false);
+
+    // Financiamento do carro (Parte B, D5): 12 de 48 pagas, comparado com o Banco do Brasil quando há taxas.
+    await seedBankRatesFromFixture('bcb-veiculos-2026-10-23.json');
+    const loans = (await request(app).get('/api/v1/loans').set(visitor.auth)).body;
+    expect(loans).toHaveLength(1);
+    expect(loans[0]).toMatchObject({ name: 'Financiamento do carro', installmentsPaid: 12, installmentsTotal: 48 });
+    const loan = (await request(app).get(`/api/v1/loans/${loans[0].id}`).set(visitor.auth)).body;
+    expect(loan).toMatchObject({ remainingCount: 36, comparison: { bank: { position: 7 } } });
 
     const evolution = await request(app).get('/api/v1/dashboard/evolution?months=6').set(visitor.auth);
     for (const point of evolution.body as { income: number; expense: number }[]) {

@@ -5,6 +5,22 @@ import { buildDemoData } from './demo-data';
 const TODAY = '2026-11-11';
 
 describe('buildDemoData', () => {
+  it('inclui o financiamento do carro: 6 pagas antes do app, 6 pagas no histórico e 36 pendentes (D5)', () => {
+    const plan = buildDemoData(TODAY);
+    expect(plan.loans).toEqual([
+      expect.objectContaining({
+        key: 'vehicle', kind: 'vehicle', bankName: 'BCO DO BRASIL S.A.', bankCnpj8: '00000000', principal: 3000000,
+        installmentAmount: 95000, installmentsTotal: 48, installmentsPaidBefore: 6, firstDueDate: '2025-12-01', accountKey: 'checking',
+      }),
+    ]);
+    const installments = plan.transactions.filter((t) => t.loanKey === 'vehicle');
+    expect(installments.map((t) => t.installmentNumber)).toEqual(Array.from({ length: 42 }, (_, i) => i + 7));
+    const paid = installments.filter((t) => t.status === 'paid');
+    expect(paid.map((t) => t.dueDate)).toEqual(['2026-06-01', '2026-07-01', '2026-08-01', '2026-09-01', '2026-10-01', '2026-11-01']);
+    expect(paid.every((t) => t.paidDate === t.dueDate && t.categoryName === 'Empréstimos e financiamentos')).toBe(true);
+    expect(installments.find((t) => t.status === 'pending')!.dueDate).toBe('2026-12-01');
+  });
+
   it('é determinístico para a mesma data', () => {
     expect(buildDemoData(TODAY)).toEqual(buildDemoData(TODAY));
   });
@@ -15,7 +31,8 @@ describe('buildDemoData', () => {
     const max = endOfMonth(monthOf(TODAY));
     // A compra parcelada em andamento (decisão do controlador, Tarefa 9) tem parcelas com vencimento em meses
     // futuros por natureza (spec C1): já "pagas" do ponto de vista do cartão, mesmo com data além de hoje.
-    for (const t of plan.transactions.filter((t) => t.installmentGroupId === null)) {
+    // As parcelas pendentes do financiamento (Parte B) também vencem em meses futuros por natureza (spec C10).
+    for (const t of plan.transactions.filter((t) => t.installmentGroupId === null && !t.loanKey)) {
       expect(t.dueDate >= min && t.dueDate <= max).toBe(true);
       if (t.status === 'paid') expect(t.paidDate! <= TODAY).toBe(true);
       expect(Number.isInteger(t.amount) && t.amount > 0).toBe(true);
@@ -83,7 +100,7 @@ describe('buildDemoData', () => {
   });
 
   it('deixa um lançamento pendente no fim do mês atual', () => {
-    const pending = buildDemoData(TODAY).transactions.filter((t) => t.status === 'pending');
+    const pending = buildDemoData(TODAY).transactions.filter((t) => t.status === 'pending' && !t.loanKey); // as parcelas do financiamento ficam de fora (Parte B)
     expect(pending).toEqual([expect.objectContaining({ description: 'IPVA (parcela)', dueDate: '2026-11-30' })]);
   });
 });
