@@ -13,7 +13,7 @@ describe('categorias', () => {
 
   it('lista as categorias padrão e filtra por tipo', async () => {
     const user = await newUser();
-    expect((await request(app).get('/api/v1/categories').set(user.auth)).body).toHaveLength(14);
+    expect((await request(app).get('/api/v1/categories').set(user.auth)).body).toHaveLength(15);
     const income = await request(app).get('/api/v1/categories?type=income').set(user.auth);
     expect(income.body.map((c: { name: string }) => c.name).sort()).toEqual(['Freelance', 'Outros', 'Rendimentos', 'Salário']);
   });

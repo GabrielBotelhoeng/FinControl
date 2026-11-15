@@ -10,6 +10,7 @@ export const DEFAULT_CATEGORIES: ReadonlyArray<{ name: string; type: CategoryTyp
   { name: 'Assinaturas', type: 'expense', icon: 'repeat', color: '#14b8a6' },
   { name: 'Compras', type: 'expense', icon: 'shopping-bag', color: '#eab308' },
   { name: 'Contas', type: 'expense', icon: 'receipt', color: '#64748b' },
+  { name: 'Empréstimos e financiamentos', type: 'expense', icon: 'landmark', color: '#0f766e' },
   { name: 'Outros', type: 'expense', icon: 'circle-ellipsis', color: '#94a3b8' },
   { name: 'Salário', type: 'income', icon: 'briefcase', color: '#16a34a' },
   { name: 'Freelance', type: 'income', icon: 'laptop', color: '#22c55e' },

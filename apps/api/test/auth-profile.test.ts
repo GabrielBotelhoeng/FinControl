@@ -29,13 +29,13 @@ describe('autenticação', () => {
 describe('provisionamento e /me', () => {
   beforeEach(resetDb);
 
-  it('cria o perfil e as 14 categorias padrão no primeiro acesso, uma única vez', async () => {
+  it('cria o perfil e as 15 categorias padrão no primeiro acesso, uma única vez', async () => {
     const user = await newUser({ name: 'Ana Souza', email: 'ana@exemplo.com' });
     const first = await request(app).get('/api/v1/me').set(user.auth);
     expect(first.status).toBe(200);
     expect(first.body).toEqual({ id: user.id, name: 'Ana Souza', email: 'ana@exemplo.com', isDemo: false, theme: 'system' });
     await request(app).get('/api/v1/me').set(user.auth);
-    expect(await testDb.category.count({ where: { userId: user.id } })).toBe(14);
+    expect(await testDb.category.count({ where: { userId: user.id } })).toBe(15);
     expect(await testDb.category.count({ where: { userId: user.id, type: 'income' } })).toBe(4);
   });
 
@@ -43,7 +43,7 @@ describe('provisionamento e /me', () => {
     const user = await newUser();
     const results = await Promise.all([1, 2, 3].map(() => request(app).get('/api/v1/me').set(user.auth)));
     expect(results.map((r) => r.status)).toEqual([200, 200, 200]);
-    expect(await testDb.category.count({ where: { userId: user.id } })).toBe(14);
+    expect(await testDb.category.count({ where: { userId: user.id } })).toBe(15);
   });
 
   it('usuário anônimo vira perfil demo', async () => {
@@ -88,7 +88,7 @@ describe('provisionamento e /me', () => {
     expect(res.status).toBe(204);
     expect(await testDb.profile.count({ where: { id: user.id } })).toBe(0);
     expect(await testDb.transaction.count({ where: { userId: user.id } })).toBe(0);
-    expect(await testDb.category.count({ where: { userId: other.id } })).toBe(14);
+    expect(await testDb.category.count({ where: { userId: other.id } })).toBe(15);
     expect(authAdmin.deleted).toEqual([user.id]);
   });
 });
