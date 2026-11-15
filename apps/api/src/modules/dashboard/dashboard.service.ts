@@ -6,6 +6,7 @@ import { computeForecast, percentChange } from '../../domain/balance';
 import { debtCommitment, reserveCoverage, savingsRate } from '../../domain/health';
 import type { AccountsRepository } from '../accounts/accounts.repository';
 import type { CardsService } from '../cards/cards.service';
+import type { LoansRepository } from '../loans/loans.repository';
 import type { RecurrencesService } from '../recurrences/recurrences.service';
 import { toTransactionDTO } from '../transactions/transactions.mapper';
 import type { TransactionsRepository } from '../transactions/transactions.repository';
@@ -23,6 +24,7 @@ export type DashboardServiceDeps = {
   recurrences: RecurrencesService;
   accountsRepo: AccountsRepository;
   cards: CardsService;
+  loansRepo: Pick<LoansRepository, 'installmentsDueIn'>;
   clock: () => Date;
 };
 
@@ -44,7 +46,7 @@ export function createDashboardService(deps: DashboardServiceDeps) {
       const reserveWindow = Array.from({ length: RESERVE_WINDOW_MONTHS }, (_, i) => addMonthsToYm(current, -(i + 1)));
       // A dívida de cartão (dashboard.cards.ts) entra no mesmo Promise.all: roda em paralelo e, se falhar,
       // a rejeição é tratada junto com as demais (nunca fica uma promise solta sem handler).
-      const [now, before, totalBalance, pending, pendingCount, overdueCount, upcomingTx, liquidBalance, recent, debt] = await Promise.all([
+      const [now, before, totalBalance, pending, pendingCount, overdueCount, upcomingTx, liquidBalance, recent, debt, loanPayments] = await Promise.all([
         repo.paidTotalsByType(userId, startOfMonth(m), monthEnd),
         repo.paidTotalsByType(userId, startOfMonth(previous), endOfMonth(previous)),
         repo.balanceAt(userId),
@@ -59,7 +61,10 @@ export function createDashboardService(deps: DashboardServiceDeps) {
           userId,
           current,
         ),
+        deps.loansRepo.installmentsDueIn(userId, current),
       ]);
+      // Comprometimento (C13): dívida do cartão + parcelas de empréstimo com vencimento no mês corrente.
+      const debtPayments = debt.debtPayments + loanPayments;
       const reserve = reserveCoverage(liquidBalance, recent.map((r) => r.expense));
 
       // "A pagar" (decisão R16): lançamentos pendentes e faturas fechadas/vencidas mesclados por vencimento,
@@ -85,8 +90,8 @@ export function createDashboardService(deps: DashboardServiceDeps) {
           reserveMonths: reserve.months,
           liquidBalance,
           averageMonthlyExpense: reserve.averageExpense,
-          debtCommitment: debtCommitment(debt.debtPayments, recent.map((r) => r.income)),
-          debtPayments: debt.debtPayments,
+          debtCommitment: debtCommitment(debtPayments, recent.map((r) => r.income)),
+          debtPayments,
         },
       };
     },
