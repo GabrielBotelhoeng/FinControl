@@ -1,6 +1,6 @@
 # HANDOFF — FinControl
 
-_Atualizado em 2026-11-13._
+_Atualizado em 2026-11-15._
 
 ## Sub-projeto 2, Parte A: cartões de crédito (2026-11-13, branch feat/cartoes)
 
@@ -14,8 +14,13 @@ _Atualizado em 2026-11-13._
   - a demo com "Cartão principal", faturas pagas, uma fechada, a aberta e um notebook em 10x;
   - a página `/cartoes/:id` e o link "Ver faturas" em Contas.
 - **Testes:** 60 em shared, 172 na API e 95 na web, além de 9 E2E (novo: `e2e/tests/cartao.spec.ts`). O teste de 360 px passou a cobrir a página de faturas. Lint e typecheck limpos.
-- **Migration nova:** colunas de cartão, fatura e parcelas. Ela precisa ser aplicada no Supabase antes do deploy da API (`npx prisma migrate deploy` pelo pooler na porta 5432).
-- **Próximo:** PR da `feat/cartoes` (via @devops), CI e CodeRabbit, merge e deploy. Depois, a **Parte B** (empréstimos e financiamentos: taxa real, saldo devedor, quitação estimada e as taxas do Banco Central), com plano próprio.
+- **No ar desde 2026-11-15:** PR #11 mergeado (`ebc6d58`). A migration `20261112151556_cartoes` foi aplicada no Supabase antes do merge. A produção foi conferida com Playwright pela demo, a 1440 px e a 360 px: painel, Contas e faturas sem erros e sem rolagem horizontal.
+- **Revisão do CodeRabbit:** 5 correções, cada uma com teste. A regra da média do comprometimento (meses sem receita ficam fora) foi mantida e registrada na spec C13.
+
+## Sub-projeto 2, Parte B: empréstimos (planejada, branch feat/emprestimos)
+
+- **Plano:** `docs/superpowers/plans/2026-11-15-fincontrol-sp2-parte-b-emprestimos.md` (11 tarefas). Ele espera o aceite do usuário para os desvios D1–D6 da spec.
+- **Leitura da API do Banco Central (2026-11-15):** só o imobiliário é mensal. Crédito pessoal, consignado e veículos vêm por semana, em `TaxasJurosDiariaPorInicioPeriodo`. As respostas gravadas para os testes ficam em `apps/api/test/fixtures/`.
 
 ## Onde estamos (sub-projeto 1)
 

@@ -1,0 +1,45 @@
+{
+ "@odata.context": "https://was-p.bcnet.bcb.gov.br/olinda/servico/taxaJuros/versao/v2/odata$metadata#TaxasJurosMensalPorMes",
+ "value": [
+  {
+   "Mes": "Set-2026",
+   "Modalidade": "Financiamento imobiliário com taxas de mercado - Prefixado",
+   "Posicao": 1,
+   "InstituicaoFinanceira": "CAIXA ECONOMICA FEDERAL",
+   "TaxaJurosAoMes": 0.87,
+   "TaxaJurosAoAno": 10.94,
+   "cnpj8": "00360305",
+   "anoMes": "2026-09"
+  },
+  {
+   "Mes": "Set-2026",
+   "Modalidade": "Financiamento imobiliário com taxas de mercado - Prefixado",
+   "Posicao": 2,
+   "InstituicaoFinanceira": "BCO XP S.A.",
+   "TaxaJurosAoMes": 1.14,
+   "TaxaJurosAoAno": 14.57,
+   "cnpj8": "33264668",
+   "anoMes": "2026-09"
+  },
+  {
+   "Mes": "Set-2026",
+   "Modalidade": "Financiamento imobiliário com taxas de mercado - Prefixado",
+   "Posicao": 3,
+   "InstituicaoFinanceira": "BCO SANTANDER (BRASIL) S.A.",
+   "TaxaJurosAoMes": 1.17,
+   "TaxaJurosAoAno": 15.04,
+   "cnpj8": "90400888",
+   "anoMes": "2026-09"
+  },
+  {
+   "Mes": "Set-2026",
+   "Modalidade": "Financiamento imobiliário com taxas de mercado - Prefixado",
+   "Posicao": 4,
+   "InstituicaoFinanceira": "APE POUPEX",
+   "TaxaJurosAoMes": 1.43,
+   "TaxaJurosAoAno": 18.62,
+   "cnpj8": "00655522",
+   "anoMes": "2026-09"
+  }
+ ]
+}
