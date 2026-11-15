@@ -1,5 +1,8 @@
+import { createBcbClient } from '../infra/bcb-client';
 import { createAccountsRepository } from '../modules/accounts/accounts.repository';
 import { createAccountsService } from '../modules/accounts/accounts.service';
+import { createBankRatesRepository } from '../modules/bank-rates/bank-rates.repository';
+import { createBankRatesService } from '../modules/bank-rates/bank-rates.service';
 import { createCardsRepository } from '../modules/cards/cards.repository';
 import { createCardsService } from '../modules/cards/cards.service';
 import { createCategoriesRepository } from '../modules/categories/categories.repository';
@@ -42,6 +45,9 @@ export function buildContainer(deps: AppDeps) {
       });
     },
   });
+  const bankRates = createBankRatesService({
+    repo: createBankRatesRepository(deps.db), bcb: createBcbClient(deps.fetchFn ?? fetch), logger: deps.logger,
+  });
   const cardsRepo = createCardsRepository(deps.db);
   const cards = createCardsService({ repo: cardsRepo, accountsRepo, accounts, transactionsRepo, clock: deps.clock });
   const dashboard = createDashboardService({
@@ -69,7 +75,7 @@ export function buildContainer(deps: AppDeps) {
   return {
     provisioner, profile, accountsRepo, accounts, categoriesRepo, categories,
     transactionsRepo, validateRefs, recurrencesRepo, recurrences, transactions, dashboard, demo,
-    cardsRepo, cards,
+    cardsRepo, cards, bankRates,
   };
 }
 

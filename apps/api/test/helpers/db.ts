@@ -7,6 +7,6 @@ export const testDb = createPrisma(url);
 
 export async function resetDb(): Promise<void> {
   await testDb.$executeRawUnsafe(
-    'TRUNCATE "transactions", "recurrence_skips", "recurrences", "categories", "accounts", "profiles" CASCADE',
+    'TRUNCATE "transactions", "loans", "bank_rates", "recurrence_skips", "recurrences", "categories", "accounts", "profiles" CASCADE',
   );
 }
