@@ -90,7 +90,7 @@ export function HealthTiles({ health }: { health: FinancialHealthDTO }) {
         detail={
           debtCommitment === null
             ? 'Sem receitas nos últimos 3 meses.'
-            : `Hoje: ${formatBRL(debtPayments)} em parcelas do cartão e faturas vencidas ÷ renda média dos últimos 3 meses.`
+            : `Hoje: ${formatBRL(debtPayments)} em parcelas de empréstimos e do cartão e faturas vencidas ÷ renda média dos últimos 3 meses.`
         }
       />
     </div>

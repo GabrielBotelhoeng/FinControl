@@ -76,6 +76,11 @@ export function createDemoService(deps: DemoServiceDeps) {
           });
         }
 
+        const loanIds = new Map<string, string>();
+        for (const { key, accountKey, ...loan } of plan.loans) {
+          loanIds.set(key, await tx.repo.createLoan(userId, { ...loan, accountId: accountId(accountKey) }));
+        }
+
         await tx.transactions.insertMany(
           userId,
           plan.transactions.map((t) => ({
@@ -95,6 +100,7 @@ export function createDemoService(deps: DemoServiceDeps) {
             installmentNumber: t.installmentNumber,
             installmentTotal: t.installmentTotal,
             installmentGroupId: t.installmentGroupId,
+            loanId: t.loanKey ? loanIds.get(t.loanKey)! : null,
           })),
         );
 

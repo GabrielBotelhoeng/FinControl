@@ -42,6 +42,16 @@ enum TransactionStatus {
   paid
 }
 
+enum LoanKind {
+  personal
+  payroll_inss
+  payroll_public
+  payroll_private
+  vehicle
+  mortgage
+  other
+}
+
 enum Frequency {
   weekly
   monthly
@@ -59,6 +69,7 @@ model Profile {
   categories   Category[]
   recurrences  Recurrence[]
   transactions Transaction[]
+  loans        Loan[]
 
   @@index([isDemo, createdAt])
   @@map("profiles")
@@ -85,6 +96,7 @@ model Account {
   recurrences             Recurrence[]  @relation("RecurrenceAccount")
   incomingRecurrences     Recurrence[]  @relation("RecurrenceDestination")
   cardsUsingThisAsPayment Account[]     @relation("AccountPaymentAccount")
+  loans                   Loan[]
 
   @@index([userId])
   @@map("accounts")
@@ -169,10 +181,57 @@ model Transaction {
   destinationAccount   Account?           @relation("TransactionDestination", fields: [destinationAccountId], references: [id], onDelete: NoAction)
   category             Category?          @relation(fields: [categoryId], references: [id], onDelete: NoAction)
   recurrence           Recurrence?        @relation(fields: [recurrenceId], references: [id], onDelete: SetNull)
+  loanId               String?            @map("loan_id") @db.Uuid
+  loan                 Loan?              @relation(fields: [loanId], references: [id], onDelete: SetNull)
 
   @@unique([recurrenceId, occurrenceDate])
   @@index([userId, dueDate])
   @@index([userId, paidDate])
   @@index([accountId, invoiceMonth])
+  @@index([loanId])
   @@map("transactions")
+}
+
+/** Empréstimo ou financiamento (spec C8–C11). As parcelas restantes são lançamentos com `loanId`. */
+model Loan {
+  id                     String        @id @default(uuid()) @db.Uuid
+  userId                 String        @map("user_id") @db.Uuid
+  name                   String
+  kind                   LoanKind
+  bankName               String        @map("bank_name")
+  bankCnpj8              String?       @map("bank_cnpj8") @db.Char(8)
+  principal              BigInt
+  installmentAmount      BigInt        @map("installment_amount")
+  installmentsTotal      Int           @map("installments_total")
+  installmentsPaidBefore Int           @default(0) @map("installments_paid_before")
+  firstDueDate           DateTime      @map("first_due_date") @db.Date
+  accountId              String        @map("account_id") @db.Uuid
+  /** Fração ao mês, só para conferência. */
+  informedMonthlyRate    Decimal?      @map("informed_monthly_rate") @db.Decimal(9, 6)
+  createdAt              DateTime      @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt              DateTime      @updatedAt @map("updated_at") @db.Timestamptz
+  user                   Profile       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  account                Account       @relation(fields: [accountId], references: [id], onDelete: NoAction)
+  transactions           Transaction[]
+
+  @@index([userId])
+  @@map("loans")
+}
+
+/** Taxas do Banco Central (spec C12; D1: só o período mais recente de cada modalidade). Percentual, como publicado. */
+model BankRate {
+  id          String   @id @default(uuid()) @db.Uuid
+  modality    String
+  periodStart DateTime @map("period_start") @db.Date
+  periodEnd   DateTime @map("period_end") @db.Date
+  institution String
+  cnpj8       String   @db.Char(8)
+  monthlyRate Decimal  @map("monthly_rate") @db.Decimal(9, 4)
+  annualRate  Decimal  @map("annual_rate") @db.Decimal(9, 4)
+  position    Int
+  syncedAt    DateTime @default(now()) @map("synced_at") @db.Timestamptz
+
+  @@unique([modality, cnpj8])
+  @@index([cnpj8])
+  @@map("bank_rates")
 }

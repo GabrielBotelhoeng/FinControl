@@ -24,7 +24,7 @@ const category = { id: 'cat1', name: 'Compras', type: 'expense', icon: 'shopping
 const baseTx: TransactionDTO = {
   id: 't0', type: 'expense', amount: 5000, description: 'Mercado', accountId: 'a1', destinationAccountId: null,
   categoryId: 'cat1', nature: 'variable', status: 'paid', dueDate: '2026-11-10', paidDate: '2026-11-10',
-  recurrenceId: null, occurrenceDate: null, invoiceMonth: null, installmentNumber: null, installmentTotal: null,
+  recurrenceId: null, occurrenceDate: null, invoiceMonth: null, installmentNumber: null, installmentTotal: null, loanId: null,
   overdue: false, createdAt: '2026-11-10T00:00:00Z',
 };
 

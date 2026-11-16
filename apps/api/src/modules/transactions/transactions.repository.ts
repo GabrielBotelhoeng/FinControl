@@ -26,13 +26,16 @@ export type TransactionRow = {
   installmentTotal: number | null;
   /** Agrupa as N parcelas de uma mesma compra (decisão R10); `null` fora de compra parcelada. */
   installmentGroupId: string | null;
+  /** Parcela de empréstimo (spec C10); `null` fora de empréstimo. */
+  loanId: string | null;
   createdAt: Date;
 };
 
 /** Tipo e dias de fatura de uma conta, para as regras de cartão nos caminhos de lançamentos (decisão R10/R11). */
 export type AccountCardInfo = { type: AccountType; closingDay: number | null; dueDay: number | null };
 
-export type NewTransaction = Omit<TransactionRow, 'id' | 'createdAt'>;
+/** `loanId` é opcional na criação: só o módulo de empréstimos o preenche. */
+export type NewTransaction = Omit<TransactionRow, 'id' | 'createdAt' | 'loanId'> & { loanId?: string | null };
 
 export type TransactionFilters = {
   from?: DateOnly;
@@ -78,6 +81,7 @@ export const toTransactionRow = (t: TransactionRecord): TransactionRow => ({
   installmentNumber: t.installmentNumber,
   installmentTotal: t.installmentTotal,
   installmentGroupId: t.installmentGroupId,
+  loanId: t.loanId,
   createdAt: t.createdAt,
 });
 

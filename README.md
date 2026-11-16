@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/GabrielBotelhoeng/FinControl/actions/workflows/ci.yml/badge.svg)](https://github.com/GabrielBotelhoeng/FinControl/actions/workflows/ci.yml)
 
-Gestão financeira pessoal: contas, cartões de crédito, receitas, despesas, transferências, recorrências e um painel do mês. Web responsivo e PWA instalável, em português e em reais. É um projeto de portfólio.
+Gestão financeira pessoal: contas, cartões de crédito, empréstimos e financiamentos, receitas, despesas, transferências, recorrências e um painel do mês. Web responsivo e PWA instalável, em português e em reais. É um projeto de portfólio.
 
 **[Abrir o app →](https://fincontrol-gb.vercel.app)** · Clique em **“Experimentar sem cadastro”** para entrar numa demo própria, com 6 meses de dados. Nada precisa ser preenchido.
 
@@ -17,16 +17,20 @@ Gestão financeira pessoal: contas, cartões de crédito, receitas, despesas, tr
 
 ![Faturas do cartão, com a fatura aberta em destaque e o histórico](docs/screenshots/faturas.png)
 
+![Detalhe de um financiamento: taxa real, quanto são juros, saldo devedor e quitação estimada](docs/screenshots/emprestimo.png)
+
 ## O que dá para fazer
 
 - **Várias contas**: corrente, poupança, carteira e investimento, cada uma com o próprio saldo, além de transferências entre elas.
 - **Cartões de crédito**: limite total e disponível, dia de fechamento e de vencimento, e a conta que paga a fatura. Cada compra cai na fatura certa, inclusive no dia do fechamento e em meses curtos. Compras parceladas (até 48x) espalham as parcelas pelas faturas seguintes, e a soma bate com o total ao centavo.
 - **Faturas**: aberta, fechada, paga ou vencida, sempre com ícone e texto. Pagar a fatura é uma transferência da conta pagadora para o cartão, que devolve o limite. Pagar a mais reduz a dívida do cartão.
+- **Empréstimos e financiamentos**: a pessoa informa o que sabe (valor recebido, valor da parcela e número de parcelas) e o app descobre a taxa de juros real, ao mês e ao ano. Ele mostra quanto ela vai devolver e quanto disso é juros, o saldo devedor e a quitação antecipada estimada (CDC art. 52 §2º). As parcelas restantes entram como lançamentos pendentes, e pagar uma delas atualiza o progresso.
+- **Comparação com o Banco Central**: a taxa do contrato é comparada com a do próprio banco e com a mediana do mercado para o mesmo tipo de crédito, com a fonte e o período de referência. As taxas oficiais são sincronizadas toda semana.
 - **Lançamentos**: receitas e despesas, fixas ou variáveis, pagas ou pendentes, com vencimento e categoria.
 - **Recorrências**: o lançamento se repete (toda semana, todo mês ou todo ano) e cada mês ganha a sua ocorrência, que pode ser paga ou editada. Dá para editar “só esta” ou “esta e as próximas”, sem mexer no que já foi pago.
 - **Histórico com filtros combinados**: período, conta, categoria, tipo, situação e busca, com paginação.
 - **Painel**: saldo total, previsão para o fim do mês, receitas e despesas comparadas com o mês anterior, evolução de 6 meses, gastos por categoria e contas a pagar, com as faturas de cartão em aberto.
-- **Saúde financeira**: taxa de poupança (meta de 20%), reserva de emergência em meses de gasto (meta de 3 a 6) e comprometimento de renda com parcelas e faturas vencidas (meta de até 30%). Cada indicador mostra a situação por escrito e a conta que gerou o número.
+- **Saúde financeira**: taxa de poupança (meta de 20%), reserva de emergência em meses de gasto (meta de 3 a 6) e comprometimento de renda com parcelas de empréstimos e do cartão e faturas vencidas (meta de até 30%). Cada indicador mostra a situação por escrito e a conta que gerou o número.
 - **Demo isolada por visitante**: cada pessoa recebe uma conta anônima com dados próprios, apagada automaticamente após 7 dias.
 - **Login** por e-mail e senha ou pelo Google. Em **Perfil → Excluir minha conta**, a pessoa apaga tudo, como prevê a LGPD ([política de privacidade](https://fincontrol-gb.vercel.app/privacidade)).
 
@@ -58,6 +62,8 @@ flowchart LR
 As decisões, com as alternativas descartadas e os motivos, estão nas specs do [sub-projeto 1](docs/superpowers/specs/2026-11-11-fincontrol-fundacao-fluxo-caixa-design.md) e do [sub-projeto 2](docs/superpowers/specs/2026-11-12-fincontrol-sp2-credito-design.md).
 
 - **O cartão é uma conta** do tipo `credit_card`. A compra é uma despesa nessa conta, com o mês da fatura gravado, e o pagamento é uma transferência. Assim, cartão, saldo e painel usam o mesmo livro-caixa.
+- **As contas do empréstimo ficam em `packages/shared`** (tabela Price): a API calcula o detalhe, e o formulário mostra a taxa real antes de salvar com as mesmas funções.
+- **Taxas do Banco Central** vêm da API Olinda (`taxaJuros` v2). Um cron semanal guarda o período mais recente de cada modalidade. Se a API falhar, os dados anteriores ficam. Os testes usam respostas gravadas, sem rede.
 
 | Pasta | O que tem |
 |---|---|
@@ -71,10 +77,10 @@ As decisões, com as alternativas descartadas e os motivos, estão nas specs do 
 
 | Camada | Quantidade | Como roda |
 |---|---|---|
-| `packages/shared` | 60 | Unitários (Vitest) |
-| `apps/api` | 172 | Integração contra **Postgres real**: rotas HTTP, regras de saldo, recorrência, cartão e fatura, e isolamento entre usuários |
-| `apps/web` | 95 | Componentes e fluxos (Testing Library), com o provedor de identidade simulado |
-| `e2e` | 9 | Chromium contra a pilha inteira |
+| `packages/shared` | 77 | Unitários (Vitest) |
+| `apps/api` | 195 | Integração contra **Postgres real**: rotas HTTP, regras de saldo, recorrência, cartão e fatura, empréstimos, sincronização com o Banco Central e isolamento entre usuários |
+| `apps/web` | 112 | Componentes e fluxos (Testing Library), com o provedor de identidade simulado |
+| `e2e` | 10 | Chromium contra a pilha inteira |
 
 O E2E roda a **web buildada como em produção**, a **API real** e o **Postgres real**. A única peça simulada é o provedor de identidade: um servidor Auth mínimo ([`e2e/fake-auth.ts`](e2e/fake-auth.ts)) que fala o mesmo protocolo do Supabase e assina JWTs ES256 de verdade. Assim, a API valida os tokens pelo mesmo caminho de produção (JWKS, issuer e audience), sem segredos no CI e sem sujar o projeto real. Os cenários seguem os critérios de aceite da spec:
 
@@ -82,8 +88,9 @@ O E2E roda a **web buildada como em produção**, a **API real** e o **Postgres 
 - cadastro, conta e despesa paga, com o saldo da conta atualizado;
 - recorrência mensal sem duplicar ao navegar e recarregar;
 - compra no cartão indo para a fatura, e o pagamento tirando da corrente e devolvendo o limite;
+- cadastro de empréstimo com a taxa real na prévia, as parcelas em Lançamentos e a exclusão apagando as pendentes;
 - “Excluir minha conta” apagando também o usuário no Auth;
-- nenhuma rolagem horizontal a 360 px, inclusive na página de faturas;
+- nenhuma rolagem horizontal a 360 px, inclusive nas páginas de faturas e de empréstimos;
 - política de privacidade e termos de uso públicos;
 - rota protegida sem sessão.
 
@@ -119,10 +126,10 @@ SCREENSHOTS=1 npm run test:e2e -- screenshots   # regenera as imagens deste READ
 Dois projetos na Vercel a partir deste monorepo: `fincontrol-web` (raiz `apps/web`) e `fincontrol-api` (raiz `apps/api`). Ambos estão ligados ao GitHub, com produção na `main` e preview em cada PR.
 
 - A API usa `src/index.ts` como entrada (`export default app`) e precisa de `VERCEL_EXPERIMENTAL_BACKENDS=1`, por causa dos imports sem extensão e do pacote `shared` em TypeScript.
-- O cron diário (`apps/api/vercel.json`) chama `/api/v1/internal/cron/cleanup-demo`, protegido por `CRON_SECRET`.
+- Os crons (`apps/api/vercel.json`) chamam `/api/v1/internal/cron/cleanup-demo` todo dia e `/api/v1/internal/cron/sync-bank-rates` toda segunda-feira, protegidos por `CRON_SECRET`.
 - A API aceita a origem de produção e, via `WEB_PREVIEW_ORIGIN_PATTERN` (regex ancorada), os previews da web.
 - A conexão com o Postgres valida o certificado e o nome do host contra a CA do Supabase (`DATABASE_CA_CERT`), e não apenas cifra o tráfego.
 
 ## Roadmap
 
-São 7 sub-projetos. O 1 (fundação e fluxo de caixa) está no ar. Do 2 (crédito), a Parte A (cartões) está pronta, e a Parte B traz empréstimos e financiamentos, com a taxa de juros real e a comparação com as taxas do Banco Central. Depois vêm planejamento e metas, relatórios e exportação, notificações e um assistente financeiro com IA. Cada um sai com spec, plano, testes e deploy.
+São 7 sub-projetos. O 1 (fundação e fluxo de caixa) e o 2 (crédito: cartões, empréstimos e financiamentos) estão prontos. Depois vêm planejamento e metas, relatórios e exportação, notificações e um assistente financeiro com IA. Cada um sai com spec, plano, testes e deploy.

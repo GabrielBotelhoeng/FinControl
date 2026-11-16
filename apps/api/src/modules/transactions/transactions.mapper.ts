@@ -19,6 +19,7 @@ export function toTransactionDTO(row: TransactionRow, today: DateOnly): Transact
     invoiceMonth: row.invoiceMonth,
     installmentNumber: row.installmentNumber,
     installmentTotal: row.installmentTotal,
+    loanId: row.loanId,
     overdue: row.status === 'pending' && row.dueDate < today,
     createdAt: row.createdAt.toISOString(),
   };

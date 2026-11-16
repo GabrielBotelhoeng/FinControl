@@ -72,7 +72,7 @@ describe('InvoicesPage', () => {
       'GET /cards/c1/invoices/2026-12': {
         ...invoiceList[0],
         transactions: [
-          { id: 't1', type: 'expense', amount: 30000, description: 'Mercado', accountId: 'c1', destinationAccountId: null, categoryId: null, nature: 'variable', status: 'paid', dueDate: '2026-11-20', paidDate: '2026-11-20', recurrenceId: null, occurrenceDate: null, invoiceMonth: '2026-12', installmentNumber: null, installmentTotal: null, overdue: false, createdAt: '' },
+          { id: 't1', type: 'expense', amount: 30000, description: 'Mercado', accountId: 'c1', destinationAccountId: null, categoryId: null, nature: 'variable', status: 'paid', dueDate: '2026-11-20', paidDate: '2026-11-20', recurrenceId: null, occurrenceDate: null, invoiceMonth: '2026-12', installmentNumber: null, installmentTotal: null, loanId: null, overdue: false, createdAt: '' },
         ],
       },
     });

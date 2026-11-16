@@ -1,6 +1,6 @@
 import {
   addMonthsToYm, dateInMonth, endOfMonth, installmentDate, invoiceDates, invoiceFor, minDate, monthOf, splitInstallments,
-  type AccountType, type DateOnly, type TransactionNature, type TransactionStatus, type TransactionType, type YearMonth,
+  type AccountType, type DateOnly, type LoanKind, type TransactionNature, type TransactionStatus, type TransactionType, type YearMonth,
 } from '@fincontrol/shared';
 
 export type DemoAccountKey = 'checking' | 'savings' | 'wallet' | 'card';
@@ -41,11 +41,28 @@ export type DemoTransaction = {
   installmentGroupId: string | null;
   installmentNumber: number | null;
   installmentTotal: number | null;
+  /** Parcela do empréstimo da demo (Parte B); ausente fora de empréstimo. */
+  loanKey?: DemoLoanKey;
+};
+export type DemoLoanKey = 'vehicle';
+export type DemoLoan = {
+  key: DemoLoanKey;
+  name: string;
+  kind: LoanKind;
+  bankName: string;
+  bankCnpj8: string;
+  principal: number;
+  installmentAmount: number;
+  installmentsTotal: number;
+  installmentsPaidBefore: number;
+  firstDueDate: DateOnly;
+  accountKey: DemoAccountKey;
 };
 export type DemoPlan = {
   accounts: DemoAccount[];
   recurrences: DemoRecurrence[];
   transactions: DemoTransaction[];
+  loans: DemoLoan[];
   /** Descrição da recorrência cuja ocorrência vencida mais recente fica sem pagar. */
   overdueDescription: string;
 };
@@ -76,6 +93,16 @@ const INSTALLMENT_PURCHASE = {
 } as const;
 /** UUID fixo (nunca `randomUUID()`): mantém `buildDemoData` puro e determinístico. */
 const DEMO_INSTALLMENT_GROUP_ID = 'a0000000-0000-4000-8000-000000000001';
+
+/**
+ * Financiamento do carro (spec seção 7, D5): 6 parcelas pagas antes do app e mais 6 dentro do histórico (12 de 48).
+ * Vence no dia 1: as parcelas 7–12 (M-5 … M) sempre já venceram e a 13 vence no mês seguinte, em qualquer dia do mês.
+ */
+const VEHICLE_LOAN = {
+  name: 'Financiamento do carro', kind: 'vehicle', bankName: 'BCO DO BRASIL S.A.', bankCnpj8: '00000000',
+  principal: 3000000, installmentAmount: 95000, installmentsTotal: 48, installmentsPaidBefore: 6, paidInHistory: 6,
+  categoryName: 'Empréstimos e financiamentos',
+} as const;
 
 /** PRNG pequeno e determinístico (mulberry32): a demo sai igual a cada execução e nos testes. */
 function mulberry32(seed: number): () => number {
@@ -218,5 +245,25 @@ export function buildDemoData(today: DateOnly, seed = 42): DemoPlan {
     });
   }
 
-  return { accounts, recurrences, transactions, overdueDescription: 'Internet' };
+  // Parcelas 7 … 48 do financiamento: 7–12 pagas na data (M-5 … M), 13–48 pendentes.
+  const loanStartYm = addMonthsToYm(currentYm, -(VEHICLE_LOAN.installmentsPaidBefore + VEHICLE_LOAN.paidInHistory - 1));
+  const loans: DemoLoan[] = [
+    {
+      key: 'vehicle', name: VEHICLE_LOAN.name, kind: VEHICLE_LOAN.kind, bankName: VEHICLE_LOAN.bankName, bankCnpj8: VEHICLE_LOAN.bankCnpj8,
+      principal: VEHICLE_LOAN.principal, installmentAmount: VEHICLE_LOAN.installmentAmount, installmentsTotal: VEHICLE_LOAN.installmentsTotal,
+      installmentsPaidBefore: VEHICLE_LOAN.installmentsPaidBefore, firstDueDate: dateInMonth(loanStartYm, 1), accountKey: 'checking',
+    },
+  ];
+  for (let k = VEHICLE_LOAN.installmentsPaidBefore + 1; k <= VEHICLE_LOAN.installmentsTotal; k++) {
+    const dueDate = dateInMonth(addMonthsToYm(loanStartYm, k - 1), 1);
+    const paid = k <= VEHICLE_LOAN.installmentsPaidBefore + VEHICLE_LOAN.paidInHistory;
+    transactions.push({
+      type: 'expense', amount: VEHICLE_LOAN.installmentAmount, description: `${VEHICLE_LOAN.name} (${k}/${VEHICLE_LOAN.installmentsTotal})`,
+      accountKey: 'checking', destinationAccountKey: null, categoryName: VEHICLE_LOAN.categoryName, nature: 'fixed',
+      status: paid ? 'paid' : 'pending', dueDate, paidDate: paid ? dueDate : null,
+      invoiceMonth: null, installmentGroupId: null, installmentNumber: k, installmentTotal: VEHICLE_LOAN.installmentsTotal, loanKey: 'vehicle',
+    });
+  }
+
+  return { accounts, recurrences, transactions, loans, overdueDescription: 'Internet' };
 }

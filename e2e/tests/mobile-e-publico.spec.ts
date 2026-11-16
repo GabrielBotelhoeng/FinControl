@@ -8,8 +8,11 @@ test.describe('tela de 360 px', () => {
     await enterDemo(page);
     await page.goto('/contas');
     const faturas = await page.getByRole('article', { name: 'Cartão principal' }).getByRole('link', { name: 'Ver faturas' }).getAttribute('href');
+    await page.goto('/emprestimos');
+    const emprestimo = await page.getByRole('article', { name: 'Financiamento do carro' }).getByRole('link', { name: /Ver detalhes/ }).getAttribute('href');
 
-    for (const path of ['/', '/lancamentos', '/contas', faturas!, '/categorias', '/perfil', '/privacidade', '/termos']) {
+    const paths = ['/', '/lancamentos', '/contas', faturas!, '/emprestimos', emprestimo!, '/categorias', '/perfil', '/privacidade', '/termos'];
+    for (const path of paths) {
       await page.goto(path);
       await page.waitForLoadState('networkidle');
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);

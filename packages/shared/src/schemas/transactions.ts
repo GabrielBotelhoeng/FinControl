@@ -123,6 +123,8 @@ export type TransactionDTO = {
   invoiceMonth: string | null;
   installmentNumber: number | null;
   installmentTotal: number | null;
+  /** Parcela de empréstimo (spec C10). */
+  loanId: string | null;
   overdue: boolean;
   createdAt: string;
 };

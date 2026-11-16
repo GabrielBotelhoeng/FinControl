@@ -1,5 +1,8 @@
+import { createBcbClient } from '../infra/bcb-client';
 import { createAccountsRepository } from '../modules/accounts/accounts.repository';
 import { createAccountsService } from '../modules/accounts/accounts.service';
+import { createBankRatesRepository } from '../modules/bank-rates/bank-rates.repository';
+import { createBankRatesService } from '../modules/bank-rates/bank-rates.service';
 import { createCardsRepository } from '../modules/cards/cards.repository';
 import { createCardsService } from '../modules/cards/cards.service';
 import { createCategoriesRepository } from '../modules/categories/categories.repository';
@@ -8,6 +11,8 @@ import { createDashboardRepository } from '../modules/dashboard/dashboard.reposi
 import { createDashboardService } from '../modules/dashboard/dashboard.service';
 import { createDemoRepository } from '../modules/demo/demo.repository';
 import { createDemoService } from '../modules/demo/demo.service';
+import { createLoansRepository } from '../modules/loans/loans.repository';
+import { createLoansService } from '../modules/loans/loans.service';
 import { createProfileRepository } from '../modules/profile/profile.repository';
 import { createProfileService } from '../modules/profile/profile.service';
 import { createProvisioner } from '../modules/profile/provisioning';
@@ -42,10 +47,15 @@ export function buildContainer(deps: AppDeps) {
       });
     },
   });
+  const bankRates = createBankRatesService({
+    repo: createBankRatesRepository(deps.db), bcb: createBcbClient(deps.fetchFn ?? fetch), logger: deps.logger,
+  });
+  const loansRepo = createLoansRepository(deps.db);
+  const loans = createLoansService({ repo: loansRepo, accountsRepo, categoriesRepo, bankRates });
   const cardsRepo = createCardsRepository(deps.db);
   const cards = createCardsService({ repo: cardsRepo, accountsRepo, accounts, transactionsRepo, clock: deps.clock });
   const dashboard = createDashboardService({
-    repo: createDashboardRepository(deps.db), transactions: transactionsRepo, recurrences, accountsRepo, cards, clock: deps.clock,
+    repo: createDashboardRepository(deps.db), transactions: transactionsRepo, recurrences, accountsRepo, cards, loansRepo, clock: deps.clock,
   });
   const demo = createDemoService({
     repo: createDemoRepository(deps.db), categories: categoriesRepo, profile, clock: deps.clock,
@@ -69,7 +79,7 @@ export function buildContainer(deps: AppDeps) {
   return {
     provisioner, profile, accountsRepo, accounts, categoriesRepo, categories,
     transactionsRepo, validateRefs, recurrencesRepo, recurrences, transactions, dashboard, demo,
-    cardsRepo, cards,
+    cardsRepo, cards, bankRates, loansRepo, loans,
   };
 }
 

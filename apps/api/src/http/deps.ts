@@ -11,4 +11,6 @@ export type AppDeps = {
   verifier: TokenVerifier;
   authAdmin: AuthAdmin;
   clock: () => Date;
+  /** `fetch` do cliente do Banco Central; injetado nos testes para não usar rede. */
+  fetchFn?: typeof fetch;
 };

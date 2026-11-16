@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  centsSchema, createAccountSchema, createTransactionSchema, listInvoicesQuerySchema, listTransactionsQuerySchema,
+  centsSchema, createAccountSchema, createLoanSchema, createTransactionSchema, listInvoicesQuerySchema, listTransactionsQuerySchema,
   payInvoiceSchema, updateAccountSchema, updateTransactionSchema,
 } from './index';
 
@@ -144,5 +144,30 @@ describe('listInvoicesQuerySchema', () => {
   it('recusa mês fora do formato AAAA-MM', () => {
     expect(listInvoicesQuerySchema.safeParse({ from: '2026-13' }).success).toBe(false);
     expect(listInvoicesQuerySchema.safeParse({ to: '2026/11' }).success).toBe(false);
+  });
+});
+
+describe('createLoanSchema', () => {
+  const demo = {
+    name: 'Financiamento do carro', kind: 'vehicle', bankName: 'BCO DO BRASIL S.A.', bankCnpj8: '00000000',
+    principal: 3000000, installmentAmount: 95000, installmentsTotal: 48, installmentsPaidBefore: 6,
+    firstDueDate: '2025-11-10', accountId: ACC,
+  };
+  it('aceita o financiamento da demo', () => expect(createLoanSchema.safeParse(demo).success).toBe(true));
+  it('"já pagas" igual ao total falha no campo; total − 1 passa', () => {
+    const r = createLoanSchema.safeParse({ ...demo, installmentsPaidBefore: 48 });
+    expect(r.success).toBe(false);
+    expect(r.error!.issues.map((i) => i.path.join('.'))).toContain('installmentsPaidBefore');
+    expect(createLoanSchema.safeParse({ ...demo, installmentsPaidBefore: 47 }).success).toBe(true);
+  });
+  it('parcela zero e CNPJ curto falham', () => {
+    expect(createLoanSchema.safeParse({ ...demo, installmentAmount: 0 }).success).toBe(false);
+    expect(createLoanSchema.safeParse({ ...demo, bankCnpj8: '123' }).success).toBe(false);
+  });
+  it('"já pagas" padrão é 0 e a taxa informada é fração opcional', () => {
+    const { installmentsPaidBefore: _, ...rest } = demo;
+    expect(createLoanSchema.parse(rest).installmentsPaidBefore).toBe(0);
+    expect(createLoanSchema.safeParse({ ...demo, informedMonthlyRate: 0.025 }).success).toBe(true);
+    expect(createLoanSchema.safeParse({ ...demo, informedMonthlyRate: 2.5 }).success).toBe(false);
   });
 });

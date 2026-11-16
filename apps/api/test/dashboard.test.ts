@@ -162,6 +162,36 @@ describe('dashboard', () => {
       expect(res.body.health.debtCommitment).toBe(0.06);
     });
 
+    it('parcelas de empréstimo do mês entram no comprometimento, somadas às do cartão (Parte B, C13)', async () => {
+      const user = await newUser();
+      const { checking, card, food } = await cardScenario(user); // fecha 26, vence 5
+      const salary = await categoryId(app, user, 'Salário', 'income');
+      for (const date of ['2026-08-05', '2026-09-05', '2026-10-05']) {
+        await createTransaction(app, user, {
+          type: 'income', amount: 500000, description: 'Salário', accountId: checking.id, categoryId: salary, nature: 'fixed',
+          dueDate: date, status: 'paid', paidDate: date,
+        });
+      }
+      // 12x de 50000, 1ª em 2026-11-20 → uma parcela em novembro.
+      const loan = await request(app).post('/api/v1/loans').set(user.auth).send({
+        name: 'Empréstimo', kind: 'personal', bankName: 'Banco X', principal: 500000, installmentAmount: 50000,
+        installmentsTotal: 12, firstDueDate: '2026-11-20', accountId: checking.id,
+      });
+      expect(loan.status).toBe(201);
+      let health = (await request(app).get('/api/v1/dashboard/summary').set(user.auth)).body.health;
+      expect(health.debtPayments).toBe(50000);
+      expect(health.debtCommitment).toBe(0.1);
+
+      // Com a compra 3x de 90000 da Parte A (30000 da fatura vencida de novembro): 80000 = 16%.
+      await request(app).post('/api/v1/transactions').set(user.auth).send({
+        type: 'expense', amount: 90000, description: 'Notebook', accountId: card.id, categoryId: food, nature: 'variable',
+        dueDate: '2026-10-05', installments: 3,
+      });
+      health = (await request(app).get('/api/v1/dashboard/summary').set(user.auth)).body.health;
+      expect(health.debtPayments).toBe(80000);
+      expect(health.debtCommitment).toBe(0.16);
+    });
+
     it('"A pagar": fatura fechada e não paga aparece com kind \'invoice\', mesmo com o cartão arquivado (foco 4)', async () => {
       const user = await newUser();
       const { card, food } = await cardScenario(user, { closingDay: 5, dueDay: 20 });

@@ -26,6 +26,9 @@ test.describe('desktop', () => {
     await shoot(page, '/contas', 'contas.png');
     const faturas = await page.getByRole('article', { name: 'Cartão principal' }).getByRole('link', { name: 'Ver faturas' }).getAttribute('href');
     await shoot(page, faturas!, 'faturas.png');
+    await page.goto('/emprestimos');
+    const emprestimo = await page.getByRole('article', { name: 'Financiamento do carro' }).getByRole('link', { name: /Ver detalhes/ }).getAttribute('href');
+    await shoot(page, emprestimo!, 'emprestimo.png');
   });
 });
 
