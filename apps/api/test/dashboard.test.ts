@@ -134,6 +134,24 @@ describe('dashboard', () => {
     expect((await request(app).get('/api/v1/dashboard/evolution?months=24').set(user.auth)).status).toBe(400);
   });
 
+  it('orçamento do mês: null sem limites; com Alimentação estourada e Lazer zerado, conta 1 estourada (sub-projeto 3)', async () => {
+    const user = await newUser();
+    const checking = await createAccount(app, user, { name: 'Corrente', initialBalance: 500000 });
+    const food = await categoryId(app, user, 'Alimentação', 'expense');
+    const fun = await categoryId(app, user, 'Lazer', 'expense');
+    expect((await request(app).get('/api/v1/dashboard/summary').set(user.auth)).body.budget).toBeNull();
+    await request(app).put(`/api/v1/budgets/${food}`).set(user.auth).send({ limit: 50000 });
+    await request(app).put(`/api/v1/budgets/${fun}`).set(user.auth).send({ limit: 30000 });
+    for (const [amount, dueDate, paid] of [[30000, '2026-11-05', true], [15000, '2026-11-20', false], [10000, '2026-11-08', true]] as const) {
+      await createTransaction(app, user, {
+        type: 'expense', amount, description: 'Mercado', accountId: checking.id, categoryId: food, nature: 'variable', dueDate,
+        ...(paid ? { status: 'paid', paidDate: dueDate } : {}),
+      });
+    }
+    const budget = (await request(app).get('/api/v1/dashboard/summary').set(user.auth)).body.budget;
+    expect(budget).toEqual({ limit: 80000, committed: 55000, nearCount: 0, overCount: 1 });
+  });
+
   describe('comprometimento de renda e faturas do cartão em "A pagar" (Tarefa 8)', () => {
     it('comprometimento de renda: parcela da fatura do mês corrente já vencida conta uma vez só (R15)', async () => {
       const user = await newUser();

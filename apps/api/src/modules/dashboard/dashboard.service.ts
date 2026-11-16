@@ -5,6 +5,7 @@ import {
 import { computeForecast, percentChange } from '../../domain/balance';
 import { debtCommitment, reserveCoverage, savingsRate } from '../../domain/health';
 import type { AccountsRepository } from '../accounts/accounts.repository';
+import type { BudgetsService } from '../budgets/budgets.service';
 import type { CardsService } from '../cards/cards.service';
 import type { LoansRepository } from '../loans/loans.repository';
 import type { RecurrencesService } from '../recurrences/recurrences.service';
@@ -25,6 +26,7 @@ export type DashboardServiceDeps = {
   accountsRepo: AccountsRepository;
   cards: CardsService;
   loansRepo: Pick<LoansRepository, 'installmentsDueIn'>;
+  budgets: Pick<BudgetsService, 'summaryFor'>;
   clock: () => Date;
 };
 
@@ -46,7 +48,7 @@ export function createDashboardService(deps: DashboardServiceDeps) {
       const reserveWindow = Array.from({ length: RESERVE_WINDOW_MONTHS }, (_, i) => addMonthsToYm(current, -(i + 1)));
       // A dívida de cartão (dashboard.cards.ts) entra no mesmo Promise.all: roda em paralelo e, se falhar,
       // a rejeição é tratada junto com as demais (nunca fica uma promise solta sem handler).
-      const [now, before, totalBalance, pending, pendingCount, overdueCount, upcomingTx, liquidBalance, recent, debt, loanPayments] = await Promise.all([
+      const [now, before, totalBalance, pending, pendingCount, overdueCount, upcomingTx, liquidBalance, recent, debt, loanPayments, budget] = await Promise.all([
         repo.paidTotalsByType(userId, startOfMonth(m), monthEnd),
         repo.paidTotalsByType(userId, startOfMonth(previous), endOfMonth(previous)),
         repo.balanceAt(userId),
@@ -62,6 +64,7 @@ export function createDashboardService(deps: DashboardServiceDeps) {
           current,
         ),
         deps.loansRepo.installmentsDueIn(userId, current),
+        deps.budgets.summaryFor(userId, m),
       ]);
       // Comprometimento (C13): dívida do cartão + parcelas de empréstimo com vencimento no mês corrente.
       const debtPayments = debt.debtPayments + loanPayments;
@@ -85,7 +88,7 @@ export function createDashboardService(deps: DashboardServiceDeps) {
         pendingCount: pendingCount + debt.pendingCount,
         overdueCount: overdueCount + debt.overdueCount,
         upcoming,
-        budget: null, // preenchido na Tarefa 6 (orçamento do mês)
+        budget,
         health: {
           savingsRate: savingsRate(now.income, now.expense),
           reserveMonths: reserve.months,

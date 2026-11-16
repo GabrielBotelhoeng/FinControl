@@ -62,7 +62,7 @@ export function buildContainer(deps: AppDeps) {
   const cardsRepo = createCardsRepository(deps.db);
   const cards = createCardsService({ repo: cardsRepo, accountsRepo, accounts, transactionsRepo, clock: deps.clock });
   const dashboard = createDashboardService({
-    repo: createDashboardRepository(deps.db), transactions: transactionsRepo, recurrences, accountsRepo, cards, loansRepo, clock: deps.clock,
+    repo: createDashboardRepository(deps.db), transactions: transactionsRepo, recurrences, accountsRepo, cards, loansRepo, budgets, clock: deps.clock,
   });
   const demo = createDemoService({
     repo: createDemoRepository(deps.db), categories: categoriesRepo, profile, clock: deps.clock,
