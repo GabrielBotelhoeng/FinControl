@@ -99,10 +99,10 @@ describe('orçamento por categoria', () => {
     expect((await month(user)).items).toEqual([]);
   });
 
-  it('CodeRabbit: mês além de 12 meses à frente dá 422 (as recorrências só existem até lá)', async () => {
+  it('CodeRabbit: mês além de 11 meses à frente dá 422 (as recorrências só existem até hoje + 366 dias)', async () => {
     const { user } = await scenario();
-    expect((await request(app).get('/api/v1/budgets?month=2028-11').set(user.auth)).status).toBe(422);
-    expect((await request(app).get('/api/v1/budgets?month=2027-11').set(user.auth)).status).toBe(200);
+    expect((await request(app).get('/api/v1/budgets?month=2027-11').set(user.auth)).status).toBe(422);
+    expect((await request(app).get('/api/v1/budgets?month=2027-10').set(user.auth)).status).toBe(200);
   });
 
   it('isolamento: a outra pessoa não vê os limites', async () => {
