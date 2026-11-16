@@ -65,6 +65,21 @@ describe('LoanDetailPage', () => {
     expect(await screen.findByText('Ainda não há taxas do Banco Central para comparar este tipo de crédito.')).toBeInTheDocument();
   });
 
+  it('pendência: sem juros mostra "sem juros", não juros negativos', async () => {
+    renderPage(fakeApi({ 'GET /loans/l1': detail({ principal: 10000, installmentAmount: 400, installmentsTotal: 24, totalCost: 9600, interest: -400, monthlyRate: 0, annualRate: 0 }) }));
+    expect(await screen.findByText('Você pegou R$ 100,00 e vai devolver R$ 96,00: sem juros.')).toBeInTheDocument();
+  });
+
+  it('pendência: depois de excluir, não pede de novo o empréstimo apagado', async () => {
+    const client = renderPage(fakeApi({ 'GET /loans/l1': detail(), 'GET /loans': [], 'DELETE /loans/l1': undefined }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Excluir empréstimo' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Excluir empréstimo?' });
+    const before = client.get.mock.calls.filter(([p]) => p === '/loans/l1').length;
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Excluir' }));
+    await screen.findByText('Lista');
+    expect(client.get.mock.calls.filter(([p]) => p === '/loans/l1').length).toBe(before);
+  });
+
   it('mostra os avisos por escrito', async () => {
     renderPage(fakeApi({ 'GET /loans/l1': detail({ warnings: ['informed_rate_differs', 'rate_too_high', 'sac_approximate'] }) }));
     expect(await screen.findByText('A taxa informada difere da calculada. Pode haver seguro ou tarifa embutida.')).toBeInTheDocument();

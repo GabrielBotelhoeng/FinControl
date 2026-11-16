@@ -61,7 +61,11 @@ export function createBankRatesService(deps: { repo: BankRatesRepository; bcb: B
       };
     },
 
-    searchBanks: (q: string): Promise<BankDTO[]> => deps.repo.searchBanks(q.trim()),
+    // O Banco Central ora abrevia "banco" ("BCO DO BRASIL S.A."), ora não ("BANCO HYUNDAI CAPITAL BRASIL"): busca as duas formas.
+    searchBanks: (q: string): Promise<BankDTO[]> => {
+      const term = q.trim();
+      return deps.repo.searchBanks([term, term.replace(/\bbanco\b/gi, 'BCO')]);
+    },
   };
 }
 

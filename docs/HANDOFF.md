@@ -1,6 +1,6 @@
 # HANDOFF — FinControl
 
-_Atualizado em 2026-11-15._
+_Atualizado em 2026-11-16._
 
 ## Sub-projeto 2, Parte A: cartões de crédito (2026-11-13, branch feat/cartoes)
 
@@ -27,10 +27,14 @@ _Atualizado em 2026-11-15._
   - as parcelas do mês no comprometimento de renda;
   - na demo, um financiamento de veículo com 12 de 48 parcelas pagas;
   - as páginas `/emprestimos` e `/emprestimos/:id` e o item "Empréstimos" no menu. A barra do celular, agora com 6 itens, usa fonte de 10 px.
-- **Testes:** 77 em shared, 195 na API e 112 na web, além de 10 E2E (novo: `e2e/tests/emprestimo.spec.ts`).
-- **Antes do deploy da API:**
-  1. Aplicar a migration `20261115195644_emprestimos` no Supabase (`npx prisma migrate deploy` pelo pooler na porta 5432). Ela cria `loans` e `bank_rates` e dá a categoria nova a todos os perfis.
-  2. Depois do deploy, rodar o sync uma vez para não esperar a segunda-feira: `MSYS_NO_PATHCONV=1 vercel curl /api/v1/internal/cron/sync-bank-rates` com `Authorization: Bearer <CRON_SECRET>`. Até lá, a comparação mostra "Ainda não há taxas do Banco Central".
+- **Testes:** 77 em shared, 198 na API e 115 na web, além de 10 E2E (novo: `e2e/tests/emprestimo.spec.ts`).
+- **No ar desde 2026-11-15:** PR #12 mergeado (`4e52faa`). A migration `20261115195644_emprestimos` foi aplicada no Supabase antes do merge, e a primeira sincronização com o Banco Central gravou as 6 modalidades. A produção foi conferida pela demo, a 1440 px e a 360 px: painel (comprometimento de 16%), lista, detalhe e comparação ("7º de 39"), sem erros e sem rolagem horizontal.
+- **Sincronização das taxas:** é automática, toda segunda às 07:00 UTC. Para rodar na mão: `GET /api/v1/internal/cron/sync-bank-rates` com `Authorization: Bearer <CRON_SECRET>`. Leva cerca de 1 minuto.
+- **Regras vindas das revisões:**
+  - parcela de empréstimo não pode ser excluída nem ter o valor mudado em Lançamentos (422);
+  - a conta que paga parcelas pendentes não pode ser arquivada (422) nem excluída (409);
+  - "banco do brasil" na busca acha "BCO DO BRASIL S.A.";
+  - quando as parcelas somam menos que o valor recebido, a tela mostra "sem juros".
 - **Leitura da API do Banco Central (2026-11-15):** só o imobiliário é mensal. Crédito pessoal, consignado e veículos vêm por semana, em `TaxasJurosDiariaPorInicioPeriodo`. As respostas gravadas para os testes ficam em `apps/api/test/fixtures/`.
 
 ## Onde estamos (sub-projeto 1)

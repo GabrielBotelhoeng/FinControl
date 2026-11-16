@@ -143,7 +143,9 @@ export function LoanForm({ open, onOpenChange }: Props) {
           <div aria-live="polite" className="grid gap-1 rounded-[var(--radius-control)] border border-border bg-surface-2 p-4 text-sm">
             <p className="font-semibold">{`Taxa real: ${formatRate(preview.monthlyRate)} ao mês (${formatRate(preview.annualRate)} ao ano)`}</p>
             <p className="text-muted">
-              {`Você recebeu ${formatBRL(principal!)} e vai devolver ${formatBRL(preview.totalCost)}. ${formatBRL(preview.interest)} são juros.`}
+              {preview.interest > 0
+                ? `Você recebeu ${formatBRL(principal!)} e vai devolver ${formatBRL(preview.totalCost)}. ${formatBRL(preview.interest)} são juros.`
+                : `Você recebeu ${formatBRL(principal!)} e vai devolver ${formatBRL(preview.totalCost)}: sem juros.`}
             </p>
           </div>
         )}

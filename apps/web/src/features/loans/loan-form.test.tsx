@@ -80,6 +80,14 @@ describe('LoanForm', () => {
     expect(within(dialog).queryByText(/Cadastre uma conta/)).not.toBeInTheDocument();
   });
 
+  it('pendência: parcelas somando menos que o recebido mostra "sem juros", não juros negativos', async () => {
+    const dialog = await open();
+    await userEvent.type(within(dialog).getByLabelText('Valor recebido'), '10000');
+    await userEvent.type(within(dialog).getByLabelText('Valor da parcela'), '400');
+    await userEvent.type(within(dialog).getByLabelText('Número de parcelas'), '24');
+    expect(within(dialog).getByText('Você recebeu R$ 100,00 e vai devolver R$ 96,00: sem juros.')).toBeInTheDocument();
+  });
+
   it('banco fora da lista: aceita o nome digitado, sem CNPJ', async () => {
     const client = api({ 'GET /banks': [] });
     const dialog = await open(client);

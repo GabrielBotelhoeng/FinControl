@@ -1,6 +1,7 @@
 import { LOAN_KIND_LABELS, type LoanDetailDTO, type LoanWarning } from '@fincontrol/shared';
 import { AlertTriangle, Pencil, Trash2 } from 'lucide-react';
 import { useState } from 'react';
+import { flushSync } from 'react-dom';
 import { useNavigate, useParams } from 'react-router';
 import { toast } from 'sonner';
 import { Button } from '../../components/ui/button';
@@ -65,16 +66,21 @@ function RenameDialog({ loan, onOpenChange }: { loan: LoanDetailDTO; onOpenChang
   );
 }
 
-function DeleteDialog({ loan, onOpenChange }: { loan: LoanDetailDTO; onOpenChange: (o: boolean) => void }) {
+type DeleteDialogProps = { loan: LoanDetailDTO; onOpenChange: (o: boolean) => void; onDeleting: (deleting: boolean) => void };
+
+function DeleteDialog({ loan, onOpenChange, onDeleting }: DeleteDialogProps) {
   const remove = useDeleteLoan();
   const navigate = useNavigate();
 
   async function confirm() {
+    // Desliga a consulta do detalhe antes de excluir: a invalidação depois da exclusão não pede o empréstimo apagado.
+    flushSync(() => onDeleting(true));
     try {
       await remove.mutateAsync(loan.id);
       toast.success('Empréstimo excluído.');
       navigate('/emprestimos');
     } catch (err) {
+      onDeleting(false);
       toast.error(err instanceof Error ? err.message : 'Não foi possível excluir.');
     }
   }
@@ -104,7 +110,8 @@ export default function LoanDetailPage() {
 }
 
 function LoanDetail({ id }: { id: string }) {
-  const loan = useLoan(id);
+  const [deleting, setDeleting] = useState(false);
+  const loan = useLoan(id, !deleting);
   const [dialog, setDialog] = useState<'rename' | 'delete' | null>(null);
   const l = loan.data;
 
@@ -138,7 +145,9 @@ function LoanDetail({ id }: { id: string }) {
           <div className="aurora grid gap-2">
             <p className="font-display text-2xl font-semibold tracking-tight">{`Taxa real ${formatRate(l.monthlyRate)} ao mês · ${formatRate(l.annualRate)} ao ano`}</p>
             <p className="text-sm text-muted">
-              {`Você pegou ${formatBRL(l.principal)} e vai devolver ${formatBRL(l.totalCost)}; ${formatBRL(l.interest)} são juros.`}
+              {l.interest > 0
+                ? `Você pegou ${formatBRL(l.principal)} e vai devolver ${formatBRL(l.totalCost)}; ${formatBRL(l.interest)} são juros.`
+                : `Você pegou ${formatBRL(l.principal)} e vai devolver ${formatBRL(l.totalCost)}: sem juros.`}
             </p>
           </div>
 
@@ -178,7 +187,7 @@ function LoanDetail({ id }: { id: string }) {
       )}
 
       {l && dialog === 'rename' && <RenameDialog loan={l} onOpenChange={(o) => !o && setDialog(null)} />}
-      {l && dialog === 'delete' && <DeleteDialog loan={l} onOpenChange={(o) => !o && setDialog(null)} />}
+      {l && dialog === 'delete' && <DeleteDialog loan={l} onOpenChange={(o) => !o && setDialog(null)} onDeleting={setDeleting} />}
     </>
   );
 }

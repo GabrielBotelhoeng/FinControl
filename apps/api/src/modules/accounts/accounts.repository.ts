@@ -124,6 +124,15 @@ export function createAccountsRepository(db: DbClient) {
     },
 
     /** Conta referenciada por lançamento ou recorrência (como origem ou destino). */
+    /** Nome de um empréstimo com parcela pendente nesta conta, ou `null` (bloqueia o arquivamento). */
+    async pendingLoanName(userId: string, id: string): Promise<string | null> {
+      const row = await db.transaction.findFirst({
+        where: { userId, accountId: id, status: 'pending', loanId: { not: null } },
+        select: { loan: { select: { name: true } } },
+      });
+      return row?.loan?.name ?? null;
+    },
+
     async isReferenced(userId: string, id: string): Promise<boolean> {
       const where = { userId, OR: [{ accountId: id }, { destinationAccountId: id }] };
       const [transactions, recurrences, loans] = await Promise.all([

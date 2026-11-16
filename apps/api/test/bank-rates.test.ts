@@ -114,4 +114,15 @@ describe('taxas do Banco Central', () => {
     expect(res.body).toContainEqual({ modality: VEHICLES, status: 'updated', rows: 39 });
     expect(await testDb.bankRate.count({ where: { modality: VEHICLES } })).toBe(39);
   });
+
+  it('pendência: "banco do brasil" acha "BCO DO BRASIL S.A." (o Banco Central abrevia "banco")', async () => {
+    await seedBankRatesFromFixture('bcb-veiculos-2026-10-23.json');
+    const { app } = buildTestApp();
+    const user = await newUser();
+    const res = await request(app).get('/api/v1/banks?q=Banco do Brasil').set(user.auth);
+    expect(res.body).toContainEqual({ cnpj8: '00000000', name: 'BCO DO BRASIL S.A.' });
+    // CodeRabbit: nomes com "BANCO" por extenso continuam achados.
+    const hyundai = (await request(app).get('/api/v1/banks?q=Banco Hyundai').set(user.auth)).body;
+    expect(hyundai.map((b: { name: string }) => b.name)).toContain('BANCO HYUNDAI CAPITAL BRASIL');
+  });
 });

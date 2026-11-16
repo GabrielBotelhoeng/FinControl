@@ -42,7 +42,7 @@ export function createLoansService(deps: LoansServiceDeps) {
     const existing = await deps.categoriesRepo.findByName(userId, 'expense', LOAN_CATEGORY_NAME);
     if (existing) return existing.id;
     const preset = DEFAULT_CATEGORIES.find((c) => c.name === LOAN_CATEGORY_NAME)!;
-    return (await deps.categoriesRepo.create(userId, preset)).id;
+    return (await deps.categoriesRepo.ensure(userId, preset)).id;
   }
 
   async function detail(userId: string, loan: LoanRow): Promise<LoanDetailDTO> {
