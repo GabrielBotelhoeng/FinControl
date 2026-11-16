@@ -19,6 +19,8 @@ Gestão financeira pessoal: contas, cartões de crédito, empréstimos e financi
 
 ![Detalhe de um financiamento: taxa real, quanto são juros, saldo devedor e quitação estimada](docs/screenshots/emprestimo.png)
 
+![Planejamento: orçamento por categoria com alertas, sobra planejada e previsão dos próximos 3 meses](docs/screenshots/planejamento.png)
+
 ## O que dá para fazer
 
 - **Várias contas**: corrente, poupança, carteira e investimento, cada uma com o próprio saldo, além de transferências entre elas.
@@ -26,6 +28,8 @@ Gestão financeira pessoal: contas, cartões de crédito, empréstimos e financi
 - **Faturas**: aberta, fechada, paga ou vencida, sempre com ícone e texto. Pagar a fatura é uma transferência da conta pagadora para o cartão, que devolve o limite. Pagar a mais reduz a dívida do cartão.
 - **Empréstimos e financiamentos**: a pessoa informa o que sabe (valor recebido, valor da parcela e número de parcelas) e o app descobre a taxa de juros real, ao mês e ao ano. Ele mostra quanto ela vai devolver e quanto disso é juros, o saldo devedor e a quitação antecipada estimada (CDC art. 52 §2º). As parcelas restantes entram como lançamentos pendentes, e pagar uma delas atualiza o progresso.
 - **Comparação com o Banco Central**: a taxa do contrato é comparada com a do próprio banco e com a mediana do mercado para o mesmo tipo de crédito, com a fonte e o período de referência. As taxas oficiais são sincronizadas toda semana.
+- **Orçamento por categoria**: um limite mensal por categoria de despesa, com o comprometido do mês (pago + a pagar) e a situação escrita (dentro, perto do limite ou estourou). Mostra a sobra planejada (receitas do mês − orçamento) e a previsão dos próximos 3 meses. O limite sugerido é a média dos últimos 3 meses.
+- **Metas**: objetivos com valor e prazo, depósitos e retiradas, percentual alcançado, situação (no ritmo, atrasada, concluída) e quanto guardar por mês até o prazo. Há um atalho para a meta de reserva de emergência, com 6 meses do gasto médio.
 - **Lançamentos**: receitas e despesas, fixas ou variáveis, pagas ou pendentes, com vencimento e categoria.
 - **Recorrências**: o lançamento se repete (toda semana, todo mês ou todo ano) e cada mês ganha a sua ocorrência, que pode ser paga ou editada. Dá para editar “só esta” ou “esta e as próximas”, sem mexer no que já foi pago.
 - **Histórico com filtros combinados**: período, conta, categoria, tipo, situação e busca, com paginação.
@@ -77,10 +81,10 @@ As decisões, com as alternativas descartadas e os motivos, estão nas specs do 
 
 | Camada | Quantidade | Como roda |
 |---|---|---|
-| `packages/shared` | 77 | Unitários (Vitest) |
-| `apps/api` | 198 | Integração contra **Postgres real**: rotas HTTP, regras de saldo, recorrência, cartão e fatura, empréstimos, sincronização com o Banco Central e isolamento entre usuários |
-| `apps/web` | 115 | Componentes e fluxos (Testing Library), com o provedor de identidade simulado |
-| `e2e` | 10 | Chromium contra a pilha inteira |
+| `packages/shared` | 92 | Unitários (Vitest) |
+| `apps/api` | 215 | Integração contra **Postgres real**: rotas HTTP, regras de saldo, recorrência, cartão e fatura, empréstimos, sincronização com o Banco Central e isolamento entre usuários |
+| `apps/web` | 131 | Componentes e fluxos (Testing Library), com o provedor de identidade simulado |
+| `e2e` | 11 | Chromium contra a pilha inteira |
 
 O E2E roda a **web buildada como em produção**, a **API real** e o **Postgres real**. A única peça simulada é o provedor de identidade: um servidor Auth mínimo ([`e2e/fake-auth.ts`](e2e/fake-auth.ts)) que fala o mesmo protocolo do Supabase e assina JWTs ES256 de verdade. Assim, a API valida os tokens pelo mesmo caminho de produção (JWKS, issuer e audience), sem segredos no CI e sem sujar o projeto real. Os cenários seguem os critérios de aceite da spec:
 
@@ -88,9 +92,10 @@ O E2E roda a **web buildada como em produção**, a **API real** e o **Postgres 
 - cadastro, conta e despesa paga, com o saldo da conta atualizado;
 - recorrência mensal sem duplicar ao navegar e recarregar;
 - compra no cartão indo para a fatura, e o pagamento tirando da corrente e devolvendo o limite;
+- limite por categoria avisando "Perto do limite", e meta acompanhando os depósitos;
 - cadastro de empréstimo com a taxa real na prévia, as parcelas em Lançamentos e a exclusão apagando as pendentes;
 - “Excluir minha conta” apagando também o usuário no Auth;
-- nenhuma rolagem horizontal a 360 px, inclusive nas páginas de faturas e de empréstimos;
+- nenhuma rolagem horizontal nem conteúdo cortado a 360 px, em todas as páginas;
 - política de privacidade e termos de uso públicos;
 - rota protegida sem sessão.
 
@@ -132,4 +137,4 @@ Dois projetos na Vercel a partir deste monorepo: `fincontrol-web` (raiz `apps/we
 
 ## Roadmap
 
-São 7 sub-projetos. O 1 (fundação e fluxo de caixa) e o 2 (crédito: cartões, empréstimos e financiamentos) estão prontos. Depois vêm planejamento e metas, relatórios e exportação, notificações e um assistente financeiro com IA. Cada um sai com spec, plano, testes e deploy.
+São 7 sub-projetos. O 1 (fundação e fluxo de caixa), o 2 (crédito: cartões, empréstimos e financiamentos) e o 3 (planejamento e metas) estão prontos. Depois vêm relatórios e exportação, notificações e um assistente financeiro com IA. Cada um sai com spec, plano, testes e deploy.
