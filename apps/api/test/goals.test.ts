@@ -84,4 +84,23 @@ describe('metas', () => {
     }
     expect((await request(app).get('/api/v1/goals').set(intruder.auth)).body).toEqual([]);
   });
+
+  it('revisão: apagar um depósito que deixaria o saldo negativo dá 422', async () => {
+    const user = await newUser();
+    const goal = await createGoal(user);
+    const dep = await deposit(user, goal.body.id, 10000);
+    await deposit(user, goal.body.id, -10000);
+    const res = await request(app).delete(`/api/v1/goals/${goal.body.id}/contributions/${dep.body.id}`).set(user.auth);
+    expect(res.status).toBe(422);
+    expect((await request(app).get(`/api/v1/goals/${goal.body.id}`).set(user.auth)).body.saved).toBe(0);
+  });
+
+  it('revisão: duas retiradas ao mesmo tempo não deixam o saldo negativo', async () => {
+    const user = await newUser();
+    const goal = await createGoal(user);
+    await deposit(user, goal.body.id, 100000);
+    const results = await Promise.all([deposit(user, goal.body.id, -80000), deposit(user, goal.body.id, -80000)]);
+    expect(results.map((r) => r.status).sort()).toEqual([201, 422]);
+    expect((await request(app).get(`/api/v1/goals/${goal.body.id}`).set(user.auth)).body.saved).toBe(20000);
+  });
 });

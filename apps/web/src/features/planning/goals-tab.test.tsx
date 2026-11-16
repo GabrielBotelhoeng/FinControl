@@ -94,4 +94,31 @@ describe('GoalsTab', () => {
     expect(await screen.findByRole('heading', { name: 'Nenhuma meta ainda' })).toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: 'Nova meta' }).length).toBeGreaterThan(0);
   });
+
+  it('revisão: o erro ao apagar um depósito aparece no diálogo', async () => {
+    const client = api({
+      'DELETE /goals/g1/contributions': () => {
+        throw new ApiError(422, 'Regra de negócio', 'Apagar este depósito deixaria a meta com saldo negativo. Apague antes a retirada.');
+      },
+    });
+    renderApp(<GoalsTab />, { api: client });
+    await userEvent.click(within(await screen.findByRole('article', { name: 'Viagem' })).getByRole('button', { name: 'Ver detalhes' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Viagem' });
+    await userEvent.click(await within(dialog).findByRole('button', { name: 'Apagar lançamento de 10/11/2026' }));
+    expect(await within(dialog).findByRole('alert')).toHaveTextContent('saldo negativo');
+  });
+
+  it('revisão: excluir a meta fecha o diálogo sem pedir de novo a meta apagada', async () => {
+    const client = api();
+    renderApp(<GoalsTab />, { api: client });
+    await userEvent.click(within(await screen.findByRole('article', { name: 'Viagem' })).getByRole('button', { name: 'Ver detalhes' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Viagem' });
+    await within(dialog).findByText(/10\/11\/2026/);
+    const before = client.get.mock.calls.filter(([p]) => p === '/goals/g1').length;
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Excluir meta' }));
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Confirmar exclusão' }));
+    expect(client.del).toHaveBeenCalledWith('/goals/g1');
+    expect(screen.queryByRole('dialog', { name: 'Viagem' })).not.toBeInTheDocument();
+    expect(client.get.mock.calls.filter(([p]) => p === '/goals/g1').length).toBe(before);
+  });
 });

@@ -13,6 +13,7 @@ const toRow = (g: GoalRecord, saved: number): GoalRow => ({
 });
 
 export class WithdrawalTooLargeError extends Error {}
+export class NegativeBalanceError extends Error {}
 
 export function createGoalsRepository(db: Db) {
   async function savedByGoal(goalIds: string[]): Promise<Map<string, number>> {
@@ -64,6 +65,8 @@ export function createGoalsRepository(db: Db) {
     /** Grava o depósito; numa retirada, confere o guardado na mesma transação (o saldo da meta nunca fica negativo). */
     async addContribution(userId: string, goalId: string, c: ContributionInput): Promise<GoalContributionDTO> {
       return db.$transaction(async (tx) => {
+        // Trava a meta: duas retiradas simultâneas não passam juntas pela conferência do saldo (revisão final).
+        await tx.$queryRaw`SELECT "id" FROM "goals" WHERE "id" = ${goalId}::uuid FOR UPDATE`;
         if (c.amount < 0) {
           const sum = await tx.goalContribution.aggregate({ where: { goalId }, _sum: { amount: true } });
           if (Number(sum._sum.amount ?? 0n) + c.amount < 0) throw new WithdrawalTooLargeError();
@@ -75,9 +78,19 @@ export function createGoalsRepository(db: Db) {
       });
     },
 
+    /** Apagar um depósito não pode deixar o saldo negativo (ex.: depósito já retirado); mesma trava da meta. */
     async deleteContribution(userId: string, goalId: string, contributionId: string): Promise<boolean> {
-      const { count } = await db.goalContribution.deleteMany({ where: { id: contributionId, goalId, userId } });
-      return count > 0;
+      return db.$transaction(async (tx) => {
+        await tx.$queryRaw`SELECT "id" FROM "goals" WHERE "id" = ${goalId}::uuid FOR UPDATE`;
+        const row = await tx.goalContribution.findFirst({ where: { id: contributionId, goalId, userId }, select: { amount: true } });
+        if (!row) return false;
+        if (row.amount > 0n) {
+          const sum = await tx.goalContribution.aggregate({ where: { goalId }, _sum: { amount: true } });
+          if ((sum._sum.amount ?? 0n) - row.amount < 0n) throw new NegativeBalanceError();
+        }
+        await tx.goalContribution.delete({ where: { id: contributionId } });
+        return true;
+      });
     },
   };
 }

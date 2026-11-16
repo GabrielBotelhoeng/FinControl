@@ -3,7 +3,7 @@ import {
   type ContributionInput, type CreateGoalInput, type GoalContributionDTO, type GoalDetailDTO, type GoalDTO, type UpdateGoalInput,
 } from '@fincontrol/shared';
 import { NotFoundError, UnprocessableError } from '../../http/errors';
-import { WithdrawalTooLargeError, type GoalRow, type GoalsRepository } from './goals.repository';
+import { NegativeBalanceError, WithdrawalTooLargeError, type GoalRow, type GoalsRepository } from './goals.repository';
 
 export function createGoalsService(deps: { repo: GoalsRepository; clock: () => Date }) {
   const today = () => todayInSaoPaulo(deps.clock());
@@ -37,7 +37,8 @@ export function createGoalsService(deps: { repo: GoalsRepository; clock: () => D
 
     async create(userId: string, input: CreateGoalInput): Promise<GoalDetailDTO> {
       assertFutureDeadline(input.targetDate);
-      return detail(userId, await deps.repo.create(userId, input));
+      // O início do prazo (P7) vem do relógio injetado, não do relógio do banco.
+      return detail(userId, await deps.repo.create(userId, input, deps.clock()));
     },
 
     async update(userId: string, id: string, input: UpdateGoalInput): Promise<GoalDetailDTO> {
@@ -65,7 +66,14 @@ export function createGoalsService(deps: { repo: GoalsRepository; clock: () => D
 
     async removeContribution(userId: string, id: string, contributionId: string): Promise<void> {
       await getOwned(userId, id);
-      if (!(await deps.repo.deleteContribution(userId, id, contributionId))) throw new NotFoundError('Depósito');
+      try {
+        if (!(await deps.repo.deleteContribution(userId, id, contributionId))) throw new NotFoundError('Depósito');
+      } catch (err) {
+        if (err instanceof NegativeBalanceError) {
+          throw new UnprocessableError('Apagar este depósito deixaria a meta com saldo negativo. Apague antes a retirada.');
+        }
+        throw err;
+      }
     },
   };
 }

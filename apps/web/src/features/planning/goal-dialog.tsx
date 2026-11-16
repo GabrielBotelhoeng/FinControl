@@ -38,12 +38,23 @@ export function GoalDialog({ goalId, title, onOpenChange }: { goalId: string; ti
   }
 
   async function deleteGoal() {
+    // Fecha antes: com o diálogo aberto, a invalidação pediria de novo a meta apagada e mostraria "Meta não encontrada".
+    onOpenChange(false);
     try {
       await removeGoal.mutateAsync(goalId);
       toast.success('Meta excluída.');
-      onOpenChange(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Não foi possível excluir.');
+      toast.error(err instanceof Error ? err.message : 'Não foi possível excluir.');
+    }
+  }
+
+  async function deleteContribution(contributionId: string) {
+    setError(null);
+    try {
+      await removeContribution.mutateAsync({ goalId, contributionId });
+      toast.success('Lançamento apagado.');
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Não foi possível apagar.');
     }
   }
 
@@ -98,7 +109,7 @@ export function GoalDialog({ goalId, title, onOpenChange }: { goalId: string; ti
                       size="icon"
                       variant="ghost"
                       aria-label={`Apagar lançamento de ${formatDate(c.date)}`}
-                      onClick={() => removeContribution.mutate({ goalId, contributionId: c.id })}
+                      onClick={() => deleteContribution(c.id)}
                     >
                       <Trash2 aria-hidden className="h-4 w-4" strokeWidth={1.75} />
                     </Button>

@@ -13,7 +13,7 @@ _Atualizado em 2026-11-16 (sub-projeto 3)._
   - na demo, 4 limites (um perto, um estourado) e 2 metas.
 - **Navegação:** "Planejamento" entrou no lugar de "Categorias" na barra do celular. Categorias continua no menu do computador e no Perfil.
 - **Testes:** o teste de 360 px agora mede conteúdo cortado (o `overflow-x: clip` escondia). Ele achou e corrigiu um corte antigo na legenda do gráfico de categorias.
-- **Testes:** 92 em shared, 215 na API e 131 na web, além de 11 E2E.
+- **Testes:** 92 em shared, 217 na API e 133 na web, além de 11 E2E.
 - **Antes do deploy da API:** aplicar a migration `20261116133954_planejamento` no Supabase (`npx prisma migrate deploy` pelo pooler na porta 5432).
 
 ## Sub-projeto 2, Parte A: cartões de crédito (2026-11-13, branch feat/cartoes)
