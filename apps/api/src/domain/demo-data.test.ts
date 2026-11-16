@@ -21,6 +21,21 @@ describe('buildDemoData', () => {
     expect(installments.find((t) => t.status === 'pending')!.dueDate).toBe('2026-12-01');
   });
 
+  it('inclui 4 limites (Alimentação perto, Lazer estourado, Compras e Moradia dentro) e 2 metas (sub-projeto 3)', () => {
+    const plan = buildDemoData(TODAY);
+    const spent = (name: string) =>
+      plan.transactions.filter((t) => t.type === 'expense' && t.categoryName === name && t.dueDate.startsWith('2026-11')).reduce((s, t) => s + t.amount, 0);
+    const limit = (name: string) => plan.budgets.find((b) => b.categoryName === name)!.limit;
+    expect(plan.budgets.map((b) => b.categoryName).sort()).toEqual(['Alimentação', 'Compras', 'Lazer', 'Moradia']);
+    const foodPct = spent('Alimentação') / limit('Alimentação');
+    expect(foodPct).toBeGreaterThanOrEqual(0.8);
+    expect(foodPct).toBeLessThanOrEqual(1);
+    expect(spent('Lazer') / limit('Lazer')).toBeGreaterThan(1);
+    expect(plan.goals.map((g) => g.name)).toEqual(['Reserva de emergência', 'Viagem de férias']);
+    expect(plan.goals[0]!.contributions).toHaveLength(7);
+    for (const g of plan.goals) for (const c of g.contributions) expect(c.date <= TODAY).toBe(true);
+  });
+
   it('é determinístico para a mesma data', () => {
     expect(buildDemoData(TODAY)).toEqual(buildDemoData(TODAY));
   });

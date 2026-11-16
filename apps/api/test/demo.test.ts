@@ -51,6 +51,15 @@ describe('conta demo', () => {
     const loan = (await request(app).get(`/api/v1/loans/${loans[0].id}`).set(visitor.auth)).body;
     expect(loan).toMatchObject({ remainingCount: 36, comparison: { bank: { position: 7 } } });
 
+    // Sub-projeto 3: orçamento com alguma categoria perto ou estourada, e duas metas (uma no ritmo, outra atrasada).
+    const budgets = (await request(app).get('/api/v1/budgets').set(visitor.auth)).body;
+    expect(budgets.items).toHaveLength(4);
+    expect(budgets.items.some((i: { status: string }) => i.status === 'near')).toBe(true);
+    expect(budgets.items.some((i: { status: string }) => i.status === 'over')).toBe(true);
+    const goals = (await request(app).get('/api/v1/goals').set(visitor.auth)).body;
+    expect(goals.map((g: { status: string }) => g.status).sort()).toEqual(['late', 'on_track']);
+    expect(summary.body.budget).toMatchObject({ overCount: 1 });
+
     const evolution = await request(app).get('/api/v1/dashboard/evolution?months=6').set(visitor.auth);
     for (const point of evolution.body as { income: number; expense: number }[]) {
       expect(point.income).toBeGreaterThan(0);

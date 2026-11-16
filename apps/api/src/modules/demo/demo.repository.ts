@@ -49,6 +49,28 @@ export function createDemoRepository(db: DbClient) {
       return created.id;
     },
 
+    async createBudget(userId: string, categoryId: string, limit: number): Promise<void> {
+      await db.budget.create({ data: { userId, categoryId, limitAmount: BigInt(limit) } });
+    },
+
+    /** Meta da demo com `createdAt` no passado (o início do prazo, P7) e os depósitos. */
+    async createGoal(
+      userId: string,
+      g: { name: string; targetAmount: number; targetDate: DateOnly; createdAt: DateOnly; contributions: { amount: number; date: DateOnly }[] },
+    ): Promise<void> {
+      const goal = await db.goal.create({
+        data: {
+          userId, name: g.name, targetAmount: BigInt(g.targetAmount), targetDate: fromDateOnly(g.targetDate),
+          // Meio-dia em São Paulo (15:00 UTC): a data local é a do plano.
+          createdAt: new Date(`${g.createdAt}T15:00:00Z`),
+        },
+        select: { id: true },
+      });
+      await db.goalContribution.createMany({
+        data: g.contributions.map((c) => ({ goalId: goal.id, userId, amount: BigInt(c.amount), date: fromDateOnly(c.date) })),
+      });
+    },
+
     async staleDemoProfileIds(cutoff: Date, limit: number): Promise<string[]> {
       const rows = await db.profile.findMany({ where: { isDemo: true, createdAt: { lt: cutoff } }, select: { id: true }, take: limit });
       return rows.map((r) => r.id);
