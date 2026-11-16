@@ -127,7 +127,7 @@ Cada parte tem plano, PR e deploy próprios. A Parte A sai primeiro.
   - lançar receita num cartão dá 422 (estornos ficam fora do escopo);
   - pagar mais do que a fatura é permitido, e o excesso reduz a dívida do cartão.
 - **Empréstimo:**
-  - `installmentsPaidBefore ≥ installmentsTotal` dá 422;
+  - `installmentsPaidBefore ≥ installmentsTotal` dá 400, com o erro no campo (é erro de forma, validado no Zod, como os campos de cartão da Parte A);
   - parcela ≤ 0 dá 422;
   - se a taxa calculada passar de 30% ao mês, o app avisa que pode haver erro de digitação.
 - **Banco Central fora do ar:** a sincronização registra um aviso e mantém os dados anteriores.

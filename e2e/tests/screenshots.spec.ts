@@ -17,6 +17,7 @@ test.describe('desktop', () => {
   test.use({ viewport: { width: 1440, height: 900 } });
 
   test('telas principais', async ({ page }) => {
+    test.setTimeout(180_000); // inclui a sincronização real com o Banco Central (6 modalidades)
     await page.goto('/entrar');
     await page.waitForLoadState('networkidle');
     await page.screenshot({ path: `${OUT}/entrada.png` });
@@ -26,6 +27,12 @@ test.describe('desktop', () => {
     await shoot(page, '/contas', 'contas.png');
     const faturas = await page.getByRole('article', { name: 'Cartão principal' }).getByRole('link', { name: 'Ver faturas' }).getAttribute('href');
     await shoot(page, faturas!, 'faturas.png');
+    // Taxas reais do Banco Central para a comparação aparecer na imagem (só roda localmente, com SCREENSHOTS=1).
+    const sync = await page.request.get('http://localhost:3334/api/v1/internal/cron/sync-bank-rates', {
+      headers: { Authorization: 'Bearer e2e-cron-secret-with-at-least-32-chars' },
+      timeout: 150_000,
+    });
+    if (!sync.ok()) throw new Error(`sync das taxas falhou: ${sync.status()}`);
     await page.goto('/emprestimos');
     const emprestimo = await page.getByRole('article', { name: 'Financiamento do carro' }).getByRole('link', { name: /Ver detalhes/ }).getAttribute('href');
     await shoot(page, emprestimo!, 'emprestimo.png');

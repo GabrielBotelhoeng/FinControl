@@ -142,6 +142,13 @@ export function createAccountsService(deps: AccountsServiceDeps) {
 
     async archive(userId: string, id: string): Promise<AccountDTO> {
       await getOwned(userId, id);
+      // Conta arquivada sai do saldo visível; as parcelas pendentes de um empréstimo ficariam "penduradas" nela.
+      const loanName = await repo.pendingLoanName(userId, id);
+      if (loanName) {
+        throw new UnprocessableError(
+          `Esta conta paga parcelas pendentes do empréstimo "${loanName}". Exclua o empréstimo ou mova as parcelas para outra conta antes de arquivar.`,
+        );
+      }
       return withBalance(userId, await repo.setArchived(userId, id, new Date()));
     },
 

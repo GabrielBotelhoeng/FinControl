@@ -8,9 +8,10 @@ export function useLoans() {
   return useQuery({ queryKey: ['loans'], queryFn: () => api.get<LoanDTO[]>('/loans') });
 }
 
-export function useLoan(id: string) {
+/** `enabled: false` enquanto o empréstimo é excluído, para a invalidação não pedir um recurso apagado. */
+export function useLoan(id: string, enabled = true) {
   const api = useApi();
-  return useQuery({ queryKey: ['loans', id], queryFn: () => api.get<LoanDetailDTO>(`/loans/${id}`) });
+  return useQuery({ queryKey: ['loans', id], queryFn: () => api.get<LoanDetailDTO>(`/loans/${id}`), enabled });
 }
 
 /** Instituições da última sincronização com o Banco Central; só busca a partir de 2 letras. */

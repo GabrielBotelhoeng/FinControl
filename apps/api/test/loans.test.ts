@@ -118,4 +118,26 @@ describe('empréstimos', () => {
     expect(ok.status).toBe(200);
     expect(await testDb.transaction.count({ where: { loanId: res.body.id } })).toBe(36);
   });
+
+  it('pendência: arquivar a conta que paga parcelas pendentes de um empréstimo dá 422; sem o empréstimo, arquiva', async () => {
+    const { user, checking, res } = await loanScenario();
+    const blocked = await request(app).post(`/api/v1/accounts/${checking.id}/archive`).set(user.auth);
+    expect(blocked.status).toBe(422);
+    expect(blocked.body.detail).toMatch(/Carro/);
+    await request(app).delete(`/api/v1/loans/${res.body.id}`).set(user.auth);
+    expect((await request(app).post(`/api/v1/accounts/${checking.id}/archive`).set(user.auth)).status).toBe(200);
+  });
+
+  it('pendência: dois cadastros ao mesmo tempo, com a categoria de empréstimos apagada, criam a categoria uma vez só', async () => {
+    const user = await newUser();
+    const checking = await createAccount(app, user, { name: 'Corrente', initialBalance: 500000 });
+    await testDb.category.deleteMany({ where: { userId: user.id, name: 'Empréstimos e financiamentos' } });
+    const body = { kind: 'personal', bankName: 'X', principal: 100000, installmentAmount: 10000, installmentsTotal: 12, firstDueDate: '2026-12-01', accountId: checking.id };
+    const [a, b] = await Promise.all([
+      request(app).post('/api/v1/loans').set(user.auth).send({ ...body, name: 'A' }),
+      request(app).post('/api/v1/loans').set(user.auth).send({ ...body, name: 'B' }),
+    ]);
+    expect([a.status, b.status]).toEqual([201, 201]);
+    expect(await testDb.category.count({ where: { userId: user.id, name: 'Empréstimos e financiamentos' } })).toBe(1);
+  });
 });

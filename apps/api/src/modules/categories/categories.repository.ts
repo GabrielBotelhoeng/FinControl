@@ -27,6 +27,12 @@ export function createCategoriesRepository(db: Db) {
       });
     },
 
+    /** Cria se não existir, sem corrida: `ON CONFLICT DO NOTHING` (skipDuplicates) e depois lê a linha. */
+    async ensure(userId: string, data: CategoryData): Promise<CategoryRow> {
+      await db.category.createMany({ data: [{ ...data, userId }], skipDuplicates: true });
+      return db.category.findFirstOrThrow({ where: { userId, type: data.type, name: data.name }, select });
+    },
+
     create(userId: string, data: CategoryData): Promise<CategoryRow> {
       return db.category.create({ data: { ...data, userId }, select });
     },
