@@ -76,9 +76,9 @@ O que a seção 06 pede: criar objetivos, valor desejado, prazo, registrar depó
   - `DELETE /goals/:id`;
   - `POST /goals/:id/contributions` e `DELETE /goals/:id/contributions/:contributionId`.
 - **Validação:**
-  - prazo no passado ao criar dá 400 (forma);
+  - prazo no passado ao criar dá 422 (depende de hoje, então fica no serviço);
   - retirada maior que o guardado dá 422 ("Não dá para retirar mais do que está guardado");
-  - depósito com data futura dá 400.
+  - depósito com data futura dá 422 (também depende de hoje).
 - **`/dashboard/summary`** ganha `budget: { limit, committed, nearCount, overCount } | null` (`null` sem nenhum limite).
 - **Isolamento:** toda rota filtra por `userId`. Recurso de outro usuário dá 404.
 
