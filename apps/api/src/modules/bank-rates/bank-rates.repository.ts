@@ -41,9 +41,10 @@ export function createBankRatesRepository(db: Db) {
     },
 
     /** Instituições sem repetir (um banco aparece em várias modalidades), em ordem de nome, no máximo 20. */
-    async searchBanks(q: string): Promise<BankDTO[]> {
+    async searchBanks(terms: string[]): Promise<BankDTO[]> {
+      const filled = terms.filter(Boolean);
       const rows = await db.bankRate.findMany({
-        where: q ? { institution: { contains: q, mode: 'insensitive' } } : {},
+        where: filled.length ? { OR: filled.map((t) => ({ institution: { contains: t, mode: 'insensitive' as const } })) } : {},
         distinct: ['cnpj8'],
         orderBy: { cnpj8: 'asc' },
         select: { cnpj8: true, institution: true },

@@ -33,6 +33,11 @@ test.describe('desktop', () => {
       timeout: 150_000,
     });
     if (!sync.ok()) throw new Error(`sync das taxas falhou: ${sync.status()}`);
+    // O cron responde 200 mesmo quando o Banco Central falha ("kept"); sem veículos, a imagem sairia sem comparação.
+    const results = (await sync.json()) as { modality: string; status: string }[];
+    if (!results.some((r) => r.modality === 'Aquisição de veículos - Prefixado' && r.status === 'updated')) {
+      throw new Error('Banco Central sem taxas de veículos agora; rode os screenshots de novo mais tarde.');
+    }
     await page.goto('/emprestimos');
     const emprestimo = await page.getByRole('article', { name: 'Financiamento do carro' }).getByRole('link', { name: /Ver detalhes/ }).getAttribute('href');
     await shoot(page, emprestimo!, 'emprestimo.png');
