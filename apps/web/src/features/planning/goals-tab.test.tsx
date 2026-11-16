@@ -121,4 +121,17 @@ describe('GoalsTab', () => {
     expect(screen.queryByRole('dialog', { name: 'Viagem' })).not.toBeInTheDocument();
     expect(client.get.mock.calls.filter(([p]) => p === '/goals/g1').length).toBe(before);
   });
+
+  it('CodeRabbit: editar só o nome envia só o nome (meta vencida não exige mudar o prazo)', async () => {
+    const client = api({ 'PATCH /goals/g1': (_p: string, body: unknown) => ({ ...goal(), ...(body as object), contributions: [] }) });
+    renderApp(<GoalsTab />, { api: client });
+    await userEvent.click(within(await screen.findByRole('article', { name: 'Viagem' })).getByRole('button', { name: 'Ver detalhes' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Viagem' });
+    await userEvent.click(await within(dialog).findByRole('button', { name: 'Editar meta' }));
+    const form = await screen.findByRole('dialog', { name: 'Editar meta' });
+    await userEvent.clear(within(form).getByLabelText('Nome'));
+    await userEvent.type(within(form).getByLabelText('Nome'), 'Viagem ao Chile');
+    await userEvent.click(within(form).getByRole('button', { name: 'Salvar meta' }));
+    expect(client.patch).toHaveBeenCalledWith('/goals/g1', { name: 'Viagem ao Chile' });
+  });
 });

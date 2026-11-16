@@ -38,7 +38,8 @@ function BudgetItem({ item, onEdit }: { item: BudgetItemDTO; onEdit: () => void 
         aria-label={`Comprometido de ${item.name}`}
         aria-valuemin={0}
         aria-valuemax={100}
-        aria-valuenow={item.percent}
+        aria-valuenow={Math.min(item.percent, 100)}
+        aria-valuetext={`${item.percent}% · ${status.label}`}
         className="h-2 overflow-hidden rounded-full bg-surface-2"
       >
         <div className={cn('h-full rounded-full', status.bar)} style={{ width: `${Math.min(item.percent, 100)}%` }} />

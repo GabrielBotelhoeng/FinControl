@@ -8,6 +8,8 @@ import type { RecurrencesService } from '../recurrences/recurrences.service';
 import type { BudgetsRepository } from './budgets.repository';
 
 const SUGGESTION_WINDOW = 3;
+/** As recorrências só são materializadas até cerca de 1 ano à frente: além disso os totais sairiam incompletos. */
+const MAX_MONTHS_AHEAD = 12;
 
 export type BudgetsServiceDeps = {
   repo: BudgetsRepository;
@@ -29,6 +31,9 @@ export function createBudgetsService(deps: BudgetsServiceDeps) {
   return {
     async getMonth(userId: string, month?: YearMonth): Promise<BudgetMonthDTO> {
       const m = month ?? currentMonth();
+      if (m > addMonthsToYm(currentMonth(), MAX_MONTHS_AHEAD)) {
+        throw new UnprocessableError('O planejamento vai até 12 meses à frente.');
+      }
       // Recorrências viram lançamentos até o fim do mês pedido (e nunca antes do fim do mês atual).
       await deps.recurrences.materialize(userId, maxDate(endOfMonth(m), endOfMonth(currentMonth())));
       const window = Array.from({ length: SUGGESTION_WINDOW }, (_, i) => addMonthsToYm(m, -(i + 1)));

@@ -37,7 +37,15 @@ export function GoalForm({ goal, draft, onOpenChange }: Props) {
     if (Object.keys(next).length > 0 || !targetAmount) return;
     const input = { name: name.trim(), targetAmount, targetDate };
     try {
-      if (goal) await update.mutateAsync({ id: goal.id, ...input });
+      if (goal) {
+        // Só o que mudou: renomear uma meta vencida não pode exigir mudar o prazo (a API recusa prazo no passado).
+        const changed = {
+          ...(input.name !== goal.name ? { name: input.name } : {}),
+          ...(input.targetAmount !== goal.targetAmount ? { targetAmount: input.targetAmount } : {}),
+          ...(input.targetDate !== goal.targetDate ? { targetDate: input.targetDate } : {}),
+        };
+        if (Object.keys(changed).length > 0) await update.mutateAsync({ id: goal.id, ...changed });
+      }
       else await create.mutateAsync(input);
       toast.success(goal ? 'Meta atualizada.' : 'Meta criada.');
       onOpenChange(false);

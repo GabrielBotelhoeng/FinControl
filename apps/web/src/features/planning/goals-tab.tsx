@@ -72,7 +72,7 @@ export function GoalsTab() {
         <Plus aria-hidden className="h-4 w-4" strokeWidth={2} />
         Nova meta
       </Button>
-      <Button variant="secondary" onClick={() => setCreating(reserve)}>
+      <Button variant="secondary" disabled={summary.isPending} onClick={() => setCreating(reserve)}>
         <ShieldCheck aria-hidden className="h-4 w-4" strokeWidth={1.75} />
         Meta de reserva de emergência
       </Button>

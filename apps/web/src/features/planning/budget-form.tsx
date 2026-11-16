@@ -21,8 +21,12 @@ export function BudgetForm({ category, current, onOpenChange }: Props) {
   const [limit, setLimit] = useState<number | null>(current ?? null);
   const [error, setError] = useState<string | undefined>();
 
+  // PUT e DELETE não podem correr juntos: um PUT atrasado recriaria o limite removido.
+  const busy = save.isPending || remove.isPending;
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
+    if (busy) return;
     if (!limit) return setError('Informe o limite do mês.');
     try {
       await save.mutateAsync({ categoryId: category.categoryId, limit });
@@ -34,6 +38,7 @@ export function BudgetForm({ category, current, onOpenChange }: Props) {
   }
 
   async function removeLimit() {
+    if (busy) return;
     try {
       await remove.mutateAsync(category.categoryId);
       toast.success('Limite removido.');
@@ -59,7 +64,7 @@ export function BudgetForm({ category, current, onOpenChange }: Props) {
         )}
         <div className="flex flex-wrap justify-between gap-2">
           {current !== undefined ? (
-            <Button variant="ghost" className="text-expense" loading={remove.isPending} onClick={removeLimit}>
+            <Button variant="ghost" className="text-expense" loading={remove.isPending} disabled={save.isPending} onClick={removeLimit}>
               Remover limite
             </Button>
           ) : (
@@ -69,7 +74,7 @@ export function BudgetForm({ category, current, onOpenChange }: Props) {
             <Button variant="ghost" onClick={() => onOpenChange(false)}>
               Cancelar
             </Button>
-            <Button type="submit" loading={save.isPending}>
+            <Button type="submit" loading={save.isPending} disabled={remove.isPending}>
               Salvar limite
             </Button>
           </div>

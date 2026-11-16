@@ -21,7 +21,10 @@ export function createGoalsService(deps: { repo: GoalsRepository; clock: () => D
 
   async function detail(userId: string, id: string): Promise<GoalDetailDTO> {
     const goal = await getOwned(userId, id);
-    return { ...toDTO(goal), contributions: await deps.repo.contributions(id) };
+    const contributions = await deps.repo.contributions(id);
+    // O saldo sai do mesmo histórico devolvido: um depósito no meio não mistura dois estados.
+    const saved = contributions.reduce((s, c) => s + c.amount, 0);
+    return { ...toDTO({ ...goal, saved }), contributions };
   }
 
   const assertFutureDeadline = (targetDate: string) => {
