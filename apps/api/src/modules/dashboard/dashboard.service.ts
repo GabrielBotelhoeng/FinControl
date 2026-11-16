@@ -85,6 +85,7 @@ export function createDashboardService(deps: DashboardServiceDeps) {
         pendingCount: pendingCount + debt.pendingCount,
         overdueCount: overdueCount + debt.overdueCount,
         upcoming,
+        budget: null, // preenchido na Tarefa 6 (orçamento do mês)
         health: {
           savingsRate: savingsRate(now.income, now.expense),
           reserveMonths: reserve.months,

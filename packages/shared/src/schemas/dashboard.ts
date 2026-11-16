@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { yearMonthSchema } from './common';
+import type { BudgetSummaryDTO } from './planning';
 import type { TransactionDTO } from './transactions';
 
 export const summaryQuerySchema = z.object({ month: yearMonthSchema.optional() });
@@ -18,6 +19,8 @@ export type DashboardSummaryDTO = {
   overdueCount: number;
   upcoming: UpcomingItemDTO[];
   health: FinancialHealthDTO;
+  /** Orçamento do mês (spec sub-projeto 3, P10); `null` sem nenhum limite. */
+  budget: BudgetSummaryDTO | null;
 };
 
 /** Item de lançamento em "A pagar" (decisão R16): o `TransactionDTO` de sempre, mais o discriminante. */

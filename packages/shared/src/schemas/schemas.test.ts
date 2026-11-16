@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  centsSchema, createAccountSchema, createLoanSchema, createTransactionSchema, listInvoicesQuerySchema, listTransactionsQuerySchema,
+  centsSchema, contributionSchema, createAccountSchema, createGoalSchema, createLoanSchema, setBudgetSchema, createTransactionSchema, listInvoicesQuerySchema, listTransactionsQuerySchema,
   payInvoiceSchema, updateAccountSchema, updateTransactionSchema,
 } from './index';
 
@@ -169,5 +169,20 @@ describe('createLoanSchema', () => {
     expect(createLoanSchema.parse(rest).installmentsPaidBefore).toBe(0);
     expect(createLoanSchema.safeParse({ ...demo, informedMonthlyRate: 0.025 }).success).toBe(true);
     expect(createLoanSchema.safeParse({ ...demo, informedMonthlyRate: 2.5 }).success).toBe(false);
+  });
+});
+
+describe('planejamento e metas', () => {
+  it('limite precisa ser maior que zero', () => {
+    expect(setBudgetSchema.safeParse({ limit: 0 }).success).toBe(false);
+    expect(setBudgetSchema.safeParse({ limit: 50000 }).success).toBe(true);
+  });
+  it('depósito não pode ser zero; retirada é negativa', () => {
+    expect(contributionSchema.safeParse({ amount: 0, date: '2026-11-10' }).success).toBe(false);
+    expect(contributionSchema.safeParse({ amount: -5000, date: '2026-11-10' }).success).toBe(true);
+  });
+  it('meta precisa de alvo maior que zero', () => {
+    expect(createGoalSchema.safeParse({ name: 'Viagem', targetAmount: 0, targetDate: '2027-04-30' }).success).toBe(false);
+    expect(createGoalSchema.safeParse({ name: 'Viagem', targetAmount: 600000, targetDate: '2027-04-30' }).success).toBe(true);
   });
 });
