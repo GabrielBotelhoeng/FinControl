@@ -18,7 +18,7 @@ export function CategoryDonut({ data }: { data: CategorySpendDTO[] }) {
   const slices = fold(data);
   const total = slices.reduce((s, c) => s + c.total, 0);
   return (
-    <div className="grid items-center gap-6 sm:grid-cols-[180px_1fr]">
+    <div className="grid grid-cols-1 items-center gap-6 sm:grid-cols-[180px_minmax(0,1fr)]">
       <div className="relative mx-auto h-44 w-44" aria-hidden>
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
@@ -36,7 +36,7 @@ export function CategoryDonut({ data }: { data: CategorySpendDTO[] }) {
           </div>
         </div>
       </div>
-      <ul className="grid gap-2.5">
+      <ul className="grid min-w-0 grid-cols-1 gap-2.5">
         {slices.map((s) => {
           const Icon = iconFor(s.icon);
           return (
@@ -44,9 +44,9 @@ export function CategoryDonut({ data }: { data: CategorySpendDTO[] }) {
               <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full" style={{ backgroundColor: `${s.color}22`, color: s.color }}>
                 <Icon aria-hidden className="h-3.5 w-3.5" strokeWidth={1.75} />
               </span>
-              <span className="flex-1 truncate">{s.name}</span>
+              <span className="min-w-0 flex-1 truncate">{s.name}</span>
               <span className="tabular text-xs text-muted">{percent.format(total ? s.total / total : 0)}</span>
-              <span className="tabular w-28 text-right font-semibold">{formatBRL(s.total)}</span>
+              <span className="tabular shrink-0 text-right font-semibold sm:w-28">{formatBRL(s.total)}</span>
             </li>
           );
         })}

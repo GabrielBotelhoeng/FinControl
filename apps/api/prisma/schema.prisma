@@ -70,6 +70,8 @@ model Profile {
   recurrences  Recurrence[]
   transactions Transaction[]
   loans        Loan[]
+  budgets      Budget[]
+  goals        Goal[]
 
   @@index([isDemo, createdAt])
   @@map("profiles")
@@ -114,6 +116,7 @@ model Category {
   user         Profile       @relation(fields: [userId], references: [id], onDelete: Cascade)
   transactions Transaction[]
   recurrences  Recurrence[]
+  budgets      Budget[]
 
   @@unique([userId, type, name])
   @@map("categories")
@@ -234,4 +237,50 @@ model BankRate {
   @@unique([modality, cnpj8])
   @@index([cnpj8])
   @@map("bank_rates")
+}
+
+/** Limite mensal de uma categoria de despesa (sub-projeto 3, P1): vale para todos os meses. */
+model Budget {
+  id          String   @id @default(uuid()) @db.Uuid
+  userId      String   @map("user_id") @db.Uuid
+  categoryId  String   @map("category_id") @db.Uuid
+  limitAmount BigInt   @map("limit_amount")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz
+  user        Profile  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category    Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, categoryId])
+  @@map("budgets")
+}
+
+/** Objetivo de economia (P6): o progresso vem dos depósitos, que não mexem em saldo de conta. */
+model Goal {
+  id            String             @id @default(uuid()) @db.Uuid
+  userId        String             @map("user_id") @db.Uuid
+  name          String
+  targetAmount  BigInt             @map("target_amount")
+  targetDate    DateTime           @map("target_date") @db.Date
+  createdAt     DateTime           @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt     DateTime           @updatedAt @map("updated_at") @db.Timestamptz
+  user          Profile            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  contributions GoalContribution[]
+
+  @@index([userId])
+  @@map("goals")
+}
+
+/** Depósito (positivo) ou retirada (negativo) numa meta. */
+model GoalContribution {
+  id        String   @id @default(uuid()) @db.Uuid
+  goalId    String   @map("goal_id") @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  amount    BigInt
+  date      DateTime @db.Date
+  note      String?
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  goal      Goal     @relation(fields: [goalId], references: [id], onDelete: Cascade)
+
+  @@index([goalId])
+  @@map("goal_contributions")
 }

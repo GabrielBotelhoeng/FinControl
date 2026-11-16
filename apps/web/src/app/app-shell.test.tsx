@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import { fakeGateway, signedIn } from '../test/fakes';
@@ -34,5 +34,15 @@ describe('AppShell', () => {
     const links = await screen.findAllByRole('link', { name: 'Empréstimos' });
     expect(links).toHaveLength(2);
     links.forEach((l) => expect(l).toHaveAttribute('href', '/emprestimos'));
+  });
+
+  it('"Planejamento" no menu e na barra do celular; "Categorias" só no menu do computador (P9)', async () => {
+    renderApp(<AppShell />, { path: '/*' });
+    const desktop = await screen.findByRole('navigation', { name: 'Principal' });
+    const mobile = screen.getByRole('navigation', { name: 'Principal (celular)' });
+    expect(within(desktop).getByRole('link', { name: 'Planejamento' })).toHaveAttribute('href', '/planejamento');
+    expect(within(desktop).getByRole('link', { name: 'Categorias' })).toBeInTheDocument();
+    expect(within(mobile).getByRole('link', { name: 'Planejamento' })).toBeInTheDocument();
+    expect(within(mobile).queryByRole('link', { name: 'Categorias' })).not.toBeInTheDocument();
   });
 });

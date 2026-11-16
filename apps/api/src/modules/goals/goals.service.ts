@@ -1,0 +1,84 @@
+import {
+  goalProgress, todayInSaoPaulo,
+  type ContributionInput, type CreateGoalInput, type GoalContributionDTO, type GoalDetailDTO, type GoalDTO, type UpdateGoalInput,
+} from '@fincontrol/shared';
+import { NotFoundError, UnprocessableError } from '../../http/errors';
+import { NegativeBalanceError, WithdrawalTooLargeError, type GoalRow, type GoalsRepository } from './goals.repository';
+
+export function createGoalsService(deps: { repo: GoalsRepository; clock: () => Date }) {
+  const today = () => todayInSaoPaulo(deps.clock());
+
+  const toDTO = (g: GoalRow): GoalDTO => ({
+    ...g,
+    ...goalProgress({ target: g.targetAmount, saved: g.saved, createdAt: g.createdAt, targetDate: g.targetDate, today: today() }),
+  });
+
+  async function getOwned(userId: string, id: string): Promise<GoalRow> {
+    const goal = await deps.repo.findById(userId, id);
+    if (!goal) throw new NotFoundError('Meta');
+    return goal;
+  }
+
+  async function detail(userId: string, id: string): Promise<GoalDetailDTO> {
+    const goal = await getOwned(userId, id);
+    const contributions = await deps.repo.contributions(id);
+    // O saldo sai do mesmo histórico devolvido: um depósito no meio não mistura dois estados.
+    const saved = contributions.reduce((s, c) => s + c.amount, 0);
+    return { ...toDTO({ ...goal, saved }), contributions };
+  }
+
+  const assertFutureDeadline = (targetDate: string) => {
+    if (targetDate < today()) throw new UnprocessableError('O prazo da meta não pode estar no passado.');
+  };
+
+  return {
+    async list(userId: string): Promise<GoalDTO[]> {
+      return (await deps.repo.list(userId)).map(toDTO);
+    },
+
+    get: detail,
+
+    async create(userId: string, input: CreateGoalInput): Promise<GoalDetailDTO> {
+      assertFutureDeadline(input.targetDate);
+      // O início do prazo (P7) vem do relógio injetado, não do relógio do banco.
+      return detail(userId, await deps.repo.create(userId, input, deps.clock()));
+    },
+
+    async update(userId: string, id: string, input: UpdateGoalInput): Promise<GoalDetailDTO> {
+      await getOwned(userId, id);
+      if (input.targetDate !== undefined) assertFutureDeadline(input.targetDate);
+      await deps.repo.update(userId, id, input);
+      return detail(userId, id);
+    },
+
+    async remove(userId: string, id: string): Promise<void> {
+      await getOwned(userId, id);
+      await deps.repo.delete(userId, id);
+    },
+
+    async addContribution(userId: string, id: string, input: ContributionInput): Promise<GoalContributionDTO> {
+      await getOwned(userId, id);
+      if (input.date > today()) throw new UnprocessableError('O depósito não pode ter data futura.');
+      try {
+        return await deps.repo.addContribution(userId, id, input);
+      } catch (err) {
+        if (err instanceof WithdrawalTooLargeError) throw new UnprocessableError('Não dá para retirar mais do que está guardado.');
+        throw err;
+      }
+    },
+
+    async removeContribution(userId: string, id: string, contributionId: string): Promise<void> {
+      await getOwned(userId, id);
+      try {
+        if (!(await deps.repo.deleteContribution(userId, id, contributionId))) throw new NotFoundError('Depósito');
+      } catch (err) {
+        if (err instanceof NegativeBalanceError) {
+          throw new UnprocessableError('Apagar este depósito deixaria a meta com saldo negativo. Apague antes a retirada.');
+        }
+        throw err;
+      }
+    },
+  };
+}
+
+export type GoalsService = ReturnType<typeof createGoalsService>;

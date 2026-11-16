@@ -1,7 +1,7 @@
 import type { ThemePreference } from '@fincontrol/shared';
 import { LogOut } from 'lucide-react';
 import { useState } from 'react';
-import { useNavigate } from 'react-router';
+import { useNavigate, Link } from 'react-router';
 import { toast } from 'sonner';
 import { useTheme } from '../../app/theme';
 import { Button } from '../../components/ui/button';
@@ -71,6 +71,15 @@ export default function ProfilePage() {
                 ]}
               />
             </div>
+          </Panel>
+          <Panel className="flex flex-wrap items-center justify-between gap-4 p-6">
+            <div>
+              <h2 className="font-semibold">Categorias</h2>
+              <p className="text-sm text-muted">Crie, renomeie ou exclua as categorias de receitas e despesas.</p>
+            </div>
+            <Link to="/categorias" className="text-sm font-medium text-primary hover:underline">
+              Gerenciar categorias
+            </Link>
           </Panel>
           <Panel className="flex flex-wrap items-center justify-between gap-4 p-6">
             <div>

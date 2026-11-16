@@ -1,5 +1,5 @@
 import {
-  addMonthsToYm, dateInMonth, endOfMonth, installmentDate, invoiceDates, invoiceFor, minDate, monthOf, splitInstallments,
+  addMonthsToYm, dateInMonth, endOfMonth, installmentDate, minDate as earliest, invoiceDates, invoiceFor, minDate, monthOf, splitInstallments,
   type AccountType, type DateOnly, type LoanKind, type TransactionNature, type TransactionStatus, type TransactionType, type YearMonth,
 } from '@fincontrol/shared';
 
@@ -58,11 +58,16 @@ export type DemoLoan = {
   firstDueDate: DateOnly;
   accountKey: DemoAccountKey;
 };
+export type DemoBudget = { categoryName: string; limit: number };
+export type DemoGoal = { name: string; targetAmount: number; targetDate: DateOnly; createdAt: DateOnly; contributions: { amount: number; date: DateOnly }[] };
 export type DemoPlan = {
   accounts: DemoAccount[];
   recurrences: DemoRecurrence[];
   transactions: DemoTransaction[];
   loans: DemoLoan[];
+  /** Sub-projeto 3: limites calculados a partir do próprio plano, para valer em qualquer data. */
+  budgets: DemoBudget[];
+  goals: DemoGoal[];
   /** Descrição da recorrência cuja ocorrência vencida mais recente fica sem pagar. */
   overdueDescription: string;
 };
@@ -265,5 +270,29 @@ export function buildDemoData(today: DateOnly, seed = 42): DemoPlan {
     });
   }
 
-  return { accounts, recurrences, transactions, loans, overdueDescription: 'Internet' };
+  // Orçamento (sub-projeto 3, seção 7): Alimentação perto do limite, Lazer estourado, Compras e Moradia dentro.
+  const spentThisMonth = (name: string) =>
+    transactions.filter((t) => t.type === 'expense' && t.categoryName === name && monthOf(t.dueDate) === currentYm).reduce((s, t) => s + t.amount, 0);
+  const roundUp = (v: number) => Math.max(Math.ceil(v / 1000) * 1000, 1000);
+  const budgets: DemoBudget[] = [
+    { categoryName: 'Alimentação', limit: roundUp(spentThisMonth('Alimentação') * 1.1) },
+    { categoryName: 'Lazer', limit: Math.max(Math.floor((spentThisMonth('Lazer') * 0.8) / 1000) * 1000, 1000) },
+    { categoryName: 'Compras', limit: roundUp(spentThisMonth('Compras') * 2) },
+    { categoryName: 'Moradia', limit: 250000 },
+  ];
+
+  // Metas: a reserva no ritmo (depósito todo mês), a viagem atrasada (um depósito só). Nada com data futura.
+  const depositDay = (ym: YearMonth) => earliest(dateInMonth(ym, 6), today);
+  const goals: DemoGoal[] = [
+    {
+      name: 'Reserva de emergência', targetAmount: 3000000, targetDate: dateInMonth(addMonthsToYm(currentYm, 18), 1), createdAt: dateInMonth(firstYm, 1),
+      contributions: Array.from({ length: HISTORY_MONTHS + 1 }, (_, i) => ({ amount: 150000, date: depositDay(addMonthsToYm(firstYm, i)) })),
+    },
+    {
+      name: 'Viagem de férias', targetAmount: 800000, targetDate: dateInMonth(addMonthsToYm(currentYm, 8), 1),
+      createdAt: dateInMonth(addMonthsToYm(currentYm, -4), 1), contributions: [{ amount: 50000, date: dateInMonth(addMonthsToYm(currentYm, -4), 6) }],
+    },
+  ];
+
+  return { accounts, recurrences, transactions, loans, budgets, goals, overdueDescription: 'Internet' };
 }

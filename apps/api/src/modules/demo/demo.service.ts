@@ -104,6 +104,9 @@ export function createDemoService(deps: DemoServiceDeps) {
           })),
         );
 
+        for (const b of plan.budgets) await tx.repo.createBudget(userId, categoryId(b.categoryName, 'expense'), b.limit);
+        for (const g of plan.goals) await tx.repo.createGoal(userId, g);
+
         await tx.recurrences.materialize(userId, endOfMonth(monthOf(today)));
         await tx.repo.markRecurringPaidBefore(userId, today, plan.overdueDescription);
         return { seeded: true };

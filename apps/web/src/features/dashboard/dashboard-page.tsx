@@ -7,6 +7,7 @@ import { MonthPicker } from '../../components/ui/month-picker';
 import { Panel } from '../../components/ui/panel';
 import { EmptyState, ErrorState, Skeleton } from '../../components/ui/states';
 import { formatBRL, formatMonthLabel } from '../../lib/format';
+import { BudgetCard } from './budget-card';
 import { HealthTiles } from './health-tiles';
 import { useAccounts } from '../accounts/api';
 import { useCategories } from '../categories/api';
@@ -91,6 +92,9 @@ export default function DashboardPage() {
       {summary.data && (
         <section aria-label="Saúde financeira" className="mb-6">
           <HealthTiles health={summary.data.health} />
+          <div className="mt-4">
+            <BudgetCard budget={summary.data.budget ?? null} />
+          </div>
         </section>
       )}
 

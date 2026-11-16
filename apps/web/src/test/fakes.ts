@@ -54,6 +54,7 @@ export function fakeApi(routes: Record<string, Handler | unknown> = {}) {
     get: vi.fn((path: string, query?: unknown) => call('GET', path, undefined, query)),
     post: vi.fn((path: string, body?: unknown) => call('POST', path, body)),
     patch: vi.fn((path: string, body: unknown) => call('PATCH', path, body)),
+    put: vi.fn((path: string, body: unknown) => call('PUT', path, body)),
     del: vi.fn(async (path: string) => {
       await call('DELETE', path);
     }),

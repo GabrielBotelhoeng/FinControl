@@ -85,13 +85,13 @@ export function AppShell() {
         aria-label="Principal (celular)"
         className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-6 border-t border-border bg-surface/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden"
       >
-        {NAV_ITEMS.map(({ to, label, icon: Icon }) => (
+        {NAV_ITEMS.filter((item) => item.mobile !== false).map(({ to, label, icon: Icon }) => (
           <NavLink
             key={to}
             to={to}
             end={to === '/'}
             className={({ isActive }) =>
-              cn('flex min-w-0 flex-col items-center gap-1 py-2.5 text-[10px] font-medium tracking-[-0.03em]', isActive ? 'text-primary' : 'text-muted')
+              cn('flex min-w-0 flex-col items-center gap-1 py-2.5 text-[10px] font-medium tracking-[-0.05em]', isActive ? 'text-primary' : 'text-muted')
             }
           >
             <Icon aria-hidden className="h-5 w-5" strokeWidth={1.75} />

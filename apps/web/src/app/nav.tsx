@@ -1,12 +1,14 @@
-import { ArrowLeftRight, Landmark, LayoutDashboard, Tags, UserRound, Wallet, type LucideIcon } from 'lucide-react';
+import { ArrowLeftRight, Landmark, LayoutDashboard, Tags, Target, UserRound, Wallet, type LucideIcon } from 'lucide-react';
 
-export type NavItem = { to: string; label: string; icon: LucideIcon };
+/** `mobile: false` tira o item da barra do celular (P9: 7 itens não cabem a 360 px). */
+export type NavItem = { to: string; label: string; icon: LucideIcon; mobile?: false };
 
 export const NAV_ITEMS: NavItem[] = [
   { to: '/', label: 'Painel', icon: LayoutDashboard },
   { to: '/lancamentos', label: 'Lançamentos', icon: ArrowLeftRight },
   { to: '/contas', label: 'Contas', icon: Wallet },
+  { to: '/planejamento', label: 'Planejamento', icon: Target },
   { to: '/emprestimos', label: 'Empréstimos', icon: Landmark },
-  { to: '/categorias', label: 'Categorias', icon: Tags },
+  { to: '/categorias', label: 'Categorias', icon: Tags, mobile: false },
   { to: '/perfil', label: 'Perfil', icon: UserRound },
 ];

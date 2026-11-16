@@ -30,4 +30,9 @@ describe('ProfilePage', () => {
     await waitFor(() => expect(api.del).toHaveBeenCalledWith('/me'));
     expect(gateway.signOut).toHaveBeenCalled();
   });
+
+  it('tem o link "Gerenciar categorias" (a barra do celular não tem mais Categorias)', async () => {
+    renderApp(<ProfilePage />, { api: fakeApi({ 'GET /me': profile }) });
+    expect(await screen.findByRole('link', { name: 'Gerenciar categorias' })).toHaveAttribute('href', '/categorias');
+  });
 });

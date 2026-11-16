@@ -11,12 +11,27 @@ test.describe('tela de 360 px', () => {
     await page.goto('/emprestimos');
     const emprestimo = await page.getByRole('article', { name: 'Financiamento do carro' }).getByRole('link', { name: /Ver detalhes/ }).getAttribute('href');
 
-    const paths = ['/', '/lancamentos', '/contas', faturas!, '/emprestimos', emprestimo!, '/categorias', '/perfil', '/privacidade', '/termos'];
+    const paths = [
+      '/', '/lancamentos', '/contas', faturas!, '/emprestimos', emprestimo!, '/planejamento', '/planejamento?aba=metas',
+      '/categorias', '/perfil', '/privacidade', '/termos',
+    ];
     for (const path of paths) {
       await page.goto(path);
       await page.waitForLoadState('networkidle');
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
       expect(overflow, `rolagem horizontal em ${path}`).toBeLessThanOrEqual(0);
+      // A área principal usa overflow-x: clip, que esconde o que passa da tela sem gerar rolagem: mede os elementos.
+      const clipped = await page.evaluate(() =>
+        [...document.querySelectorAll('main *')].filter((el) => {
+          if (el.getBoundingClientRect().right <= document.documentElement.clientWidth + 0.5) return false;
+          // Dentro de uma área com rolagem própria (ex.: filtros de Lançamentos), passar da borda é intencional.
+          for (let p = el.parentElement; p && p.tagName !== 'MAIN'; p = p.parentElement) {
+            if (['auto', 'scroll'].includes(getComputedStyle(p).overflowX)) return false;
+          }
+          return true;
+        }).length,
+      );
+      expect(clipped, `conteúdo cortado na borda em ${path}`).toBe(0);
     }
   });
 });
