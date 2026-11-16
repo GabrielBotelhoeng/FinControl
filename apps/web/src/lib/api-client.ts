@@ -20,6 +20,7 @@ export type ApiClient = {
   get<T>(path: string, query?: Query): Promise<T>;
   post<T>(path: string, body?: unknown): Promise<T>;
   patch<T>(path: string, body: unknown): Promise<T>;
+  put<T>(path: string, body: unknown): Promise<T>;
   del(path: string): Promise<void>;
 };
 
@@ -78,6 +79,7 @@ export function createApiClient({ baseUrl, getToken, onUnauthorized, fetchFn = f
     get: (path, query) => request('GET', path, undefined, query),
     post: (path, body) => request('POST', path, body),
     patch: (path, body) => request('PATCH', path, body),
+    put: (path, body) => request('PUT', path, body),
     del: (path) => request<void>('DELETE', path),
   };
 }

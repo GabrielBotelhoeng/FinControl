@@ -11,6 +11,7 @@ const AccountsPage = lazy(() => import('../features/accounts/accounts-page'));
 const InvoicesPage = lazy(() => import('../features/cards/invoices-page'));
 const LoansPage = lazy(() => import('../features/loans/loans-page'));
 const LoanDetailPage = lazy(() => import('../features/loans/loan-detail-page'));
+const PlanningPage = lazy(() => import('../features/planning/planning-page'));
 const CategoriesPage = lazy(() => import('../features/categories/categories-page'));
 const ProfilePage = lazy(() => import('../features/profile/profile-page'));
 const PrivacyPage = lazy(() => import('../features/legal/privacy-page'));
@@ -36,6 +37,7 @@ export const router = createBrowserRouter([
       { path: 'cartoes/:id', element: page(<InvoicesPage />) },
       { path: 'emprestimos', element: page(<LoansPage />) },
       { path: 'emprestimos/:id', element: page(<LoanDetailPage />) },
+      { path: 'planejamento', element: page(<PlanningPage />) },
       { path: 'categorias', element: page(<CategoriesPage />) },
       { path: 'perfil', element: page(<ProfilePage />) },
       { path: '*', element: <Navigate to="/" replace /> },
