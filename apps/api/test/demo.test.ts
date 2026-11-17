@@ -65,6 +65,16 @@ describe('conta demo', () => {
       expect(point.income).toBeGreaterThan(0);
       expect(point.expense).toBeGreaterThan(0);
     }
+
+    // Sub-projeto 4: o relatório da demo sai completo, com dívida de cartão e de empréstimo, e o painel soma as duas.
+    const report = (await request(app).get('/api/v1/reports?from=2026-11&to=2026-11').set(visitor.auth)).body;
+    expect(report.expenseByCategory.length).toBeGreaterThan(2);
+    expect(report.topExpenses.length).toBeGreaterThan(0);
+    const lastDebt = report.debts.at(-1);
+    expect(lastDebt.cards).toBeGreaterThan(0);
+    expect(lastDebt.loans).toBe(loan.outstanding);
+    expect(summary.body.debts).toEqual({ cards: summary.body.debts.cards, loans: loan.outstanding, total: summary.body.debts.cards + loan.outstanding });
+    expect(summary.body.debts.cards).toBeGreaterThan(0);
   });
 });
 
