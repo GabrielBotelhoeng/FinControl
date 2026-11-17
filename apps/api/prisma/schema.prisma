@@ -59,19 +59,24 @@ enum Frequency {
 }
 
 model Profile {
-  id           String          @id @db.Uuid
-  name         String
-  isDemo       Boolean         @default(false) @map("is_demo")
-  theme        ThemePreference @default(system)
-  createdAt    DateTime        @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt    DateTime        @updatedAt @map("updated_at") @db.Timestamptz
-  accounts     Account[]
-  categories   Category[]
-  recurrences  Recurrence[]
-  transactions Transaction[]
-  loans        Loan[]
-  budgets      Budget[]
-  goals        Goal[]
+  id                String          @id @db.Uuid
+  name              String
+  isDemo            Boolean         @default(false) @map("is_demo")
+  theme             ThemePreference @default(system)
+  /**
+   * Preferências de notificação (spec do sub-projeto 5, N7); o que faltar vem dos padrões.
+   */
+  notificationPrefs Json            @default("{}") @map("notification_prefs")
+  createdAt         DateTime        @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt         DateTime        @updatedAt @map("updated_at") @db.Timestamptz
+  accounts          Account[]
+  categories        Category[]
+  recurrences       Recurrence[]
+  transactions      Transaction[]
+  loans             Loan[]
+  budgets           Budget[]
+  goals             Goal[]
+  notifications     Notification[]
 
   @@index([isDemo, createdAt])
   @@map("profiles")
@@ -195,7 +200,9 @@ model Transaction {
   @@map("transactions")
 }
 
-/** Empréstimo ou financiamento (spec C8–C11). As parcelas restantes são lançamentos com `loanId`. */
+/**
+ * Empréstimo ou financiamento (spec C8–C11). As parcelas restantes são lançamentos com `loanId`.
+ */
 model Loan {
   id                     String        @id @default(uuid()) @db.Uuid
   userId                 String        @map("user_id") @db.Uuid
@@ -209,7 +216,9 @@ model Loan {
   installmentsPaidBefore Int           @default(0) @map("installments_paid_before")
   firstDueDate           DateTime      @map("first_due_date") @db.Date
   accountId              String        @map("account_id") @db.Uuid
-  /** Fração ao mês, só para conferência. */
+  /**
+   * Fração ao mês, só para conferência.
+   */
   informedMonthlyRate    Decimal?      @map("informed_monthly_rate") @db.Decimal(9, 6)
   createdAt              DateTime      @default(now()) @map("created_at") @db.Timestamptz
   updatedAt              DateTime      @updatedAt @map("updated_at") @db.Timestamptz
@@ -221,7 +230,9 @@ model Loan {
   @@map("loans")
 }
 
-/** Taxas do Banco Central (spec C12; D1: só o período mais recente de cada modalidade). Percentual, como publicado. */
+/**
+ * Taxas do Banco Central (spec C12; D1: só o período mais recente de cada modalidade). Percentual, como publicado.
+ */
 model BankRate {
   id          String   @id @default(uuid()) @db.Uuid
   modality    String
@@ -239,7 +250,9 @@ model BankRate {
   @@map("bank_rates")
 }
 
-/** Limite mensal de uma categoria de despesa (sub-projeto 3, P1): vale para todos os meses. */
+/**
+ * Limite mensal de uma categoria de despesa (sub-projeto 3, P1): vale para todos os meses.
+ */
 model Budget {
   id          String   @id @default(uuid()) @db.Uuid
   userId      String   @map("user_id") @db.Uuid
@@ -254,7 +267,9 @@ model Budget {
   @@map("budgets")
 }
 
-/** Objetivo de economia (P6): o progresso vem dos depósitos, que não mexem em saldo de conta. */
+/**
+ * Objetivo de economia (P6): o progresso vem dos depósitos, que não mexem em saldo de conta.
+ */
 model Goal {
   id            String             @id @default(uuid()) @db.Uuid
   userId        String             @map("user_id") @db.Uuid
@@ -270,7 +285,9 @@ model Goal {
   @@map("goals")
 }
 
-/** Depósito (positivo) ou retirada (negativo) numa meta. */
+/**
+ * Depósito (positivo) ou retirada (negativo) numa meta.
+ */
 model GoalContribution {
   id        String   @id @default(uuid()) @db.Uuid
   goalId    String   @map("goal_id") @db.Uuid
@@ -283,4 +300,21 @@ model GoalContribution {
 
   @@index([goalId])
   @@map("goal_contributions")
+}
+
+/**
+ * Memória de cada aviso (spec do sub-projeto 5, N2 e N3): o aviso em si é calculado na hora.
+ */
+model Notification {
+  id           String    @id @default(uuid()) @db.Uuid
+  userId       String    @map("user_id") @db.Uuid
+  key          String    @db.VarChar(200)
+  firstSeenAt  DateTime  @default(now()) @map("first_seen_at") @db.Timestamptz
+  lastActiveAt DateTime  @default(now()) @map("last_active_at") @db.Timestamptz
+  readAt       DateTime? @map("read_at") @db.Timestamptz
+  user         Profile   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, key])
+  @@index([lastActiveAt])
+  @@map("notifications")
 }
