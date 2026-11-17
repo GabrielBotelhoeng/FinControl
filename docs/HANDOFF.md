@@ -1,6 +1,22 @@
 # HANDOFF — FinControl
 
-_Atualizado em 2026-11-16 (sub-projeto 3)._
+_Atualizado em 2026-11-17 (sub-projeto 4)._
+
+## Sub-projeto 4: relatórios e exportação (2026-11-17, branch feat/relatorios)
+
+- **Spec:** `docs/superpowers/specs/2026-11-17-fincontrol-sp4-relatorios-exportacao-design.md`, com as decisões R1–R13 tomadas pelo agente. **Plano:** `docs/superpowers/plans/2026-11-17-fincontrol-sp4-relatorios-exportacao.md`.
+- **Sem migration:** tudo sai das tabelas que já existem.
+- **Entregue:**
+  - `/relatorios` com os períodos "Mês", "Ano" e "12 meses": resumo com comparação, categorias, evolução mensal, evolução das dívidas, maiores despesas, saldos no fim do período e notas;
+  - `GET /reports`, `GET /reports/export.csv` (padrão do Excel brasileiro) e `GET /reports/export.pdf` (`pdf-lib`, A4);
+  - "Total de dívidas" no painel (`debts` no `/dashboard/summary`), com o link "Ver relatórios";
+  - "Relatórios" no menu do computador e no Perfil. A barra do celular continua com 6 itens;
+  - as pendências do sub-projeto 3: juntar categorias leva o limite (e o diálogo avisa), e o PUT de orçamento devolve o id gravado.
+- **Regras de dívida:** a do cartão conta a compra parcelada inteira desde a 1ª parcela, menos pagamentos e estornos (cartão arquivado entra). A do empréstimo é o saldo devedor Price com as parcelas pagas até a data, o mesmo número da tela do empréstimo.
+- **Downloads:** a web nomeia o arquivo sozinha (o CORS esconde o `Content-Disposition`) e manda o token só no cabeçalho.
+- **Testes:** 118 em shared, 235 na API e 148 na web, além de 12 E2E (novo: `e2e/tests/relatorios.spec.ts`). O teste de 360 px cobre `/relatorios`.
+- **Cuidado ao editar no Windows:** um `﻿` literal num arquivo-fonte quebra o lint (`no-irregular-whitespace`). Use o escape.
+
 
 ## Sub-projeto 3: planejamento e metas (2026-11-16, branch feat/planejamento)
 

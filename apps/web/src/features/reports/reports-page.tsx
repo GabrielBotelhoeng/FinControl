@@ -80,7 +80,7 @@ function Summary({ report }: { report: ReportDTO }) {
 
 function CategoryList({ title, rows, kind }: { title: string; rows: ReportCategoryDTO[]; kind: 'income' | 'expense' }) {
   return (
-    <Panel className="grid gap-4 p-5 sm:p-6">
+    <Panel className="grid content-start gap-4 p-5 sm:p-6">
       <div>
         <h2 className="font-display text-lg font-semibold tracking-tight">{title}</h2>
         <p className="text-xs text-muted">Participação no período e variação contra o período anterior.</p>
@@ -118,7 +118,7 @@ function CategoryList({ title, rows, kind }: { title: string; rows: ReportCatego
 
 function TopExpenses({ report }: { report: ReportDTO }) {
   return (
-    <Panel className="grid gap-4 p-5 sm:p-6">
+    <Panel className="grid content-start gap-4 p-5 sm:p-6">
       <h2 className="font-display text-lg font-semibold tracking-tight">Maiores despesas</h2>
       {report.topExpenses.length === 0 ? (
         <p className="text-sm text-muted">Nenhuma despesa paga no período.</p>
@@ -142,7 +142,7 @@ function TopExpenses({ report }: { report: ReportDTO }) {
 function Balances({ report }: { report: ReportDTO }) {
   const { balances } = report;
   return (
-    <Panel role="region" aria-label="Saldo das contas" className="grid gap-4 p-5 sm:p-6">
+    <Panel role="region" aria-label="Saldo das contas" className="grid content-start gap-4 p-5 sm:p-6">
       <div>
         <h2 className="font-display text-lg font-semibold tracking-tight">{`Saldo das contas em ${formatDate(balances.date)}`}</h2>
         <p className="text-xs text-muted">Contas ativas, sem cartões. No fim do ano, é o que a ficha "Bens e Direitos" do IR pede.</p>
