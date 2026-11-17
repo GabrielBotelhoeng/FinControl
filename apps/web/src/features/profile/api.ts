@@ -12,7 +12,11 @@ export function useUpdateProfile() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (input: UpdateProfileInput) => api.patch<ProfileDTO>('/me', input),
-    onSuccess: (profile) => queryClient.setQueryData(['me'], profile),
+    onSuccess: async (profile) => {
+      queryClient.setQueryData(['me'], profile);
+      // As preferências mudam o que o sino mostra (sub-projeto 5, N7).
+      await queryClient.invalidateQueries({ queryKey: ['notifications'] });
+    },
   });
 }
 

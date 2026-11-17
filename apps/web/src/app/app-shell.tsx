@@ -3,6 +3,7 @@ import { NavLink, Outlet, useNavigate } from 'react-router';
 import { Button } from '../components/ui/button';
 import { useAuth } from '../features/auth/auth-context';
 import { cn } from '../lib/cn';
+import { NotificationBell } from '../features/notifications/bell';
 import { NAV_ITEMS } from './nav';
 
 function Logo() {
@@ -70,11 +71,10 @@ export function AppShell() {
           <span className="md:hidden">
             <Logo />
           </span>
-          {isDemo && (
-            <div className="ml-auto">
-              <DemoBadge />
-            </div>
-          )}
+          <div className="ml-auto flex items-center gap-3">
+            {isDemo && <DemoBadge />}
+            <NotificationBell />
+          </div>
         </header>
         <main className="mx-auto w-full max-w-6xl flex-1 px-5 pb-28 pt-6 md:px-10 md:pb-12">
           <Outlet />
