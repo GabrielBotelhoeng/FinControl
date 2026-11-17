@@ -151,4 +151,38 @@ describe('relatórios', () => {
     expect(r.debts.every((d) => d.total === 0)).toBe(true);
     expect((await request(app).get('/api/v1/reports?from=2026-11&to=2026-11')).status).toBe(401);
   });
+
+  it('CSV (R9): BOM, ; e vírgula decimal, pagas e pendentes por competência, transferência e proteção contra fórmula', async () => {
+    const user = await newUser();
+    const { checking, food } = await scenario(user);
+    await createTransaction(app, user, {
+      type: 'expense', amount: 1050, description: '=SOMA(A1); "teste"', accountId: checking.id, categoryId: food, nature: 'variable',
+      dueDate: '2026-10-30', status: 'paid', paidDate: '2026-11-02',
+    });
+    const res = await request(app).get('/api/v1/reports/export.csv?from=2026-11&to=2026-11').set(user.auth);
+    expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toBe('text/csv; charset=utf-8');
+    expect(res.headers['content-disposition']).toBe('attachment; filename="fincontrol-lancamentos-2026-11.csv"');
+    expect(res.text.startsWith('\uFEFF')).toBe(true);
+    const lines = res.text.slice(1).trimEnd().split('\r\n');
+    expect(lines[0]).toBe('Data;Descrição;Tipo;Categoria;Conta;Conta de destino;Situação;Valor');
+    expect(lines.slice(1)).toEqual([
+      '01/11/2026;Salário novembro;Receita;Salário;Corrente;;Paga;5000,00',
+      `02/11/2026;"'=SOMA(A1); ""teste""";Despesa;Alimentação;Corrente;;Paga;-10,50`,
+      '03/11/2026;Mercado novembro;Despesa;Alimentação;Corrente;;Paga;-2000,00',
+      '08/11/2026;Show;Despesa;Lazer;Corrente;;Paga;-1000,00',
+      '09/11/2026;Guardar;Transferência;;Corrente;Poupança;Paga;300,00',
+      '20/11/2026;Conta pendente;Despesa;Alimentação;Corrente;;Pendente;-999,00',
+    ]);
+  });
+
+  it('CSV: nome do arquivo com o intervalo, período validado e isolamento', async () => {
+    const owner = await newUser();
+    await scenario(owner);
+    const other = await newUser();
+    const res = await request(app).get('/api/v1/reports/export.csv?from=2026-01&to=2026-11').set(other.auth);
+    expect(res.headers['content-disposition']).toBe('attachment; filename="fincontrol-lancamentos-2026-01_2026-11.csv"');
+    expect(res.text.slice(1).trimEnd().split('\r\n')).toHaveLength(1);
+    expect((await request(app).get('/api/v1/reports/export.csv?from=2026-12&to=2026-12').set(other.auth)).status).toBe(422);
+  });
 });

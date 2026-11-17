@@ -1,14 +1,25 @@
 import { reportQuerySchema } from '@fincontrol/shared';
-import { Router } from 'express';
+import { Router, type Response } from 'express';
 import { userIdOf } from '../../http/auth';
 import { parse } from '../../http/validate';
+import { periodSlug, transactionsCsv } from './reports.csv';
 import type { ReportsService } from './reports.service';
+
+/** O nome do arquivo só tem letras, números e hífens (R11), então vai entre aspas sem escape. */
+function download(res: Response, contentType: string, filename: string): Response {
+  return res.set({ 'Content-Type': contentType, 'Content-Disposition': `attachment; filename="${filename}"` });
+}
 
 export function reportsRouter(service: ReportsService): Router {
   const r = Router();
   r.get('/', async (req, res) => {
     const { from, to } = parse(reportQuerySchema, req.query);
     res.json(await service.build(userIdOf(res), from, to));
+  });
+  r.get('/export.csv', async (req, res) => {
+    const { from, to } = parse(reportQuerySchema, req.query);
+    const csv = transactionsCsv(await service.csvRows(userIdOf(res), from, to));
+    download(res, 'text/csv; charset=utf-8', `fincontrol-lancamentos-${periodSlug(from, to)}.csv`).send(csv);
   });
   return r;
 }
