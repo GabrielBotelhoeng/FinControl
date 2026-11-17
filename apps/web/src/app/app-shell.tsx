@@ -21,7 +21,7 @@ function DemoBadge() {
   return (
     <div className="flex items-center gap-3 rounded-full border border-primary/40 bg-primary-soft py-1.5 pl-4 pr-1.5 text-sm">
       <Sparkles aria-hidden className="h-4 w-4 text-primary" strokeWidth={1.75} />
-      <span className="mr-auto font-medium">Modo demo</span>
+      <span className="mr-auto whitespace-nowrap font-medium">Modo demo</span>
       <Button
         size="sm"
         className="h-8"
