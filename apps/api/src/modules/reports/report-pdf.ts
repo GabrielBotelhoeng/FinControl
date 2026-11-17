@@ -175,8 +175,10 @@ export async function renderReportPdf(report: ReportDTO, generatedAt: Date): Pro
   categories('Receitas por categoria', report.incomeByCategory, C.income);
 
   // ---------- Evolução mensal (gráfico de barras + tabela) ----------
-  heading('Evolução mensal', 'Receitas e despesas pagas em cada mês.');
   const chartHeight = 110;
+  // Título e gráfico juntos: sem isso, o título podia ficar no pé de uma página e o gráfico ir para a seguinte.
+  ensure(50 + chartHeight + 30);
+  heading('Evolução mensal', 'Receitas e despesas pagas em cada mês.');
   ensure(chartHeight + 30);
   const max = Math.max(1, ...report.monthly.flatMap((m) => [m.income, m.expense]));
   const slot = WIDTH / report.monthly.length;

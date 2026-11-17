@@ -1,5 +1,5 @@
 import {
-  cardDebtAt, impliedMonthlyRate, loanOutstandingAt, todayInSaoPaulo,
+  addMonthsToYm, cardDebtAt, dateInMonth, impliedMonthlyRate, monthOf, loanOutstandingAt, todayInSaoPaulo,
   type CardDebtInput, type DateOnly, type DebtsDTO, type LoanDebtInput,
 } from '@fincontrol/shared';
 import { toDateOnly } from '../../infra/date-mapping';
@@ -20,16 +20,19 @@ export function createDebtsReader(db: Db) {
     // Sem limite de data: as parcelas futuras de uma compra já feita são dívida (R5).
     const rows = await db.transaction.findMany({
       where: { userId, status: 'paid', OR: [{ accountId: { in: ids } }, { destinationAccountId: { in: ids } }] },
-      select: { type: true, amount: true, paidDate: true, accountId: true, destinationAccountId: true, installmentGroupId: true },
+      select: { type: true, amount: true, paidDate: true, accountId: true, destinationAccountId: true, installmentGroupId: true, installmentNumber: true },
     });
 
-    // A compra parcelada vira dívida inteira na data da 1ª parcela (a menor data do grupo).
+    // A compra parcelada vira dívida inteira na data da compra. Ela sai de cada parcela (a k-ésima vence k−1 meses
+    // depois, `installmentDate`), para não andar para a frente quando a pessoa exclui a 1ª parcela. Fica a maior:
+    // em mês curto o dia da parcela é cortado (31 → 30), o que só pode puxar a data reconstruída para trás.
     const groupStart = new Map<string, DateOnly>();
     for (const r of rows) {
       if (!r.installmentGroupId || !r.paidDate) continue;
-      const d = toDateOnly(r.paidDate);
+      const paid = toDateOnly(r.paidDate);
+      const d = dateInMonth(addMonthsToYm(monthOf(paid), -((r.installmentNumber ?? 1) - 1)), Number(paid.slice(8, 10)));
       const seen = groupStart.get(r.installmentGroupId);
-      if (!seen || d < seen) groupStart.set(r.installmentGroupId, d);
+      if (!seen || d > seen) groupStart.set(r.installmentGroupId, d);
     }
 
     const byCard = new Map<string, CardDebtInput>(cards.map((c) => [c.id, { initialBalance: Number(c.initialBalance), charges: [], credits: [] }]));

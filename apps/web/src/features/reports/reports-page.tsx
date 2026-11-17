@@ -222,7 +222,8 @@ export default function ReportsPage() {
   const { from, to } = periodRange(mode, month, year, current);
   const report = useReport(from, to);
   const r = report.data;
-  const nothingPaid = r !== undefined && r.totals.income === 0 && r.totals.expense === 0;
+  // Sem nada pago agora nem antes: estado vazio. Com valores só no período anterior, a comparação (−100%) continua visível.
+  const nothingPaid = r !== undefined && r.totals.income === 0 && r.totals.expense === 0 && r.totals.previousIncome === 0 && r.totals.previousExpense === 0;
 
   return (
     <>

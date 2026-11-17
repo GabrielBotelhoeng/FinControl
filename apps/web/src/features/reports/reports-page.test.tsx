@@ -95,6 +95,18 @@ describe('ReportsPage', () => {
     expect(screen.getByRole('region', { name: 'Saldo das contas' })).toBeInTheDocument();
   });
 
+  it('sem pagamentos agora, mas com gastos antes, a comparação continua visível', async () => {
+    const onlyBefore = reportFixture({
+      totals: { income: 0, expense: 0, net: 0, savingsRate: null, previousIncome: 0, previousExpense: 150000, incomeChange: null, expenseChange: -1 },
+      expenseByCategory: [{ categoryId: 'home', name: 'Moradia', icon: 'house', color: '#22c55e', total: 0, share: 0, previous: 150000, change: -1 }],
+      incomeByCategory: [],
+      topExpenses: [],
+    });
+    renderApp(<ReportsPage />, { api: api(onlyBefore) });
+    expect(await screen.findByRole('listitem', { name: 'Moradia' })).toHaveTextContent('-100%');
+    expect(screen.queryByText('Nada pago neste período')).not.toBeInTheDocument();
+  });
+
   it('erro da API aparece com "Tentar de novo"', async () => {
     renderApp(<ReportsPage />, { api: api(new ApiError(500, 'Erro', 'Falhou ao carregar.')) });
     expect(await screen.findByRole('alert')).toHaveTextContent('Falhou ao carregar.');

@@ -5,7 +5,8 @@ import request from 'supertest';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { buildTestApp } from './helpers/app';
 import { newUser, type TestUser } from './helpers/auth';
-import { resetDb } from './helpers/db';
+import { createDebtsReader } from '../src/modules/reports/debts';
+import { resetDb, testDb } from './helpers/db';
 import { categoryId, createAccount, createTransaction } from './helpers/factories';
 
 const { app } = buildTestApp();
@@ -119,6 +120,22 @@ describe('relatórios', () => {
     expect(at('2026-11')).toEqual({ month: '2026-11', cards: 110000, loans: outstanding, total: 110000 + outstanding });
     // Em junho, 7 das 12 parcelas pagas antes do cadastro já tinham vencido (dez/25 a jun/26): o saldo era maior.
     expect(at('2026-06').loans).toBeGreaterThan(outstanding);
+  });
+
+  it('excluir a 1ª parcela não move a dívida da compra para o mês seguinte', async () => {
+    const user = await newUser();
+    const checking = await createAccount(app, user, { initialBalance: 500000 });
+    const card = await createAccount(app, user, { type: 'credit_card', color: '#7c3aed', creditLimit: 800000, closingDay: 26, dueDay: 5, paymentAccountId: checking.id });
+    const food = await categoryId(app, user, 'Alimentação', 'expense');
+    const purchase = await createTransaction(app, user, { type: 'expense', amount: 120000, description: 'Notebook', accountId: card.id, categoryId: food, nature: 'variable', dueDate: '2026-08-31', installments: 12 }) as unknown as { installments: { id: string }[] };
+    const del = await request(app).delete(`/api/v1/transactions/${purchase.installments[0]!.id}`).set(user.auth);
+    expect(del.status).toBe(204);
+    const r = await report(user, '2026-11', '2026-11');
+    expect(r.debts.find((d) => d.month === '2026-07')!.cards).toBe(0);
+    expect(r.debts.find((d) => d.month === '2026-08')!.cards).toBe(110000);
+    // Compra no dia 31: a parcela de setembro vence em 30/09 (dia cortado); a data da compra continua 31/08.
+    const { cards } = await createDebtsReader(testDb).load(user.id);
+    expect(new Set(cards[0]!.charges.map((c) => c.startDate))).toEqual(new Set(['2026-08-31']));
   });
 
   it('um ano inteiro: 11 meses até o mês atual, comparado com o mesmo tamanho antes', async () => {

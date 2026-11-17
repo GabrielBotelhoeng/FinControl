@@ -14,7 +14,7 @@ _Atualizado em 2026-11-17 (sub-projeto 4)._
   - as pendências do sub-projeto 3: juntar categorias leva o limite (e o diálogo avisa), e o PUT de orçamento devolve o id gravado.
 - **Regras de dívida:** a do cartão conta a compra parcelada inteira desde a 1ª parcela, menos pagamentos e estornos (cartão arquivado entra). A do empréstimo é o saldo devedor Price com as parcelas pagas até a data, o mesmo número da tela do empréstimo.
 - **Downloads:** a web nomeia o arquivo sozinha (o CORS esconde o `Content-Disposition`) e manda o token só no cabeçalho.
-- **Testes:** 120 em shared, 235 na API e 148 na web, além de 12 E2E (novo: `e2e/tests/relatorios.spec.ts`). O teste de 360 px cobre `/relatorios`.
+- **Testes:** 120 em shared, 236 na API e 149 na web, além de 12 E2E (novo: `e2e/tests/relatorios.spec.ts`). O teste de 360 px cobre `/relatorios`.
 - **Revisão final (revisor novo):** nenhum achado crítico ou alto. Os 5 baixos foram corrigidos: ano antes de 2000 dá 400 (antes, 500); parcela "já paga" adiantada conta no dia do cadastro; acentos decompostos no PDF; título de seção nunca sozinho no pé da página; eixo dos gráficos com "1,5 mil" ou reais abaixo de R$ 1 mil.
 - **Cuidado ao editar no Windows:** um `﻿` literal num arquivo-fonte quebra o lint (`no-irregular-whitespace`). Use o escape.
 
