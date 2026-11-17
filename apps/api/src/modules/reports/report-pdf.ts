@@ -71,7 +71,8 @@ export async function renderReportPdf(report: ReportDTO, generatedAt: Date): Pro
     y = PAGE[1] - MARGIN;
   };
   const heading = (label: string, note?: string) => {
-    ensure(48);
+    // Título, nota e o começo do que vem embaixo (cabeçalho + 1ª linha de tabela): nunca deixa o título sozinho no pé da página.
+    ensure(50 + 32);
     y -= 26;
     text(label, MARGIN, y, { font: bold, size: 13 });
     if (note) text(note, MARGIN, y - 13, { size: 8, color: C.muted });

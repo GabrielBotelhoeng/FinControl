@@ -62,7 +62,7 @@ describe('loanOutstandingAt (R6)', () => {
   const installmentAmount = 120000;
   const installmentsTotal = 48;
   const { monthlyRate } = loanSummary({ principal, installmentAmount, installmentsTotal, installmentsPaid: 0 });
-  const base = { installmentAmount, monthlyRate, installmentsTotal, installmentsPaidBefore: 0, firstDueDate: '2026-03-10', paidDates: [] as string[] };
+  const base = { installmentAmount, monthlyRate, installmentsTotal, installmentsPaidBefore: 0, firstDueDate: '2026-03-10', createdAt: '2026-11-17', paidDates: [] as string[] };
 
   it('antes do mês anterior à 1ª parcela o empréstimo não existia', () => {
     expect(loanOutstandingAt(base, '2026-01-31')).toBe(0);
@@ -84,6 +84,11 @@ describe('loanOutstandingAt (R6)', () => {
     const loan = { ...base, installmentsPaidBefore: 12, firstDueDate: '2025-01-10', paidDates: ['2026-01-10', '2026-02-10'] };
     const screen = loanSummary({ principal, installmentAmount, installmentsTotal, installmentsPaid: 14 }).outstanding;
     expect(loanOutstandingAt(loan, '2026-11-30')).toBe(screen);
+  });
+  it('parcela "já paga" que ainda não venceu conta como paga no dia do cadastro (adiantada)', () => {
+    const loan = { ...base, installmentsPaidBefore: 12, firstDueDate: '2026-01-10', createdAt: '2026-11-17' };
+    expect(loanOutstandingAt(loan, '2026-11-30')).toBe(outstandingBalance(installmentAmount, monthlyRate, 36));
+    expect(loanOutstandingAt(loan, '2026-10-31')).toBe(outstandingBalance(installmentAmount, monthlyRate, 38));
   });
   it('quitado vale 0', () => {
     expect(loanOutstandingAt({ ...base, installmentsPaidBefore: 48, firstDueDate: '2020-01-10' }, '2026-11-30')).toBe(0);
@@ -117,6 +122,9 @@ describe('pdfSafe (R10)', () => {
     expect(pdfSafe('−5%')).toBe('-5%');
     expect(pdfSafe('a b')).toBe('a b');
     expect(pdfSafe('Pizza 🍕 sexta')).toBe('Pizza  sexta');
+  });
+  it('compõe acentos decompostos (texto colado do macOS) em vez de perdê-los', () => {
+    expect(pdfSafe('Cafe\u0301')).toBe('Café');
   });
   it('mantém as aspas e travessões do WinAnsi', () => {
     expect(pdfSafe('“ok” – fim…')).toBe('“ok” – fim…');

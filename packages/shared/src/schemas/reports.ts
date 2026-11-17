@@ -11,6 +11,11 @@ export const reportQuerySchema = z
   .superRefine(({ from, to }, ctx) => {
     // O Zod 4 roda o refinamento mesmo com campo inválido; sem meses válidos não há o que comparar.
     if (!yearMonthSchema.safeParse(from).success || !yearMonthSchema.safeParse(to).success) return;
+    // Anos antigos demais quebrariam as datas do período anterior (ano sem 4 dígitos): o app não tem dados antes de 2000.
+    if (from < '2000-01') {
+      ctx.addIssue({ code: 'custom', path: ['from'], message: 'O período começa em 2000 ou depois' });
+      return;
+    }
     const months = monthsBetween(from, to);
     if (months < 1) ctx.addIssue({ code: 'custom', path: ['to'], message: 'O fim do período vem antes do início' });
     else if (months > MAX_REPORT_MONTHS) ctx.addIssue({ code: 'custom', path: ['to'], message: `O período pode ter no máximo ${MAX_REPORT_MONTHS} meses` });

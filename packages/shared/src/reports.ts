@@ -1,7 +1,7 @@
 /**
  * Regras dos relatórios (spec do sub-projeto 4, seção 3). Valores em centavos; datas `YYYY-MM-DD`; meses `YYYY-MM`.
  */
-import { addMonthsToYm, dateInMonth, monthOf, type DateOnly, type YearMonth } from './dates';
+import { addMonthsToYm, dateInMonth, minDate, monthOf, type DateOnly, type YearMonth } from './dates';
 import { outstandingBalance } from './loan';
 
 export const MAX_REPORT_MONTHS = 24;
@@ -55,13 +55,15 @@ export type LoanDebtInput = {
   installmentsTotal: number;
   installmentsPaidBefore: number;
   firstDueDate: DateOnly;
+  /** Dia do cadastro: a parcela "já paga" que ainda nem venceu foi paga até ele (adiantada). */
+  createdAt: DateOnly;
   /** Datas de pagamento das parcelas pagas no app. */
   paidDates: DateOnly[];
 };
 
 /**
  * R6: saldo devedor (Price, o mesmo da tela do empréstimo) no fim do dia `date`. As parcelas pagas antes do
- * cadastro contam como pagas no vencimento; antes do mês anterior à 1ª parcela, o empréstimo não existia.
+ * cadastro contam como pagas no vencimento (ou no cadastro, se adiantadas); antes do mês anterior à 1ª parcela, o empréstimo não existia.
  */
 export function loanOutstandingAt(loan: LoanDebtInput, date: DateOnly): number {
   const firstMonth = monthOf(loan.firstDueDate);
@@ -69,7 +71,7 @@ export function loanOutstandingAt(loan: LoanDebtInput, date: DateOnly): number {
   const day = Number(loan.firstDueDate.slice(8, 10));
   let paid = 0;
   for (let k = 1; k <= loan.installmentsPaidBefore; k += 1) {
-    if (dateInMonth(addMonthsToYm(firstMonth, k - 1), day) <= date) paid += 1;
+    if (minDate(dateInMonth(addMonthsToYm(firstMonth, k - 1), day), loan.createdAt) <= date) paid += 1;
   }
   paid += loan.paidDates.filter((d) => d <= date).length;
   return outstandingBalance(loan.installmentAmount, loan.monthlyRate, loan.installmentsTotal - paid);
@@ -103,7 +105,8 @@ const REPLACEMENTS: Record<string, string> = { '−': '-', ' ': ' ', ' ': ' 
 /** R10: texto que a Helvetica padrão do PDF (WinAnsi) consegue desenhar. */
 export function pdfSafe(text: string): string {
   let out = '';
-  for (const ch of text) {
+  // Texto colado do macOS/iOS pode vir decomposto ("e" + acento): compõe antes, senão o acento some.
+  for (const ch of text.normalize('NFC')) {
     const replaced = REPLACEMENTS[ch];
     if (replaced !== undefined) {
       out += replaced;

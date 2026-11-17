@@ -196,5 +196,6 @@ describe('reportQuerySchema (R1)', () => {
     expect(paths(reportQuerySchema.safeParse({ from: '2024-01', to: '2026-01' }))).toEqual(['to']);
     expect(paths(reportQuerySchema.safeParse({ from: '2026-13', to: '2026-01' }))).toEqual(['from']);
     expect(paths(reportQuerySchema.safeParse({}))).toEqual(['from', 'to']);
+    expect(paths(reportQuerySchema.safeParse({ from: '0001-01', to: '0001-01' }))).toEqual(['from']);
   });
 });

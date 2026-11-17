@@ -1,5 +1,5 @@
 import {
-  cardDebtAt, impliedMonthlyRate, loanOutstandingAt,
+  cardDebtAt, impliedMonthlyRate, loanOutstandingAt, todayInSaoPaulo,
   type CardDebtInput, type DateOnly, type DebtsDTO, type LoanDebtInput,
 } from '@fincontrol/shared';
 import { toDateOnly } from '../../infra/date-mapping';
@@ -63,6 +63,7 @@ export function createDebtsReader(db: Db) {
         installmentsTotal: l.installmentsTotal,
         installmentsPaidBefore: l.installmentsPaidBefore,
         firstDueDate: toDateOnly(l.firstDueDate),
+        createdAt: todayInSaoPaulo(l.createdAt),
         paidDates: paid.filter((p) => p.loanId === l.id && p.paidDate).map((p) => toDateOnly(p.paidDate!)),
       };
     });

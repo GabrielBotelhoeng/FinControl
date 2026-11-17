@@ -2,7 +2,9 @@ import type { ReportDebtPointDTO, ReportMonthDTO } from '@fincontrol/shared';
 import { Bar, BarChart, CartesianGrid, ComposedChart, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { formatBRL, formatMonthShort } from '../../lib/format';
 
-const compact = (cents: number) => `${Math.round(cents / 100000)} mil`;
+// Abaixo de R$ 1 mil, em reais; acima, "1,5 mil" (arredondar sempre para mil repetia "0 mil" e "1 mil" no eixo).
+const compact = (cents: number) =>
+  Math.abs(cents) < 100000 ? `R$ ${Math.round(cents / 100)}` : `${(cents / 100000).toLocaleString('pt-BR', { maximumFractionDigits: 1 })} mil`;
 const axisTick = { fill: 'var(--text-muted)', fontSize: 12 };
 
 function Legend({ items }: { items: { label: string; swatch: string }[] }) {

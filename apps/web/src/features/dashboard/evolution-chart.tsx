@@ -4,7 +4,9 @@ import { formatBRL } from '../../lib/format';
 
 const shortMonth = new Intl.DateTimeFormat('pt-BR', { month: 'short', timeZone: 'UTC' });
 const label = (ym: string) => shortMonth.format(new Date(`${ym}-01T00:00:00Z`)).replace('.', '');
-const compact = (cents: number) => `${Math.round(cents / 100000)} mil`;
+// Abaixo de R$ 1 mil, em reais; acima, "1,5 mil" (arredondar sempre para mil repetia "0 mil" e "1 mil" no eixo).
+const compact = (cents: number) =>
+  Math.abs(cents) < 100000 ? `R$ ${Math.round(cents / 100)}` : `${(cents / 100000).toLocaleString('pt-BR', { maximumFractionDigits: 1 })} mil`;
 
 type TipProps = { active?: boolean; payload?: Array<{ payload: EvolutionPointDTO }> };
 
