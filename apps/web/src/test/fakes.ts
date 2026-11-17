@@ -58,6 +58,7 @@ export function fakeApi(routes: Record<string, Handler | unknown> = {}) {
     del: vi.fn(async (path: string) => {
       await call('DELETE', path);
     }),
+    download: vi.fn(async (path: string, query?: unknown) => (await call('GET', path, undefined, query)) as Blob),
   };
   return api as typeof api & ApiClient;
 }

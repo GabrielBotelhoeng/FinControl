@@ -5,7 +5,8 @@ import { Button } from './button';
 
 const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
-export function MonthPicker({ value, onChange }: { value: YearMonth; onChange: (ym: YearMonth) => void }) {
+/** `max` desliga o "Próximo mês" a partir dele (os relatórios vão só até o mês atual). */
+export function MonthPicker({ value, onChange, max }: { value: YearMonth; onChange: (ym: YearMonth) => void; max?: YearMonth }) {
   return (
     <div className="inline-flex items-center gap-1 rounded-full border border-border bg-surface p-1">
       <Button variant="ghost" size="icon" className="h-9 w-9" aria-label="Mês anterior" onClick={() => onChange(addMonthsToYm(value, -1))}>
@@ -14,7 +15,14 @@ export function MonthPicker({ value, onChange }: { value: YearMonth; onChange: (
       <span aria-live="polite" className="min-w-[10.5rem] text-center text-sm font-semibold">
         {capitalize(formatMonthLabel(value))}
       </span>
-      <Button variant="ghost" size="icon" className="h-9 w-9" aria-label="Próximo mês" onClick={() => onChange(addMonthsToYm(value, 1))}>
+      <Button
+        variant="ghost"
+        size="icon"
+        className="h-9 w-9"
+        aria-label="Próximo mês"
+        disabled={max !== undefined && value >= max}
+        onClick={() => onChange(addMonthsToYm(value, 1))}
+      >
         <ChevronRight aria-hidden className="h-4 w-4" strokeWidth={1.75} />
       </Button>
     </div>
