@@ -1,6 +1,7 @@
 import { endOfMonth, monthOf, startOfMonth, todayInSaoPaulo, type TransactionDTO, type TransactionType, type YearMonth } from '@fincontrol/shared';
 import { ArrowLeftRight, Plus, Search } from 'lucide-react';
 import { useDeferredValue, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router';
 import { Button } from '../../components/ui/button';
 import { Input, Select } from '../../components/ui/field';
 import { MonthPicker } from '../../components/ui/month-picker';
@@ -19,7 +20,10 @@ type TypeFilter = 'all' | TransactionType;
 
 export default function TransactionsPage() {
   const today = todayInSaoPaulo();
-  const [month, setMonth] = useState<YearMonth>(monthOf(today));
+  // `?mes=AAAA-MM` abre no mês pedido (o "Pagar" das notificações leva ao mês do vencimento).
+  const [params] = useSearchParams();
+  const requested = params.get('mes');
+  const [month, setMonth] = useState<YearMonth>(requested && /^\d{4}-(0[1-9]|1[0-2])$/.test(requested) ? requested : monthOf(today));
   const [type, setType] = useState<TypeFilter>('all');
   const [status, setStatus] = useState<'' | 'pending' | 'paid'>('');
   const [accountId, setAccountId] = useState('');

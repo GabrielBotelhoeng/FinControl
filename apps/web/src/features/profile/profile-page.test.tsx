@@ -1,11 +1,13 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
+import { ApiError } from '../../lib/api-client';
 import { fakeApi, fakeGateway, signedIn } from '../../test/fakes';
 import { renderApp } from '../../test/render';
 import ProfilePage from './profile-page';
 
-const profile = { id: 'u1', name: 'Ana Lúcia', email: 'ana@exemplo.com', isDemo: false, theme: 'dark' };
+const prefs = { bills: true, invoices: true, budget: true, goals: true, billDays: 3 };
+const profile = { id: 'u1', name: 'Ana Lúcia', email: 'ana@exemplo.com', isDemo: false, theme: 'dark', notificationPrefs: prefs };
 
 describe('ProfilePage', () => {
   it('trocar o tema aplica na hora e salva no perfil', async () => {
@@ -39,5 +41,38 @@ describe('ProfilePage', () => {
   it('tem o link "Gerenciar categorias" (a barra do celular não tem mais Categorias)', async () => {
     renderApp(<ProfilePage />, { api: fakeApi({ 'GET /me': profile }) });
     expect(await screen.findByRole('link', { name: 'Gerenciar categorias' })).toHaveAttribute('href', '/categorias');
+  });
+
+  it('preferências de notificação (N7): desligar um tipo e mudar a antecedência salvam o objeto inteiro', async () => {
+    // Servidor falso com estado, como o real: a busca depois de salvar traz o que foi gravado.
+    let saved = profile;
+    const api = fakeApi({
+      'GET /me': () => saved,
+      'PATCH /me': (_p: string, body: unknown) => (saved = { ...saved, ...(body as object) }),
+      'GET /notifications': { items: [], unreadCount: 0 },
+    });
+    renderApp(<ProfilePage />, { api });
+    const panel = await screen.findByRole('region', { name: 'Notificações' });
+    await userEvent.click(within(panel).getByRole('checkbox', { name: /Orçamento/ }));
+    expect(api.patch).toHaveBeenLastCalledWith('/me', { notificationPrefs: { ...prefs, budget: false } });
+    await userEvent.click(within(panel).getByRole('radio', { name: '7 dias' }));
+    expect(api.patch).toHaveBeenLastCalledWith('/me', { notificationPrefs: { ...prefs, budget: false, billDays: 7 } });
+  });
+
+  it('a caixa muda na hora e volta se o salvamento falhar', async () => {
+    let reject: (e: Error) => void = () => {};
+    const api = fakeApi({
+      'GET /me': profile,
+      'PATCH /me': () => new Promise((_resolve, fail) => (reject = fail)),
+      'GET /notifications': { items: [], unreadCount: 0 },
+    });
+    renderApp(<ProfilePage />, { api });
+    const box = within(await screen.findByRole('region', { name: 'Notificações' })).getByRole('checkbox', { name: /Metas/ });
+    await userEvent.click(box);
+    // Com o PATCH ainda pendente, a caixa já mudou e o pedido leva goals: false.
+    expect(box).not.toBeChecked();
+    expect(api.patch).toHaveBeenCalledWith('/me', { notificationPrefs: { ...prefs, goals: false } });
+    reject(new ApiError(500, 'Erro', 'Falhou.'));
+    await waitFor(() => expect(box).toBeChecked());
   });
 });

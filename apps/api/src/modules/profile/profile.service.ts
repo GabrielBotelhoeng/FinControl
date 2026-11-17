@@ -1,14 +1,14 @@
-import type { ProfileDTO, ThemePreference, UpdateProfileInput } from '@fincontrol/shared';
+import { notificationPrefs, type ProfileDTO, type ThemePreference, type UpdateProfileInput } from '@fincontrol/shared';
 import { NotFoundError } from '../../http/errors';
 import type { AuthAdmin } from '../../infra/auth-admin';
 import type { AuthClaims } from '../../infra/token-verifier';
 import type { ProfileRepository } from './profile.repository';
 import type { Provisioner } from './provisioning';
 
-type ProfileRecord = { id: string; name: string; isDemo: boolean; theme: ThemePreference };
+type ProfileRecord = { id: string; name: string; isDemo: boolean; theme: ThemePreference; notificationPrefs: unknown };
 
 const toDTO = (p: ProfileRecord, email: string | null): ProfileDTO => ({
-  id: p.id, name: p.name, email, isDemo: p.isDemo, theme: p.theme,
+  id: p.id, name: p.name, email, isDemo: p.isDemo, theme: p.theme, notificationPrefs: notificationPrefs(p.notificationPrefs),
 });
 
 export function createProfileService(deps: { repo: ProfileRepository; provisioner: Provisioner; authAdmin: AuthAdmin }) {

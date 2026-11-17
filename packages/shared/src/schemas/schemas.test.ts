@@ -199,3 +199,15 @@ describe('reportQuerySchema (R1)', () => {
     expect(paths(reportQuerySchema.safeParse({ from: '0001-01', to: '0001-01' }))).toEqual(['from']);
   });
 });
+
+describe('notificações (N7)', () => {
+  it('preferências exigem o objeto inteiro e antecedência de 1, 3 ou 7 dias', async () => {
+    const { notificationPrefsSchema, markReadSchema, updateProfileSchema } = await import('./index');
+    const ok = { bills: true, invoices: false, budget: true, goals: true, billDays: 7 };
+    expect(notificationPrefsSchema.safeParse(ok).success).toBe(true);
+    expect(paths(notificationPrefsSchema.safeParse({ ...ok, billDays: 5 }))).toEqual(['billDays']);
+    expect(updateProfileSchema.safeParse({ notificationPrefs: ok }).success).toBe(true);
+    expect(markReadSchema.safeParse({ keys: [] }).success).toBe(false);
+    expect(markReadSchema.safeParse({ keys: ['due:a:2026-11-20'] }).success).toBe(true);
+  });
+});

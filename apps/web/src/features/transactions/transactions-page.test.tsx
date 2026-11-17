@@ -1,4 +1,4 @@
-import { screen, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import { fakeApi } from '../../test/fakes';
@@ -22,6 +22,16 @@ function api(item: Record<string, unknown>) {
 }
 
 describe('TransactionsPage', () => {
+  it('?mes=AAAA-MM abre no mês pedido (o "Pagar" das notificações); valor inválido cai no mês atual', async () => {
+    const client = api({});
+    const { unmount } = renderApp(<TransactionsPage />, { api: client, route: '/lancamentos?mes=2026-10', path: '/lancamentos' });
+    await waitFor(() => expect(client.get).toHaveBeenCalledWith('/transactions', expect.objectContaining({ from: '2026-10-01', to: '2026-10-31' })));
+    unmount();
+    const other = api({});
+    renderApp(<TransactionsPage />, { api: other, route: '/lancamentos?mes=2026-13', path: '/lancamentos' });
+    await waitFor(() => expect(other.get).toHaveBeenCalledWith('/transactions', expect.not.objectContaining({ from: '2026-13-01' })));
+  });
+
   it('lista com valor sinalizado e marca como pago', async () => {
     const client = api({});
     renderApp(<TransactionsPage />, { api: client });

@@ -12,6 +12,7 @@ import { Segmented } from '../../components/ui/segmented';
 import { ErrorState, Skeleton } from '../../components/ui/states';
 import { useAuth } from '../auth/auth-context';
 import { useProfile, useUpdateProfile } from './api';
+import { NotificationSettings } from './notification-settings';
 import { DeleteAccountDialog } from './delete-account-dialog';
 
 function NameForm({ initial }: { initial: string }) {
@@ -72,6 +73,7 @@ export default function ProfilePage() {
               />
             </div>
           </Panel>
+          <NotificationSettings prefs={profile.data.notificationPrefs} />
           <Panel className="flex flex-wrap items-center justify-between gap-4 p-6">
             <div>
               <h2 className="font-semibold">Categorias</h2>

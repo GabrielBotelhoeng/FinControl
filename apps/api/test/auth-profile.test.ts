@@ -33,7 +33,9 @@ describe('provisionamento e /me', () => {
     const user = await newUser({ name: 'Ana Souza', email: 'ana@exemplo.com' });
     const first = await request(app).get('/api/v1/me').set(user.auth);
     expect(first.status).toBe(200);
-    expect(first.body).toEqual({ id: user.id, name: 'Ana Souza', email: 'ana@exemplo.com', isDemo: false, theme: 'system' });
+    expect(first.body).toEqual({ id: user.id, name: 'Ana Souza', email: 'ana@exemplo.com', isDemo: false, theme: 'system',
+      notificationPrefs: { bills: true, invoices: true, budget: true, goals: true, billDays: 3 },
+    });
     await request(app).get('/api/v1/me').set(user.auth);
     expect(await testDb.category.count({ where: { userId: user.id } })).toBe(15);
     expect(await testDb.category.count({ where: { userId: user.id, type: 'income' } })).toBe(4);
