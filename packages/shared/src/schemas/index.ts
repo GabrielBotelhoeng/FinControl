@@ -7,3 +7,4 @@ export * from './profile';
 export * from './problem';
 export * from './loans';
 export * from './planning';
+export * from './reports';
