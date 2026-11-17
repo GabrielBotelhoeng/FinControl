@@ -53,12 +53,18 @@ export function createCategoriesRepository(db: Db) {
       return transactions + recurrences > 0;
     },
 
+    /**
+     * Move lançamentos e recorrências e apaga a origem. O limite da origem passa para o destino quando ele não
+     * tem limite; quando tem, o destino fica com o dele (spec do sub-projeto 4, R13 a).
+     */
     async reassignAndDelete(userId: string, fromId: string, toId: string): Promise<void> {
-      await db.$transaction([
-        db.transaction.updateMany({ where: { userId, categoryId: fromId }, data: { categoryId: toId } }),
-        db.recurrence.updateMany({ where: { userId, categoryId: fromId }, data: { categoryId: toId } }),
-        db.category.delete({ where: { id: fromId, userId } }),
-      ]);
+      await db.$transaction(async (tx) => {
+        await tx.transaction.updateMany({ where: { userId, categoryId: fromId }, data: { categoryId: toId } });
+        await tx.recurrence.updateMany({ where: { userId, categoryId: fromId }, data: { categoryId: toId } });
+        const targetBudget = await tx.budget.findUnique({ where: { userId_categoryId: { userId, categoryId: toId } } });
+        if (!targetBudget) await tx.budget.updateMany({ where: { userId, categoryId: fromId }, data: { categoryId: toId } });
+        await tx.category.delete({ where: { id: fromId, userId } });
+      });
     },
   };
 }

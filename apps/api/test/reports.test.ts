@@ -223,10 +223,12 @@ describe('relatórios', () => {
 });
 
 /** Junta o corpo binário da resposta (o supertest só bufferiza texto e JSON por padrão). */
-function binary(res: NodeJS.ReadableStream, done: (err: Error | null, body: Buffer) => void) {
+function binary(res: unknown, done: (err: Error | null, body: Buffer) => void) {
+  // No Node, o "Response" que o superagent entrega ao parser é o stream da resposta HTTP.
+  const stream = res as NodeJS.ReadableStream;
   const chunks: Buffer[] = [];
-  res.on('data', (c: Buffer) => chunks.push(c));
-  res.on('end', () => done(null, Buffer.concat(chunks)));
+  stream.on('data', (c: Buffer) => chunks.push(c));
+  stream.on('end', () => done(null, Buffer.concat(chunks)));
 }
 
 /** Texto desenhado nas páginas: o pdf-lib grava cada trecho como `<hex> Tj` em WinAnsi, com as streams comprimidas. */

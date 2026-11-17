@@ -73,9 +73,11 @@ export function createBudgetsService(deps: BudgetsServiceDeps) {
       };
     },
 
-    async set(userId: string, categoryId: string, limit: number): Promise<void> {
-      await getOwnedExpenseCategory(userId, categoryId);
-      await deps.repo.upsert(userId, categoryId, limit);
+    /** Devolve o id gravado no banco, e não o texto da URL (spec do sub-projeto 4, R13 b). */
+    async set(userId: string, categoryId: string, limit: number): Promise<string> {
+      const category = await getOwnedExpenseCategory(userId, categoryId);
+      await deps.repo.upsert(userId, category.id, limit);
+      return category.id;
     },
 
     async remove(userId: string, categoryId: string): Promise<void> {
