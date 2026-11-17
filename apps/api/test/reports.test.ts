@@ -1,4 +1,6 @@
 import type { ReportDTO } from '@fincontrol/shared';
+import { inflateSync } from 'node:zlib';
+import { PDFDocument } from 'pdf-lib';
 import request from 'supertest';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { buildTestApp } from './helpers/app';
@@ -185,4 +187,66 @@ describe('relatórios', () => {
     expect(res.text.slice(1).trimEnd().split('\r\n')).toHaveLength(1);
     expect((await request(app).get('/api/v1/reports/export.csv?from=2026-12&to=2026-12').set(other.auth)).status).toBe(422);
   });
+
+  it('PDF (R10): abre no pdf-lib, tem o resumo, as categorias, as dívidas e aguenta emoji na descrição', async () => {
+    const user = await newUser();
+    const { checking, food } = await scenario(user);
+    await createTransaction(app, user, {
+      type: 'expense', amount: 4200, description: 'Pizza 🍕 com amigos', accountId: checking.id, categoryId: food, nature: 'variable',
+      dueDate: '2026-11-07', status: 'paid', paidDate: '2026-11-07',
+    });
+    const res = await request(app).get('/api/v1/reports/export.pdf?from=2026-11&to=2026-11').set(user.auth).buffer(true).parse(binary);
+    expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toBe('application/pdf');
+    expect(res.headers['content-disposition']).toBe('attachment; filename="fincontrol-relatorio-2026-11.pdf"');
+    const bytes = res.body as Buffer;
+    expect(bytes.subarray(0, 5).toString('latin1')).toBe('%PDF-');
+    const doc = await PDFDocument.load(bytes);
+    expect(doc.getPageCount()).toBeGreaterThanOrEqual(1);
+    expect(doc.getTitle()).toBe('Relatório financeiro — novembro de 2026');
+    const text = pdfText(bytes);
+    for (const piece of ['Relatório financeiro', 'Resumo', 'Gastos por categoria', 'Alimentação', 'Evolução das dívidas', 'Maiores despesas', 'Pizza  com amigos', 'Saldo das contas em 30/11/2026', 'Página 1 de']) {
+      expect(text, piece).toContain(piece);
+    }
+    expect(text).toContain('R$\u00a05.000,00');
+  });
+
+  it('PDF de um período sem nada ainda sai, com os estados vazios', async () => {
+    const user = await newUser();
+    const res = await request(app).get('/api/v1/reports/export.pdf?from=2026-01&to=2026-11').set(user.auth).buffer(true).parse(binary);
+    expect(res.status).toBe(200);
+    const text = pdfText(res.body as Buffer);
+    expect(text).toContain('janeiro a novembro de 2026');
+    expect(text).toContain('Nada pago no período.');
+    expect((await request(app).get('/api/v1/reports/export.pdf?from=2026-12&to=2026-12').set(user.auth)).status).toBe(422);
+  });
 });
+
+/** Junta o corpo binário da resposta (o supertest só bufferiza texto e JSON por padrão). */
+function binary(res: NodeJS.ReadableStream, done: (err: Error | null, body: Buffer) => void) {
+  const chunks: Buffer[] = [];
+  res.on('data', (c: Buffer) => chunks.push(c));
+  res.on('end', () => done(null, Buffer.concat(chunks)));
+}
+
+/** Texto desenhado nas páginas: o pdf-lib grava cada trecho como `<hex> Tj` em WinAnsi, com as streams comprimidas. */
+function pdfText(pdf: Buffer): string {
+  const raw = pdf.toString('latin1');
+  const pieces: string[] = [];
+  for (const m of raw.matchAll(/stream\r?\n([\s\S]*?)\r?\nendstream/g)) {
+    const data = Buffer.from(m[1]!, 'latin1');
+    let content: string;
+    try {
+      content = inflateSync(data).toString('latin1');
+    } catch {
+      content = data.toString('latin1');
+    }
+    for (const t of content.matchAll(/<([0-9A-Fa-f]*)> Tj/g)) pieces.push(winAnsi(Buffer.from(t[1]!, 'hex')));
+  }
+  return pieces.join('\n');
+}
+
+/** Latin-1 cobre os acentos; os extras do WinAnsi usados aqui são o travessão e as reticências. */
+function winAnsi(bytes: Buffer): string {
+  return [...bytes].map((b) => (b === 0x97 ? '—' : b === 0x96 ? '–' : b === 0x85 ? '…' : b === 0x95 ? '•' : String.fromCharCode(b))).join('');
+}

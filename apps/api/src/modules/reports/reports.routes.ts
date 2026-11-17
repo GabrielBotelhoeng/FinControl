@@ -21,5 +21,10 @@ export function reportsRouter(service: ReportsService): Router {
     const csv = transactionsCsv(await service.csvRows(userIdOf(res), from, to));
     download(res, 'text/csv; charset=utf-8', `fincontrol-lancamentos-${periodSlug(from, to)}.csv`).send(csv);
   });
+  r.get('/export.pdf', async (req, res) => {
+    const { from, to } = parse(reportQuerySchema, req.query);
+    const pdf = await service.pdf(userIdOf(res), from, to);
+    download(res, 'application/pdf', `fincontrol-relatorio-${periodSlug(from, to)}.pdf`).send(Buffer.from(pdf));
+  });
   return r;
 }

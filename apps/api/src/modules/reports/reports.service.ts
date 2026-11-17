@@ -6,6 +6,7 @@ import { savingsRate } from '../../domain/health';
 import { UnprocessableError } from '../../http/errors';
 import type { RecurrencesService } from '../recurrences/recurrences.service';
 import { debtsAt, type DebtsReader } from './debts';
+import { renderReportPdf } from './report-pdf';
 import type { CsvRow, ReportsRepository } from './reports.repository';
 
 const TOP_EXPENSES = 10;
@@ -46,59 +47,66 @@ export function createReportsService(deps: ReportsServiceDeps) {
       .sort((a, b) => b.total - a.total || b.previous - a.previous || a.name.localeCompare(b.name, 'pt-BR'));
   }
 
+  async function build(userId: string, from: YearMonth, to: YearMonth): Promise<ReportDTO> {
+    const period = checkPeriod(from, to);
+    const range: [string, string] = [startOfMonth(from), endOfMonth(to)];
+    const previousRange: [string, string] = [startOfMonth(period.previousFrom), endOfMonth(period.previousTo)];
+    const series = seriesMonths(from, to);
+    const balanceDate = endOfMonth(to);
+
+    const [expenseByCategory, incomeByCategory, monthTotals, previousTotals, debtSources, topExpenses, balances] = await Promise.all([
+      categoryRows(userId, 'expense', range, previousRange),
+      categoryRows(userId, 'income', range, previousRange),
+      repo.monthTotals(userId, startOfMonth(series[0]!), endOfMonth(to)),
+      repo.monthTotals(userId, ...previousRange),
+      deps.debts.load(userId),
+      repo.topExpenses(userId, ...range, TOP_EXPENSES),
+      repo.balances(userId, balanceDate),
+    ]);
+
+    const sumIn = (totals: Map<string, { income: number; expense: number }>, months: (m: string) => boolean) => {
+      let income = 0;
+      let expense = 0;
+      for (const [m, t] of totals) {
+        if (!months(m)) continue;
+        income += t.income;
+        expense += t.expense;
+      }
+      return { income, expense };
+    };
+    const current = sumIn(monthTotals, (m) => m >= from && m <= to);
+    const previous = sumIn(previousTotals, () => true);
+
+    return {
+      period: { from, to, ...period },
+      totals: {
+        income: current.income,
+        expense: current.expense,
+        net: current.income - current.expense,
+        savingsRate: savingsRate(current.income, current.expense),
+        previousIncome: previous.income,
+        previousExpense: previous.expense,
+        incomeChange: changeRatio(current.income, previous.income),
+        expenseChange: changeRatio(current.expense, previous.expense),
+      },
+      expenseByCategory,
+      incomeByCategory,
+      monthly: series.map((month) => {
+        const t = monthTotals.get(month) ?? { income: 0, expense: 0 };
+        return { month, income: t.income, expense: t.expense, net: t.income - t.expense };
+      }),
+      debts: series.map((month) => ({ month, ...debtsAt(debtSources, endOfMonth(month)) })),
+      topExpenses,
+      balances: { date: balanceDate, items: balances, total: balances.reduce((s, b) => s + b.balance, 0) },
+    };
+  }
+
   return {
-    async build(userId: string, from: YearMonth, to: YearMonth): Promise<ReportDTO> {
-      const period = checkPeriod(from, to);
-      const range: [string, string] = [startOfMonth(from), endOfMonth(to)];
-      const previousRange: [string, string] = [startOfMonth(period.previousFrom), endOfMonth(period.previousTo)];
-      const series = seriesMonths(from, to);
-      const balanceDate = endOfMonth(to);
+    build,
 
-      const [expenseByCategory, incomeByCategory, monthTotals, previousTotals, debtSources, topExpenses, balances] = await Promise.all([
-        categoryRows(userId, 'expense', range, previousRange),
-        categoryRows(userId, 'income', range, previousRange),
-        repo.monthTotals(userId, startOfMonth(series[0]!), endOfMonth(to)),
-        repo.monthTotals(userId, ...previousRange),
-        deps.debts.load(userId),
-        repo.topExpenses(userId, ...range, TOP_EXPENSES),
-        repo.balances(userId, balanceDate),
-      ]);
-
-      const sumIn = (totals: Map<string, { income: number; expense: number }>, months: (m: string) => boolean) => {
-        let income = 0;
-        let expense = 0;
-        for (const [m, t] of totals) {
-          if (!months(m)) continue;
-          income += t.income;
-          expense += t.expense;
-        }
-        return { income, expense };
-      };
-      const current = sumIn(monthTotals, (m) => m >= from && m <= to);
-      const previous = sumIn(previousTotals, () => true);
-
-      return {
-        period: { from, to, ...period },
-        totals: {
-          income: current.income,
-          expense: current.expense,
-          net: current.income - current.expense,
-          savingsRate: savingsRate(current.income, current.expense),
-          previousIncome: previous.income,
-          previousExpense: previous.expense,
-          incomeChange: changeRatio(current.income, previous.income),
-          expenseChange: changeRatio(current.expense, previous.expense),
-        },
-        expenseByCategory,
-        incomeByCategory,
-        monthly: series.map((month) => {
-          const t = monthTotals.get(month) ?? { income: 0, expense: 0 };
-          return { month, income: t.income, expense: t.expense, net: t.income - t.expense };
-        }),
-        debts: series.map((month) => ({ month, ...debtsAt(debtSources, endOfMonth(month)) })),
-        topExpenses,
-        balances: { date: balanceDate, items: balances, total: balances.reduce((s, b) => s + b.balance, 0) },
-      };
+    /** R10: o mesmo relatório da tela, em PDF. */
+    async pdf(userId: string, from: YearMonth, to: YearMonth): Promise<Uint8Array> {
+      return renderReportPdf(await build(userId, from, to), deps.clock());
     },
 
     /** R9: lançamentos do período, pagos e pendentes. As recorrências do período são materializadas antes. */
