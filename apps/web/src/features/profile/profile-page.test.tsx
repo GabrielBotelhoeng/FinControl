@@ -60,10 +60,19 @@ describe('ProfilePage', () => {
   });
 
   it('a caixa muda na hora e volta se o salvamento falhar', async () => {
-    const api = fakeApi({ 'GET /me': profile, 'PATCH /me': () => new ApiError(500, 'Erro', 'Falhou.') });
+    let reject: (e: Error) => void = () => {};
+    const api = fakeApi({
+      'GET /me': profile,
+      'PATCH /me': () => new Promise((_resolve, fail) => (reject = fail)),
+      'GET /notifications': { items: [], unreadCount: 0 },
+    });
     renderApp(<ProfilePage />, { api });
     const box = within(await screen.findByRole('region', { name: 'Notificações' })).getByRole('checkbox', { name: /Metas/ });
     await userEvent.click(box);
+    // Com o PATCH ainda pendente, a caixa já mudou e o pedido leva goals: false.
+    expect(box).not.toBeChecked();
+    expect(api.patch).toHaveBeenCalledWith('/me', { notificationPrefs: { ...prefs, goals: false } });
+    reject(new ApiError(500, 'Erro', 'Falhou.'));
     await waitFor(() => expect(box).toBeChecked());
   });
 });

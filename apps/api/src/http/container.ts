@@ -73,7 +73,7 @@ export function buildContainer(deps: AppDeps) {
   });
   const notifications = createNotificationsService({
     repo: createNotificationsRepository(deps.db), profileRepo: createProfileRepository(deps.db), recurrences,
-    cards: { accountsRepo, cards, installmentTotalsByAccount: dashboardRepo.installmentTotalsByAccount }, budgets, goals, clock: deps.clock,
+    cards: { accountsRepo, cards, installmentTotalsByAccount: dashboardRepo.installmentTotalsByAccount }, budgets, goals, logger: deps.logger, clock: deps.clock,
   });
   const reports = createReportsService({ repo: createReportsRepository(deps.db), debts, recurrences, clock: deps.clock });
   const demo = createDemoService({

@@ -28,7 +28,10 @@ test('demo: o sino mostra os não lidos, a ação marca como lido e "marcar toda
 
   // Critério 5: desligar "Orçamento" no Perfil tira esses avisos.
   await page.goto('/perfil');
+  // Espera o PATCH terminar antes de navegar: a navegação poderia cortar o salvamento.
+  const saved = page.waitForResponse((r) => r.request().method() === 'PATCH' && r.url().endsWith('/me'));
   await page.getByRole('region', { name: 'Notificações' }).getByRole('checkbox', { name: /Orçamento/ }).uncheck();
+  expect((await saved).ok()).toBe(true);
   await page.goto('/notificacoes');
   await expect(page.getByRole('list', { name: 'Notificações' })).not.toContainText('limite');
 });

@@ -1,8 +1,9 @@
 import type { NotificationDTO, NotificationListDTO } from '@fincontrol/shared';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { fakeApi } from '../../test/fakes';
+import { Link } from 'react-router';
 import { renderApp } from '../../test/render';
 import { NotificationBell } from './bell';
 import NotificationsPage from './notifications-page';
@@ -41,6 +42,31 @@ describe('NotificationBell (N9)', () => {
     const bell = await screen.findByRole('link', { name: 'Notificações, 2 não lidas' });
     expect(bell).toHaveAttribute('href', '/notificacoes');
     expect(bell).toHaveTextContent('2');
+  });
+
+  afterEach(() => vi.useRealTimers());
+
+  it('N10: troca de tela busca de novo só com a lista velha (mais de 60 s); o tempo passar sozinho não busca', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-11-17T12:00:00Z'));
+    const client = api();
+    const calls = () => client.get.mock.calls.filter(([path]) => path === '/notifications').length;
+    renderApp(
+      <>
+        <NotificationBell />
+        <Link to="/a">Ir para A</Link>
+        <Link to="/b">Ir para B</Link>
+      </>,
+      { api: client },
+    );
+    await screen.findByRole('link', { name: 'Notificações, 2 não lidas' });
+    expect(calls()).toBe(1);
+    await userEvent.click(screen.getByRole('link', { name: 'Ir para A' }));
+    expect(calls()).toBe(1);
+    vi.setSystemTime(new Date('2026-11-17T12:01:30Z'));
+    expect(calls()).toBe(1);
+    await userEvent.click(screen.getByRole('link', { name: 'Ir para B' }));
+    await waitFor(() => expect(calls()).toBe(2));
   });
 
   it('acima de 9 mostra "9+"; sem não lidos, sem selo', async () => {

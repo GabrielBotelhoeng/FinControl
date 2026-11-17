@@ -8,6 +8,7 @@ import { cardDebt } from '../dashboard/dashboard.cards';
 import type { GoalsService } from '../goals/goals.service';
 import type { ProfileRepository } from '../profile/profile.repository';
 import type { RecurrencesService } from '../recurrences/recurrences.service';
+import type { Logger } from '../../infra/logger';
 import type { NotificationsRepository } from './notifications.repository';
 
 const INACTIVE_DAYS = 60;
@@ -21,6 +22,7 @@ export type NotificationsServiceDeps = {
   cards: CardDebtDeps;
   budgets: Pick<BudgetsService, 'getMonth'>;
   goals: Pick<GoalsService, 'list'>;
+  logger: Pick<Logger, 'error'>;
   clock: () => Date;
 };
 
@@ -34,13 +36,23 @@ export function createNotificationsService(deps: NotificationsServiceDeps) {
     const profile = await deps.profileRepo.find(userId);
     const prefs = notificationPrefs(profile?.notificationPrefs);
     const until = addDays(today, prefs.billDays);
-    if (prefs.bills) await deps.recurrences.materialize(userId, until);
+    // Uma fonte com erro não derruba as outras: ela sai vazia desta vez e o erro vai para o log.
+    const safe = <T>(source: string, run: () => Promise<T>, fallback: T): Promise<T> =>
+      run().catch((err: unknown) => {
+        deps.logger.error({ err, source }, 'Notificações: fonte falhou; seguindo sem ela');
+        return fallback;
+      });
 
     const [bills, debt, budget, goals] = await Promise.all([
-      prefs.bills ? deps.repo.pendingBills(userId, until) : [],
-      prefs.invoices ? cardDebt(deps.cards, userId, current) : null,
-      prefs.budget ? deps.budgets.getMonth(userId, current) : null,
-      prefs.goals ? deps.goals.list(userId) : [],
+      prefs.bills
+        ? safe('bills', async () => {
+            await deps.recurrences.materialize(userId, until);
+            return deps.repo.pendingBills(userId, until);
+          }, [])
+        : [],
+      prefs.invoices ? safe('invoices', () => cardDebt(deps.cards, userId, current), null) : null,
+      prefs.budget ? safe('budget', () => deps.budgets.getMonth(userId, current), null) : null,
+      prefs.goals ? safe('goals', () => deps.goals.list(userId), []) : [],
     ]);
 
     const list: Candidate[] = [];

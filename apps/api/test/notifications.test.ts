@@ -1,6 +1,9 @@
 import type { NotificationListDTO } from '@fincontrol/shared';
 import request from 'supertest';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { createNotificationsRepository } from '../src/modules/notifications/notifications.repository';
+import { createNotificationsService, type NotificationsServiceDeps } from '../src/modules/notifications/notifications.service';
+import { createProfileRepository } from '../src/modules/profile/profile.repository';
 import { buildTestApp, FIXED_NOW } from './helpers/app';
 import { newUser, type TestUser } from './helpers/auth';
 import { resetDb, testDb } from './helpers/db';
@@ -156,5 +159,27 @@ describe('notificações', () => {
     expect((await list(user)).unreadCount).toBe(1);
     expect((await request(app).post('/api/v1/notifications/read').set(user.auth).send({ keys: [] })).status).toBe(400);
     expect((await request(app).get('/api/v1/notifications')).status).toBe(401);
+  });
+
+  it('uma fonte com erro não derruba as outras: as contas continuam e o erro vai para o log', async () => {
+    const { user, bill } = await scenario();
+    await bill('Aluguel', 180000, '2026-11-12');
+    const boom = async (): Promise<never> => {
+      throw new Error('fora do ar');
+    };
+    const logger = { error: vi.fn() };
+    const service = createNotificationsService({
+      repo: createNotificationsRepository(testDb),
+      profileRepo: createProfileRepository(testDb),
+      recurrences: { materialize: async () => {} },
+      cards: { accountsRepo: { list: boom }, cards: { listInvoices: boom }, installmentTotalsByAccount: boom } as unknown as NotificationsServiceDeps['cards'],
+      budgets: { getMonth: boom },
+      goals: { list: boom },
+      logger,
+      clock: () => FIXED_NOW,
+    });
+    const result = await service.list(user.id);
+    expect(result.items.map((i) => i.title)).toEqual(['Aluguel']);
+    expect(logger.error.mock.calls.map((c) => (c[0] as { source: string }).source).sort()).toEqual(['budget', 'goals', 'invoices']);
   });
 });
