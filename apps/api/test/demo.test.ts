@@ -126,7 +126,7 @@ describe('limpeza agendada das demos', () => {
     await profile(false, 30);
     const res = await request(app).get('/api/v1/internal/cron/cleanup-demo').set('Authorization', `Bearer ${SECRET}`);
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({ deleted: 1 });
+    expect(res.body).toEqual({ deleted: 1, notificationsPurged: 0 });
     expect(authAdmin.deleted).toEqual([oldDemo]);
     expect(await testDb.profile.count()).toBe(2);
   });

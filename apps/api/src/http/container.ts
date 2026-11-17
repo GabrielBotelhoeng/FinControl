@@ -20,6 +20,8 @@ import { createLoansService } from '../modules/loans/loans.service';
 import { createProfileRepository } from '../modules/profile/profile.repository';
 import { createProfileService } from '../modules/profile/profile.service';
 import { createProvisioner } from '../modules/profile/provisioning';
+import { createNotificationsRepository } from '../modules/notifications/notifications.repository';
+import { createNotificationsService } from '../modules/notifications/notifications.service';
 import { createDebtsReader } from '../modules/reports/debts';
 import { createReportsRepository } from '../modules/reports/reports.repository';
 import { createReportsService } from '../modules/reports/reports.service';
@@ -65,8 +67,13 @@ export function buildContainer(deps: AppDeps) {
   const cardsRepo = createCardsRepository(deps.db);
   const cards = createCardsService({ repo: cardsRepo, accountsRepo, accounts, transactionsRepo, clock: deps.clock });
   const debts = createDebtsReader(deps.db);
+  const dashboardRepo = createDashboardRepository(deps.db);
   const dashboard = createDashboardService({
-    repo: createDashboardRepository(deps.db), transactions: transactionsRepo, recurrences, accountsRepo, cards, loansRepo, budgets, debts, clock: deps.clock,
+    repo: dashboardRepo, transactions: transactionsRepo, recurrences, accountsRepo, cards, loansRepo, budgets, debts, clock: deps.clock,
+  });
+  const notifications = createNotificationsService({
+    repo: createNotificationsRepository(deps.db), profileRepo: createProfileRepository(deps.db), recurrences,
+    cards: { accountsRepo, cards, installmentTotalsByAccount: dashboardRepo.installmentTotalsByAccount }, budgets, goals, clock: deps.clock,
   });
   const reports = createReportsService({ repo: createReportsRepository(deps.db), debts, recurrences, clock: deps.clock });
   const demo = createDemoService({
@@ -91,7 +98,7 @@ export function buildContainer(deps: AppDeps) {
   return {
     provisioner, profile, accountsRepo, accounts, categoriesRepo, categories,
     transactionsRepo, validateRefs, recurrencesRepo, recurrences, transactions, dashboard, demo,
-    cardsRepo, cards, bankRates, loansRepo, loans, budgets, goalsRepo, goals, debts, reports,
+    cardsRepo, cards, bankRates, loansRepo, loans, budgets, goalsRepo, goals, debts, reports, notifications,
   };
 }
 
