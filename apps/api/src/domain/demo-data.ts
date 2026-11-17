@@ -1,5 +1,5 @@
 import {
-  addMonthsToYm, dateInMonth, endOfMonth, installmentDate, minDate as earliest, invoiceDates, invoiceFor, minDate, monthOf, splitInstallments,
+  addDays, addMonthsToYm, dateInMonth, endOfMonth, installmentDate, minDate as earliest, invoiceDates, invoiceFor, minDate, monthOf, splitInstallments,
   type AccountType, type DateOnly, type LoanKind, type TransactionNature, type TransactionStatus, type TransactionType, type YearMonth,
 } from '@fincontrol/shared';
 
@@ -188,6 +188,12 @@ export function buildDemoData(today: DateOnly, seed = 42): DemoPlan {
     categoryName: 'Transporte', nature: 'fixed', status: 'pending', dueDate: endOfMonth(currentYm), paidDate: null,
     invoiceMonth: null, installmentGroupId: null, installmentNumber: null, installmentTotal: null,
   });
+  // Sub-projeto 5 (N11): uma conta vencendo em 2 dias, para a central mostrar "vence em 2 dias". Categoria sem limite.
+  transactions.push({
+    type: 'expense', amount: 18990, description: 'Conta de luz', accountKey: 'checking', destinationAccountKey: null,
+    categoryName: 'Contas', nature: 'variable', status: 'pending', dueDate: addDays(today, 2), paidDate: null,
+    invoiceMonth: null, installmentGroupId: null, installmentNumber: null, installmentTotal: null,
+  });
 
   // --- Cartão: compras nas faturas de M-6 até a aberta (M = invoiceFor(hoje)), pagamentos por transferência e
   // uma compra parcelada em andamento (decisão do controlador). Reaproveita exatamente `invoiceFor`/`invoiceDates`/
@@ -291,6 +297,15 @@ export function buildDemoData(today: DateOnly, seed = 42): DemoPlan {
     {
       name: 'Viagem de férias', targetAmount: 800000, targetDate: dateInMonth(addMonthsToYm(currentYm, 8), 1),
       createdAt: dateInMonth(addMonthsToYm(currentYm, -4), 1), contributions: [{ amount: 50000, date: dateInMonth(addMonthsToYm(currentYm, -4), 6) }],
+    },
+    // Sub-projeto 5 (N11): uma meta já concluída, para a central mostrar "Meta concluída".
+    {
+      name: 'Notebook novo', targetAmount: 300000, targetDate: dateInMonth(addMonthsToYm(currentYm, 2), 1),
+      createdAt: dateInMonth(addMonthsToYm(currentYm, -3), 1),
+      contributions: [
+        { amount: 150000, date: dateInMonth(addMonthsToYm(currentYm, -3), 6) },
+        { amount: 150000, date: depositDay(addMonthsToYm(currentYm, -1)) },
+      ],
     },
   ];
 

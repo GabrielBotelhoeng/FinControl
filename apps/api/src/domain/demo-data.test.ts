@@ -1,4 +1,4 @@
-import { addMonthsToYm, endOfMonth, monthOf, startOfMonth } from '@fincontrol/shared';
+import { addDays, addMonthsToYm, endOfMonth, monthOf, startOfMonth } from '@fincontrol/shared';
 import { describe, expect, it } from 'vitest';
 import { buildDemoData } from './demo-data';
 
@@ -21,7 +21,7 @@ describe('buildDemoData', () => {
     expect(installments.find((t) => t.status === 'pending')!.dueDate).toBe('2026-12-01');
   });
 
-  it('inclui 4 limites (Alimentação perto, Lazer estourado, Compras e Moradia dentro) e 2 metas (sub-projeto 3)', () => {
+  it('inclui 4 limites (Alimentação perto, Lazer estourado, Compras e Moradia dentro) e 3 metas (sub-projetos 3 e 5)', () => {
     const plan = buildDemoData(TODAY);
     const spent = (name: string) =>
       plan.transactions.filter((t) => t.type === 'expense' && t.categoryName === name && t.dueDate.startsWith('2026-11')).reduce((s, t) => s + t.amount, 0);
@@ -31,7 +31,9 @@ describe('buildDemoData', () => {
     expect(foodPct).toBeGreaterThanOrEqual(0.8);
     expect(foodPct).toBeLessThanOrEqual(1);
     expect(spent('Lazer') / limit('Lazer')).toBeGreaterThan(1);
-    expect(plan.goals.map((g) => g.name)).toEqual(['Reserva de emergência', 'Viagem de férias']);
+    expect(plan.goals.map((g) => g.name)).toEqual(['Reserva de emergência', 'Viagem de férias', 'Notebook novo']);
+    const notebook = plan.goals[2]!;
+    expect(notebook.contributions.reduce((sum, c) => sum + c.amount, 0)).toBe(notebook.targetAmount);
     expect(plan.goals[0]!.contributions).toHaveLength(7);
     for (const g of plan.goals) for (const c of g.contributions) expect(c.date <= TODAY).toBe(true);
   });
@@ -114,8 +116,11 @@ describe('buildDemoData', () => {
     for (const r of plan.recurrences) expect(monthOf(r.startDate)).toBe('2026-05');
   });
 
-  it('deixa um lançamento pendente no fim do mês atual', () => {
+  it('deixa pendentes o IPVA no fim do mês e a conta de luz em 2 dias (sub-projeto 5)', () => {
     const pending = buildDemoData(TODAY).transactions.filter((t) => t.status === 'pending' && !t.loanKey); // as parcelas do financiamento ficam de fora (Parte B)
-    expect(pending).toEqual([expect.objectContaining({ description: 'IPVA (parcela)', dueDate: '2026-11-30' })]);
+    expect(pending).toEqual([
+      expect.objectContaining({ description: 'IPVA (parcela)', dueDate: '2026-11-30' }),
+      expect.objectContaining({ description: 'Conta de luz', dueDate: addDays(TODAY, 2), categoryName: 'Contas' }),
+    ]);
   });
 });

@@ -57,7 +57,7 @@ describe('conta demo', () => {
     expect(budgets.items.some((i: { status: string }) => i.status === 'near')).toBe(true);
     expect(budgets.items.some((i: { status: string }) => i.status === 'over')).toBe(true);
     const goals = (await request(app).get('/api/v1/goals').set(visitor.auth)).body;
-    expect(goals.map((g: { status: string }) => g.status).sort()).toEqual(['late', 'on_track']);
+    expect(goals.map((g: { status: string }) => g.status).sort()).toEqual(['late', 'on_track', 'reached']);
     expect(summary.body.budget).toMatchObject({ overCount: 1 });
 
     const evolution = await request(app).get('/api/v1/dashboard/evolution?months=6').set(visitor.auth);
@@ -75,6 +75,13 @@ describe('conta demo', () => {
     expect(lastDebt.loans).toBe(loan.outstanding);
     expect(summary.body.debts).toEqual({ cards: summary.body.debts.cards, loans: loan.outstanding, total: summary.body.debts.cards + loan.outstanding });
     expect(summary.body.debts.cards).toBeGreaterThan(0);
+
+    // Sub-projeto 5 (N11): a central mostra todos os tipos de aviso, com a vencida no topo.
+    const notes = (await request(app).get('/api/v1/notifications').set(visitor.auth)).body;
+    const kinds = new Set(notes.items.map((n: { kind: string }) => n.kind));
+    for (const kind of ['bill_overdue', 'bill_due', 'budget_near', 'budget_over', 'goal_reached']) expect(kinds.has(kind), kind).toBe(true);
+    expect(notes.items[0].priority).toBe(1);
+    expect(notes.unreadCount).toBe(notes.items.length);
   });
 });
 
