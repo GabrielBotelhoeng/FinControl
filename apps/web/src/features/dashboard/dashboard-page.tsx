@@ -8,6 +8,7 @@ import { Panel } from '../../components/ui/panel';
 import { EmptyState, ErrorState, Skeleton } from '../../components/ui/states';
 import { formatBRL, formatMonthLabel } from '../../lib/format';
 import { BudgetCard } from './budget-card';
+import { DebtCard } from './debt-card';
 import { HealthTiles } from './health-tiles';
 import { useAccounts } from '../accounts/api';
 import { useCategories } from '../categories/api';
@@ -92,8 +93,9 @@ export default function DashboardPage() {
       {summary.data && (
         <section aria-label="Saúde financeira" className="mb-6">
           <HealthTiles health={summary.data.health} />
-          <div className="mt-4">
+          <div className="mt-4 grid gap-4 lg:grid-cols-2 [&>*]:min-w-0">
             <BudgetCard budget={summary.data.budget ?? null} />
+            <DebtCard debts={summary.data.debts ?? { cards: 0, loans: 0, total: 0 }} />
           </div>
         </section>
       )}

@@ -59,4 +59,19 @@ describe('createApiClient', () => {
     const { api } = setup(new Response(null, { status: 204 }));
     await expect(api.del('/accounts/1')).resolves.toBeUndefined();
   });
+
+  it('download devolve o arquivo como Blob, com o token no cabeçalho e não na URL (R11)', async () => {
+    const { api, fetchFn } = setup(new Response('%PDF-1.7', { status: 200, headers: { 'Content-Type': 'application/pdf' } }));
+    const blob = await api.download('/reports/export.pdf', { from: '2026-11', to: '2026-11' });
+    expect(blob.type).toBe('application/pdf');
+    expect(await blob.text()).toBe('%PDF-1.7');
+    const [url, init] = fetchFn.mock.calls[0] as unknown as [string, RequestInit];
+    expect(url).toBe('http://api.test/api/v1/reports/export.pdf?from=2026-11&to=2026-11');
+    expect(new Headers(init.headers).get('Authorization')).toBe('Bearer tok');
+  });
+
+  it('download com erro vira ApiError com a mensagem da API', async () => {
+    const { api } = setup(jsonResponse(422, { title: 'Não processável', detail: 'O relatório vai só até o mês atual.' }, 'application/problem+json'));
+    await expect(api.download('/reports/export.csv', { from: '2026-12', to: '2026-12' })).rejects.toMatchObject({ status: 422, message: 'O relatório vai só até o mês atual.' });
+  });
 });

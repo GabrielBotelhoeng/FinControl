@@ -127,4 +127,31 @@ describe('previsão dos próximos meses', () => {
     expect(res.body.map((m: { month: string }) => m.month)).toEqual(['2026-11', '2026-12', '2027-01']);
     for (const m of res.body as { expense: number }[]) expect(m.expense).toBeGreaterThanOrEqual(10000);
   });
+
+  it('R13 (b): o PUT devolve o id gravado, mesmo com o UUID da URL em maiúsculas', async () => {
+    const { user, food } = await scenario();
+    const res = await setLimit(user, food.toUpperCase(), 40000);
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ categoryId: food, limit: 40000 });
+  });
+
+  it('R13 (a): juntar categorias leva o limite da origem quando o destino não tem', async () => {
+    const { user, checking, food, fun } = await scenario();
+    await setLimit(user, fun, 30000);
+    await expense(user, checking.id, fun, 12000, '2026-11-05');
+    const del = await request(app).delete(`/api/v1/categories/${fun}?reassignTo=${food}`).set(user.auth);
+    expect(del.status).toBe(204);
+    expect(itemOf(await month(user), food)).toMatchObject({ limit: 30000, paid: 12000 });
+  });
+
+  it('R13 (a): quando as duas têm limite, o destino fica com o dele', async () => {
+    const { user, checking, food, fun } = await scenario();
+    await setLimit(user, fun, 30000);
+    await setLimit(user, food, 80000);
+    await expense(user, checking.id, fun, 12000, '2026-11-05');
+    expect((await request(app).delete(`/api/v1/categories/${fun}?reassignTo=${food}`).set(user.auth)).status).toBe(204);
+    const body = await month(user);
+    expect(itemOf(body, food)).toMatchObject({ limit: 80000 });
+    expect(itemOf(body, fun)).toBeUndefined();
+  });
 });

@@ -2,7 +2,7 @@ import request from 'supertest';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { buildTestApp } from './helpers/app';
 import { newUser, type TestUser } from './helpers/auth';
-import { resetDb } from './helpers/db';
+import { resetDb, testDb } from './helpers/db';
 import { categoryId, createAccount, createTransaction } from './helpers/factories';
 
 const { app } = buildTestApp();
@@ -305,5 +305,41 @@ describe('dashboard', () => {
       expect(res.body.pendingCount).toBe(4); // 2 transações + fatura fechada + fatura vencida
       expect(res.body.overdueCount).toBe(2); // 1 transação vencida + 1 fatura vencida
     });
+  });
+
+  it('total de dívidas (R8): compra parcelada inteira menos a fatura paga, mais o saldo devedor do empréstimo', async () => {
+    const user = await newUser();
+    const { checking, card, food } = await cardScenario(user);
+    const empty = await request(app).get('/api/v1/dashboard/summary').set(user.auth);
+    expect(empty.body.debts).toEqual({ cards: 0, loans: 0, total: 0 });
+
+    // R$ 1.200 em 12x em 27/10: as 11 parcelas futuras já são dívida (R5).
+    await createTransaction(app, user, {
+      type: 'expense', amount: 120000, description: 'Notebook', accountId: card.id, categoryId: food, nature: 'variable', dueDate: '2026-10-27', installments: 12,
+    });
+    const pay = await request(app).post(`/api/v1/cards/${card.id}/invoices/2026-11/payments`).set(user.auth).send({ amount: 10000, accountId: checking.id, paidDate: '2026-11-10' });
+    expect(pay.status, JSON.stringify(pay.body)).toBe(201);
+    const loan = await request(app).post('/api/v1/loans').set(user.auth).send({
+      name: 'Carro', kind: 'vehicle', bankName: 'BCO DO BRASIL S.A.', principal: 3000000, installmentAmount: 95000,
+      installmentsTotal: 48, installmentsPaidBefore: 12, firstDueDate: '2025-12-10', accountId: checking.id,
+    });
+    expect(loan.status).toBe(201);
+    const outstanding = (await request(app).get(`/api/v1/loans/${loan.body.id}`).set(user.auth)).body.outstanding;
+
+    const res = await request(app).get('/api/v1/dashboard/summary').set(user.auth);
+    expect(res.body.debts).toEqual({ cards: 110000, loans: outstanding, total: 110000 + outstanding });
+    expect(outstanding).toBe(2477608);
+  });
+
+  it('total de dívidas: cartão arquivado continua contando e outro usuário não vê nada', async () => {
+    const user = await newUser();
+    const { card, food } = await cardScenario(user);
+    await createTransaction(app, user, {
+      type: 'expense', amount: 30000, description: 'Tênis', accountId: card.id, categoryId: food, nature: 'variable', dueDate: '2026-11-02',
+    });
+    await testDb.account.update({ where: { id: card.id }, data: { archivedAt: new Date() } });
+    expect((await request(app).get('/api/v1/dashboard/summary').set(user.auth)).body.debts.cards).toBe(30000);
+    const other = await newUser();
+    expect((await request(app).get('/api/v1/dashboard/summary').set(other.auth)).body.debts).toEqual({ cards: 0, loans: 0, total: 0 });
   });
 });

@@ -45,4 +45,12 @@ describe('AppShell', () => {
     expect(within(mobile).getByRole('link', { name: 'Planejamento' })).toBeInTheDocument();
     expect(within(mobile).queryByRole('link', { name: 'Categorias' })).not.toBeInTheDocument();
   });
+
+  it('"Relatórios" só no menu do computador (R12); no celular, o acesso é pelo painel e pelo Perfil', async () => {
+    renderApp(<AppShell />, { path: '/*' });
+    const desktop = await screen.findByRole('navigation', { name: 'Principal' });
+    const mobile = screen.getByRole('navigation', { name: 'Principal (celular)' });
+    expect(within(desktop).getByRole('link', { name: 'Relatórios' })).toHaveAttribute('href', '/relatorios');
+    expect(within(mobile).queryByRole('link', { name: 'Relatórios' })).not.toBeInTheDocument();
+  });
 });

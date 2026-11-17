@@ -11,8 +11,8 @@ export function budgetsRouter(service: BudgetsService): Router {
   });
   r.put('/:categoryId', async (req, res) => {
     const { limit } = parse(setBudgetSchema, req.body);
-    await service.set(userIdOf(res), parse(idSchema, req.params.categoryId), limit);
-    res.status(200).json({ categoryId: req.params.categoryId, limit });
+    const categoryId = await service.set(userIdOf(res), parse(idSchema, req.params.categoryId), limit);
+    res.status(200).json({ categoryId, limit });
   });
   r.delete('/:categoryId', async (req, res) => {
     await service.remove(userIdOf(res), parse(idSchema, req.params.categoryId));

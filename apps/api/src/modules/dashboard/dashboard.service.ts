@@ -9,6 +9,7 @@ import type { BudgetsService } from '../budgets/budgets.service';
 import type { CardsService } from '../cards/cards.service';
 import type { LoansRepository } from '../loans/loans.repository';
 import type { RecurrencesService } from '../recurrences/recurrences.service';
+import { debtsAt, type DebtsReader } from '../reports/debts';
 import { toTransactionDTO } from '../transactions/transactions.mapper';
 import type { TransactionsRepository } from '../transactions/transactions.repository';
 import { cardDebt } from './dashboard.cards';
@@ -27,6 +28,7 @@ export type DashboardServiceDeps = {
   cards: CardsService;
   loansRepo: Pick<LoansRepository, 'installmentsDueIn'>;
   budgets: Pick<BudgetsService, 'summaryFor'>;
+  debts: DebtsReader;
   clock: () => Date;
 };
 
@@ -48,7 +50,7 @@ export function createDashboardService(deps: DashboardServiceDeps) {
       const reserveWindow = Array.from({ length: RESERVE_WINDOW_MONTHS }, (_, i) => addMonthsToYm(current, -(i + 1)));
       // A dívida de cartão (dashboard.cards.ts) entra no mesmo Promise.all: roda em paralelo e, se falhar,
       // a rejeição é tratada junto com as demais (nunca fica uma promise solta sem handler).
-      const [now, before, totalBalance, pending, pendingCount, overdueCount, upcomingTx, liquidBalance, recent, debt, loanPayments, budget] = await Promise.all([
+      const [now, before, totalBalance, pending, pendingCount, overdueCount, upcomingTx, liquidBalance, recent, debt, loanPayments, budget, debtSources] = await Promise.all([
         repo.paidTotalsByType(userId, startOfMonth(m), monthEnd),
         repo.paidTotalsByType(userId, startOfMonth(previous), endOfMonth(previous)),
         repo.balanceAt(userId),
@@ -65,6 +67,7 @@ export function createDashboardService(deps: DashboardServiceDeps) {
         ),
         deps.loansRepo.installmentsDueIn(userId, current),
         deps.budgets.summaryFor(userId, m),
+        deps.debts.load(userId),
       ]);
       // Comprometimento (C13): dívida do cartão + parcelas de empréstimo com vencimento no mês corrente.
       const debtPayments = debt.debtPayments + loanPayments;
@@ -89,6 +92,7 @@ export function createDashboardService(deps: DashboardServiceDeps) {
         overdueCount: overdueCount + debt.overdueCount,
         upcoming,
         budget,
+        debts: debtsAt(debtSources, t),
         health: {
           savingsRate: savingsRate(now.income, now.expense),
           reserveMonths: reserve.months,

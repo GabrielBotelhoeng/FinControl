@@ -31,6 +31,11 @@ describe('ProfilePage', () => {
     expect(gateway.signOut).toHaveBeenCalled();
   });
 
+  it('tem o link "Ver relatórios" (no celular, os relatórios não estão na barra; R12)', async () => {
+    renderApp(<ProfilePage />, { api: fakeApi({ 'GET /me': profile }) });
+    expect(await screen.findByRole('link', { name: 'Ver relatórios' })).toHaveAttribute('href', '/relatorios');
+  });
+
   it('tem o link "Gerenciar categorias" (a barra do celular não tem mais Categorias)', async () => {
     renderApp(<ProfilePage />, { api: fakeApi({ 'GET /me': profile }) });
     expect(await screen.findByRole('link', { name: 'Gerenciar categorias' })).toHaveAttribute('href', '/categorias');

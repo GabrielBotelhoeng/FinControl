@@ -186,3 +186,16 @@ describe('planejamento e metas', () => {
     expect(createGoalSchema.safeParse({ name: 'Viagem', targetAmount: 600000, targetDate: '2027-04-30' }).success).toBe(true);
   });
 });
+
+describe('reportQuerySchema (R1)', () => {
+  it('aceita de 1 a 24 meses, com o fim depois do início', async () => {
+    const { reportQuerySchema } = await import('./index');
+    expect(reportQuerySchema.safeParse({ from: '2026-01', to: '2026-12' }).success).toBe(true);
+    expect(reportQuerySchema.safeParse({ from: '2026-05', to: '2026-05' }).success).toBe(true);
+    expect(paths(reportQuerySchema.safeParse({ from: '2026-05', to: '2026-04' }))).toEqual(['to']);
+    expect(paths(reportQuerySchema.safeParse({ from: '2024-01', to: '2026-01' }))).toEqual(['to']);
+    expect(paths(reportQuerySchema.safeParse({ from: '2026-13', to: '2026-01' }))).toEqual(['from']);
+    expect(paths(reportQuerySchema.safeParse({}))).toEqual(['from', 'to']);
+    expect(paths(reportQuerySchema.safeParse({ from: '0001-01', to: '0001-01' }))).toEqual(['from']);
+  });
+});

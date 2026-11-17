@@ -22,6 +22,8 @@ export type ApiClient = {
   patch<T>(path: string, body: unknown): Promise<T>;
   put<T>(path: string, body: unknown): Promise<T>;
   del(path: string): Promise<void>;
+  /** Arquivo (PDF, CSV) com o token no cabeçalho, nunca na URL (spec do sub-projeto 4, R11). */
+  download(path: string, query?: Query): Promise<Blob>;
 };
 
 type Options = {
@@ -52,8 +54,8 @@ async function toApiError(res: Response): Promise<ApiError> {
 }
 
 export function createApiClient({ baseUrl, getToken, onUnauthorized, fetchFn = fetch }: Options): ApiClient {
-  async function request<T>(method: string, path: string, body?: unknown, query?: Query): Promise<T> {
-    const headers = new Headers({ Accept: 'application/json' });
+  async function send(method: string, path: string, body: unknown, query: Query | undefined, accept: string): Promise<Response> {
+    const headers = new Headers({ Accept: accept });
     const token = await getToken();
     if (token) headers.set('Authorization', `Bearer ${token}`);
     if (body !== undefined) headers.set('Content-Type', 'application/json');
@@ -71,6 +73,11 @@ export function createApiClient({ baseUrl, getToken, onUnauthorized, fetchFn = f
 
     if (res.status === 401) onUnauthorized();
     if (!res.ok) throw await toApiError(res);
+    return res;
+  }
+
+  async function request<T>(method: string, path: string, body?: unknown, query?: Query): Promise<T> {
+    const res = await send(method, path, body, query, 'application/json');
     if (res.status === 204) return undefined as T;
     return (await res.json()) as T;
   }
@@ -81,5 +88,6 @@ export function createApiClient({ baseUrl, getToken, onUnauthorized, fetchFn = f
     patch: (path, body) => request('PATCH', path, body),
     put: (path, body) => request('PUT', path, body),
     del: (path) => request<void>('DELETE', path),
+    download: async (path, query) => (await send('GET', path, undefined, query, '*/*')).blob(),
   };
 }
