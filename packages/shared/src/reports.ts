@@ -93,7 +93,7 @@ export type CsvValue = string | number;
 /** R9: arquivo CSV com BOM, `;` e CRLF. Números são centavos. */
 export function toCsv(header: string[], rows: CsvValue[][]): string {
   const line = (cells: CsvValue[]) => cells.map((c) => (typeof c === 'number' ? csvAmount(c) : csvCell(c))).join(';');
-  return `﻿${[header, ...rows].map(line).join('\r\n')}\r\n`;
+  return `\uFEFF${[header, ...rows].map(line).join('\r\n')}\r\n`;
 }
 
 /** Os 27 caracteres que o WinAnsi (CP1252) tem entre 0x80 e 0x9F. */

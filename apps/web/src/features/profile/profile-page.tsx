@@ -83,6 +83,15 @@ export default function ProfilePage() {
           </Panel>
           <Panel className="flex flex-wrap items-center justify-between gap-4 p-6">
             <div>
+              <h2 className="font-semibold">Relatórios</h2>
+              <p className="text-sm text-muted">Resumo do período, evolução das dívidas e exportação em PDF e CSV.</p>
+            </div>
+            <Link to="/relatorios" className="text-sm font-medium text-primary hover:underline">
+              Ver relatórios
+            </Link>
+          </Panel>
+          <Panel className="flex flex-wrap items-center justify-between gap-4 p-6">
+            <div>
               <h2 className="font-semibold">Sair</h2>
               <p className="text-sm text-muted">Encerra a sessão neste aparelho.</p>
             </div>
