@@ -21,6 +21,8 @@ import { createProfileRepository } from '../modules/profile/profile.repository';
 import { createProfileService } from '../modules/profile/profile.service';
 import { createProvisioner } from '../modules/profile/provisioning';
 import { createDebtsReader } from '../modules/reports/debts';
+import { createReportsRepository } from '../modules/reports/reports.repository';
+import { createReportsService } from '../modules/reports/reports.service';
 import { createRecurrencesRepository } from '../modules/recurrences/recurrences.repository';
 import { createRecurrencesService } from '../modules/recurrences/recurrences.service';
 import { createRefsValidator } from '../modules/transactions/transactions.refs';
@@ -66,6 +68,7 @@ export function buildContainer(deps: AppDeps) {
   const dashboard = createDashboardService({
     repo: createDashboardRepository(deps.db), transactions: transactionsRepo, recurrences, accountsRepo, cards, loansRepo, budgets, debts, clock: deps.clock,
   });
+  const reports = createReportsService({ repo: createReportsRepository(deps.db), debts, recurrences, clock: deps.clock });
   const demo = createDemoService({
     repo: createDemoRepository(deps.db), categories: categoriesRepo, profile, clock: deps.clock,
     // O seed grava ~170 linhas; o limite de 5 s padrão do Prisma é apertado no plano gratuito.
@@ -88,7 +91,7 @@ export function buildContainer(deps: AppDeps) {
   return {
     provisioner, profile, accountsRepo, accounts, categoriesRepo, categories,
     transactionsRepo, validateRefs, recurrencesRepo, recurrences, transactions, dashboard, demo,
-    cardsRepo, cards, bankRates, loansRepo, loans, budgets, goalsRepo, goals, debts,
+    cardsRepo, cards, bankRates, loansRepo, loans, budgets, goalsRepo, goals, debts, reports,
   };
 }
 

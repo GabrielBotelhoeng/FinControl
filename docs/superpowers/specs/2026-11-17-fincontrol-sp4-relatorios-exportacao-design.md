@@ -26,7 +26,7 @@ A seção 01 pede "Total de dívidas" no painel. Ele entra como um indicador nov
 
 | # | Decisão | Alternativas descartadas | Motivo |
 |---|---|---|---|
-| R1 | **Período = intervalo de meses (`from`, `to`, AAAA-MM), de 1 a 24 meses.** A tela oferece três atalhos: "Mês", "Ano" e "Últimos 12 meses". `to` não pode passar do mês atual (422). | Datas livres; só mês | Os números do app são mensais (orçamento, painel). 24 meses cobre a comparação de um ano com o anterior sem consultas pesadas. |
+| R1 | **Período = intervalo de meses (`from`, `to`, AAAA-MM), de 1 a 24 meses.** A tela oferece três atalhos: "Mês", "Ano" e "Últimos 12 meses". `to` não pode passar do mês atual (422; formato e tamanho inválidos dão 400). | Datas livres; só mês | Os números do app são mensais (orçamento, painel). 24 meses cobre a comparação de um ano com o anterior sem consultas pesadas. |
 | R2 | **Regime de caixa: só o que foi pago, pela data de pagamento**, igual ao painel. Compras no cartão contam na data de cada parcela (C1 do sub-projeto 2). Transferências ficam de fora. Pendentes ficam de fora do relatório, mas entram no CSV com a situação. | Contar pendentes | O relatório mostra o que aconteceu. As pendentes já aparecem no planejamento e no "A pagar". |
 | R3 | **Comparação contra o período anterior de mesmo tamanho**: um mês contra o mês anterior, um ano contra o ano anterior. A variação é `null` quando o anterior é zero (a tela mostra "novo" em vez de um percentual infinito). | Mesmo mês do ano anterior | É a leitura mais direta de "comparação mensal" e funciona para qualquer tamanho de período. |
 | R4 | **Séries mensais com no mínimo 6 meses**, terminando em `to`. Num relatório de um mês, os gráficos mostram os 6 meses até ele. | Série só do período | Um gráfico de um ponto não mostra evolução. |
@@ -61,7 +61,7 @@ A seção 01 pede "Total de dívidas" no painel. Ele entra como um indicador nov
   - `balances: { items: [{ accountId, name, type, balance }], total }`: saldo de cada conta não arquivada, exceto cartões, no fim de `to`.
 - **`GET /reports/export.csv?from&to`:** `text/csv; charset=utf-8`, com `Content-Disposition: attachment`.
 - **`GET /reports/export.pdf?from&to`:** `application/pdf`, com `Content-Disposition: attachment`.
-- **Validação:** `from` e `to` obrigatórios. `to < from`, mais de 24 meses ou `to` depois do mês atual dão 422.
+- **Validação:** `from` e `to` são obrigatórios. Formato inválido, `to < from` ou mais de 24 meses dão 400, como nas outras rotas (schema). `to` depois do mês atual dá 422, porque depende de hoje e é checado no serviço.
 - **`/dashboard/summary`** ganha `debts: { cards, loans, total }` (R8).
 - **Isolamento:** tudo filtra por `userId`.
 
