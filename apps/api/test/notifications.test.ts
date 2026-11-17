@@ -38,7 +38,7 @@ describe('notificações', () => {
     expect(before.items).toEqual([
       {
         key: `due:${tx.id}:2026-11-13`, kind: 'bill_due', priority: 2, title: 'Aluguel', body: 'R$ 1.800,00 · vence em 2 dias',
-        href: '/lancamentos', action: 'Pagar', date: '2026-11-13', read: false,
+        href: '/lancamentos?mes=2026-11', action: 'Pagar', date: '2026-11-13', read: false,
       },
     ]);
     expect(before.unreadCount).toBe(1);
@@ -55,7 +55,14 @@ describe('notificações', () => {
     const { items } = await list(user);
     expect(items.map((i) => i.kind)).toEqual(['bill_overdue', 'bill_due', 'goal_reached']);
     expect(items[0]).toMatchObject({ key: `overdue:${late.id}:2026-11-05`, body: 'R$ 120,00 · venceu há 6 dias' });
+    expect(late.dueDate).toBe('2026-11-05');
     expect(items[2]).toMatchObject({ title: 'Meta concluída: Viagem', href: '/planejamento?aba=metas', action: 'Ver metas', date: '2026-11-11' });
+  });
+
+  it('"Pagar" de uma conta vencida no mês passado leva para os lançamentos daquele mês', async () => {
+    const { user, bill } = await scenario();
+    await bill('Internet', 12000, '2026-10-15');
+    expect((await list(user)).items[0]).toMatchObject({ kind: 'bill_overdue', href: '/lancamentos?mes=2026-10' });
   });
 
   it('critério 3: orçamento perto do limite e, ao estourar, a chave muda e volta a ser não lido', async () => {

@@ -1,10 +1,16 @@
 import { Bell } from 'lucide-react';
-import { Link } from 'react-router';
+import { useEffect } from 'react';
+import { Link, useLocation } from 'react-router';
 import { useNotifications } from './api';
 
 /** N9: sino no topo de todas as telas, com os não lidos (até "9+"). */
 export function NotificationBell() {
-  const { data } = useNotifications();
+  const { data, isStale, refetch } = useNotifications();
+  const { pathname } = useLocation();
+  // O sino fica sempre montado: sem isto, trocar de tela nunca buscaria de novo (o app abre de um dia para o outro).
+  useEffect(() => {
+    if (isStale) void refetch();
+  }, [pathname, isStale, refetch]);
   const unread = data?.unreadCount ?? 0;
   const label = unread === 0 ? 'Notificações' : `Notificações, ${unread} ${unread === 1 ? 'não lida' : 'não lidas'}`;
   return (

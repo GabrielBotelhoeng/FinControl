@@ -1,9 +1,8 @@
 import type { BillDays, NotificationPrefs } from '@fincontrol/shared';
-import { useState } from 'react';
-import { toast } from 'sonner';
+import { useEffect, useState } from 'react';
 import { Panel } from '../../components/ui/panel';
 import { Segmented } from '../../components/ui/segmented';
-import { useUpdateProfile } from './api';
+import { useUpdateNotificationPrefs } from './api';
 
 const TYPES: { key: 'bills' | 'invoices' | 'budget' | 'goals'; label: string; hint: string }[] = [
   { key: 'bills', label: 'Contas', hint: 'Contas perto do vencimento e vencidas.' },
@@ -20,21 +19,15 @@ const DAYS: { value: `${BillDays}`; label: string }[] = [
 
 /** Preferências de notificação (sub-projeto 5, N7): o que avisar e com quanta antecedência. */
 export function NotificationSettings({ prefs: saved }: { prefs: NotificationPrefs }) {
-  const update = useUpdateProfile();
-  // Muda na hora (sem esperar o servidor) e volta ao que estava gravado se o salvamento falhar.
+  const update = useUpdateNotificationPrefs();
+  // A caixa muda no próprio clique; sem salvamento pendente, volta a seguir o perfil (que a mutação corrige em erro).
   const [prefs, setPrefs] = useState(saved);
+  useEffect(() => {
+    if (!update.isPending) setPrefs(saved);
+  }, [saved, update.isPending]);
   const save = (next: NotificationPrefs) => {
-    const previous = prefs;
     setPrefs(next);
-    update.mutate(
-      { notificationPrefs: next },
-      {
-        onError: (e) => {
-          setPrefs(previous);
-          toast.error(e.message);
-        },
-      },
-    );
+    update.mutate(next);
   };
 
   return (

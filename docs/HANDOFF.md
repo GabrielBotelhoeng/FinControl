@@ -13,7 +13,8 @@ _Atualizado em 2026-11-17 (sub-projeto 5, Parte A)._
   - o cron diário (`cleanup-demo`) também apaga a memória de avisos inativos há mais de 60 dias;
   - na demo, uma conta vencendo em 2 dias e a meta concluída "Notebook novo".
 - **Cabeçalho do celular:** com o sino, o selo da demo desce para uma segunda linha. O teste de 360 px agora mede o cabeçalho (transbordo e sobreposição com o sino), e foi conferido que ele falha sem a correção.
-- **Testes:** 128 em shared, 245 na API e 158 na web, além de 13 E2E (novo: `e2e/tests/notificacoes.spec.ts`).
+- **Testes:** 128 em shared, 246 na API e 159 na web, além de 13 E2E (novo: `e2e/tests/notificacoes.spec.ts`).
+- **Revisão final (revisor novo):** nada crítico. Corrigidos: o sino não atualizava ao trocar de tela (agora atualiza com o dado velho e ao voltar para a aba); "Pagar" leva ao mês do vencimento (`/lancamentos?mes=AAAA-MM`); preferências salvas pela mutação com estado otimista e ressincronização; "marcar todas" calcula uma vez só. Aceitos e registrados na spec (seção 7.1): memória de tipo desligado por mais de 60 dias e muitas contas vencidas.
 - **Pendência do sub-projeto 4 (aceita, não corrigida):** se a 1ª parcela de uma compra feita nos dias 29 a 31 for excluída, a data da compra reconstruída para a dívida do cartão pode ficar 1 ou 2 dias antes. O mês fica certo, então relatório e painel não mudam.
 - **Parte B (próxima):** avisos no celular e no navegador (Web Push). Precisa de chaves VAPID nas variáveis da Vercel e de um envio diário.
 

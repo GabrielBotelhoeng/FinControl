@@ -85,6 +85,12 @@ O que a seção 09 pede, e como entra:
 - **Web:** o sino com o contador e o rótulo, a página (ordem, ação marcando como lido, "marcar todas", estado vazio) e as preferências no Perfil.
 - **E2E:** a demo mostra o contador, abrir um aviso e clicar na ação diminui o contador; nenhuma rolagem horizontal a 360 px.
 
+## 7.1 Limites aceitos (revisão final, 2026-11-17)
+
+- **Tipo desligado por mais de 60 dias:** a memória dele é apagada pela limpeza (N8). Ao religar, avisos antigos ainda ativos (uma conta vencida há meses, uma meta concluída) voltam como não lidos. Renovar a memória de tipos desligados custaria calcular regras que a pessoa pediu para não ver. O efeito é um aviso repetido, sem perda de dado.
+- **Muitas contas vencidas:** cada parcela pendente vencida vira um aviso (uma recorrência criada com início antigo pode gerar dezenas). O painel já conta assim desde o sub-projeto 1 (`countOverdue`). Agrupar por recorrência fica para depois, se aparecer na prática.
+- **"Pagar"** leva para `/lancamentos?mes=AAAA-MM`, o mês do vencimento: uma conta vencida no mês passado não está na lista do mês atual.
+
 ## 8. Fora do escopo
 
 Parte B (Web Push), e-mail, avisos de "próxima melhor ação" (ficam para o assistente com IA), avisos de outras pessoas e som.

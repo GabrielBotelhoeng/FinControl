@@ -53,7 +53,8 @@ export function createNotificationsService(deps: NotificationsServiceDeps) {
         priority: overdue ? 1 : 2,
         title: b.description,
         body: `${formatBRL(b.amount)} · ${daysLabel(b.dueDate, today)}`,
-        href: '/lancamentos',
+        // A tela de lançamentos abre no mês do vencimento: a conta vencida no mês passado não está no mês atual.
+        href: `/lancamentos?mes=${monthOf(b.dueDate)}`,
         action: 'Pagar',
         date: b.dueDate,
       });
@@ -128,10 +129,11 @@ export function createNotificationsService(deps: NotificationsServiceDeps) {
       return active(userId);
     },
 
+    /** Marca o que acabou de ser calculado, sem calcular tudo de novo. */
     async markAllRead(userId: string): Promise<NotificationListDTO> {
       const { items } = await active(userId);
       if (items.length > 0) await deps.repo.markRead(userId, items.map((i) => i.key), deps.clock());
-      return active(userId);
+      return { items: items.map((i) => ({ ...i, read: true })), unreadCount: 0 };
     },
 
     /** N8: chamada pelo cron diário. */

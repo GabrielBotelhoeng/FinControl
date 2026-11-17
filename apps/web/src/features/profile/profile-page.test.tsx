@@ -44,7 +44,13 @@ describe('ProfilePage', () => {
   });
 
   it('preferências de notificação (N7): desligar um tipo e mudar a antecedência salvam o objeto inteiro', async () => {
-    const api = fakeApi({ 'GET /me': profile, 'PATCH /me': (_p: string, body: unknown) => ({ ...profile, ...(body as object) }) });
+    // Servidor falso com estado, como o real: a busca depois de salvar traz o que foi gravado.
+    let saved = profile;
+    const api = fakeApi({
+      'GET /me': () => saved,
+      'PATCH /me': (_p: string, body: unknown) => (saved = { ...saved, ...(body as object) }),
+      'GET /notifications': { items: [], unreadCount: 0 },
+    });
     renderApp(<ProfilePage />, { api });
     const panel = await screen.findByRole('region', { name: 'Notificações' });
     await userEvent.click(within(panel).getByRole('checkbox', { name: /Orçamento/ }));
