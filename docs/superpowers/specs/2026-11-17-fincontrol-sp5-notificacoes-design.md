@@ -58,7 +58,7 @@ O que a seção 09 pede, e como entra:
 - **`GET /notifications`** devolve `{ items: [{ key, kind, priority, title, body, href, action, date, read }], unreadCount }`. `kind` é um de `bill_due`, `bill_overdue`, `invoice_closed`, `invoice_overdue`, `budget_near`, `budget_over` e `goal_reached`.
 - **`POST /notifications/read`** com `{ keys: string[] }` (de 1 a 100) marca como lidos. Chave que não está ativa é ignorada.
 - **`POST /notifications/read-all`** marca todos os ativos como lidos.
-- **`GET /me`** e **`PUT /me`** ganham `notificationPrefs: { bills, invoices, budget, goals, billDays }`.
+- **`GET /me`** e **`PATCH /me`** ganham `notificationPrefs: { bills, invoices, budget, goals, billDays }`.
 - O cron diário apaga a memória inativa há mais de 60 dias (N8).
 - **Isolamento:** tudo filtra por `userId`.
 
