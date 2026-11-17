@@ -1,6 +1,7 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
+import { ApiError } from '../../lib/api-client';
 import { fakeApi, fakeGateway, signedIn } from '../../test/fakes';
 import { renderApp } from '../../test/render';
 import ProfilePage from './profile-page';
@@ -50,5 +51,13 @@ describe('ProfilePage', () => {
     expect(api.patch).toHaveBeenLastCalledWith('/me', { notificationPrefs: { ...prefs, budget: false } });
     await userEvent.click(within(panel).getByRole('radio', { name: '7 dias' }));
     expect(api.patch).toHaveBeenLastCalledWith('/me', { notificationPrefs: { ...prefs, budget: false, billDays: 7 } });
+  });
+
+  it('a caixa muda na hora e volta se o salvamento falhar', async () => {
+    const api = fakeApi({ 'GET /me': profile, 'PATCH /me': () => new ApiError(500, 'Erro', 'Falhou.') });
+    renderApp(<ProfilePage />, { api });
+    const box = within(await screen.findByRole('region', { name: 'Notificações' })).getByRole('checkbox', { name: /Metas/ });
+    await userEvent.click(box);
+    await waitFor(() => expect(box).toBeChecked());
   });
 });

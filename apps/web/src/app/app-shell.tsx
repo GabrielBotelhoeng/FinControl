@@ -19,9 +19,9 @@ function DemoBadge() {
   const { signOut } = useAuth();
   const navigate = useNavigate();
   return (
-    <div className="flex items-center gap-3 rounded-full border border-primary/40 bg-primary-soft py-1.5 pl-3 pr-1.5 sm:pl-4 text-sm">
+    <div className="flex items-center gap-3 rounded-full border border-primary/40 bg-primary-soft py-1.5 pl-4 pr-1.5 text-sm">
       <Sparkles aria-hidden className="h-4 w-4 text-primary" strokeWidth={1.75} />
-      <span className="hidden font-medium sm:inline">Modo demo</span>
+      <span className="mr-auto font-medium">Modo demo</span>
       <Button
         size="sm"
         className="h-8"
@@ -67,12 +67,17 @@ export function AppShell() {
       </aside>
 
       <div className="flex min-w-0 flex-col overflow-x-clip">
-        <header className="flex items-center justify-between gap-3 px-5 pt-5 md:px-10 md:pt-7">
+        {/* No celular, o selo da demo desce para uma segunda linha: logo, selo e sino não cabem lado a lado a 360 px. */}
+        <header className="flex flex-wrap items-center gap-3 px-5 pt-5 md:px-10 md:pt-7">
           <span className="md:hidden">
             <Logo />
           </span>
-          <div className="ml-auto flex items-center gap-3">
-            {isDemo && <DemoBadge />}
+          {isDemo && (
+            <div className="order-last w-full sm:order-none sm:ml-auto sm:w-auto">
+              <DemoBadge />
+            </div>
+          )}
+          <div className={cn('ml-auto', isDemo && 'sm:ml-0')}>
             <NotificationBell />
           </div>
         </header>

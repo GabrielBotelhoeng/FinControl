@@ -1,4 +1,5 @@
 import type { BillDays, NotificationPrefs } from '@fincontrol/shared';
+import { useState } from 'react';
 import { toast } from 'sonner';
 import { Panel } from '../../components/ui/panel';
 import { Segmented } from '../../components/ui/segmented';
@@ -18,10 +19,23 @@ const DAYS: { value: `${BillDays}`; label: string }[] = [
 ];
 
 /** Preferências de notificação (sub-projeto 5, N7): o que avisar e com quanta antecedência. */
-export function NotificationSettings({ prefs }: { prefs: NotificationPrefs }) {
+export function NotificationSettings({ prefs: saved }: { prefs: NotificationPrefs }) {
   const update = useUpdateProfile();
-  const save = (next: NotificationPrefs) =>
-    update.mutate({ notificationPrefs: next }, { onError: (e) => toast.error(e.message) });
+  // Muda na hora (sem esperar o servidor) e volta ao que estava gravado se o salvamento falhar.
+  const [prefs, setPrefs] = useState(saved);
+  const save = (next: NotificationPrefs) => {
+    const previous = prefs;
+    setPrefs(next);
+    update.mutate(
+      { notificationPrefs: next },
+      {
+        onError: (e) => {
+          setPrefs(previous);
+          toast.error(e.message);
+        },
+      },
+    );
+  };
 
   return (
     <Panel role="region" aria-label="Notificações" className="grid gap-5 p-6">

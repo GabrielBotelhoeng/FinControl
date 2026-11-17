@@ -1,6 +1,22 @@
 # HANDOFF — FinControl
 
-_Atualizado em 2026-11-17 (sub-projeto 4)._
+_Atualizado em 2026-11-17 (sub-projeto 5, Parte A)._
+
+## Sub-projeto 5, Parte A: central de notificações (2026-11-17, branch feat/notificacoes)
+
+- **Spec:** `docs/superpowers/specs/2026-11-17-fincontrol-sp5-notificacoes-design.md`, com as decisões N1–N11 tomadas pelo agente. **Plano:** `docs/superpowers/plans/2026-11-17-fincontrol-sp5-notificacoes.md`.
+- **Migration:** `notificacoes` (tabela `notifications` e a coluna `profiles.notification_prefs`). **Antes do deploy da API, aplicar no Supabase** (`npx prisma migrate deploy` pelo pooler na porta 5432).
+- **Entregue:**
+  - o sino com os não lidos no topo de todas as telas e a página `/notificacoes`, com os avisos do mais urgente ao menos (contas vencidas e a vencer, faturas, orçamento e metas concluídas);
+  - os avisos são calculados na hora, e o banco guarda só a memória (chave, quando apareceu e quando foi lido). Um aviso some sozinho quando o assunto se resolve, e a mudança de faixa ou de vencimento muda a chave, então ele volta como não lido;
+  - as preferências no Perfil (tipos e antecedência de 1, 3 ou 7 dias), que mudam na hora e voltam ao estado anterior se o salvamento falhar;
+  - o cron diário (`cleanup-demo`) também apaga a memória de avisos inativos há mais de 60 dias;
+  - na demo, uma conta vencendo em 2 dias e a meta concluída "Notebook novo".
+- **Cabeçalho do celular:** com o sino, o selo da demo desce para uma segunda linha. O teste de 360 px agora mede o cabeçalho (transbordo e sobreposição com o sino), e foi conferido que ele falha sem a correção.
+- **Testes:** 128 em shared, 245 na API e 158 na web, além de 13 E2E (novo: `e2e/tests/notificacoes.spec.ts`).
+- **Pendência do sub-projeto 4 (aceita, não corrigida):** se a 1ª parcela de uma compra feita nos dias 29 a 31 for excluída, a data da compra reconstruída para a dívida do cartão pode ficar 1 ou 2 dias antes. O mês fica certo, então relatório e painel não mudam.
+- **Parte B (próxima):** avisos no celular e no navegador (Web Push). Precisa de chaves VAPID nas variáveis da Vercel e de um envio diário.
+
 
 ## Sub-projeto 4: relatórios e exportação (2026-11-17, branch feat/relatorios)
 

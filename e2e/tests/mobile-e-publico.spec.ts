@@ -13,7 +13,7 @@ test.describe('tela de 360 px', () => {
 
     const paths = [
       '/', '/lancamentos', '/contas', faturas!, '/emprestimos', emprestimo!, '/planejamento', '/planejamento?aba=metas',
-      '/relatorios', '/categorias', '/perfil', '/privacidade', '/termos',
+      '/relatorios', '/notificacoes', '/categorias', '/perfil', '/privacidade', '/termos',
     ];
     for (const path of paths) {
       await page.goto(path);
@@ -32,6 +32,27 @@ test.describe('tela de 360 px', () => {
         }).length,
       );
       expect(clipped, `conteúdo cortado na borda em ${path}`).toBe(0);
+      // Cabeçalho (logo, selo da demo e sino): nada transborda da própria caixa, passa da borda ou fica por baixo do sino.
+      const header = await page.evaluate(() => {
+        const width = document.documentElement.clientWidth;
+        const all = [...document.querySelectorAll('header *')] as HTMLElement[];
+        // Páginas públicas (privacidade, termos) não têm sino.
+        const bellEl = document.querySelector('header a[href="/notificacoes"]');
+        // O selo do sino fica por fora do círculo de propósito: o sino e quem só o envolve ficam fora desta conta.
+        const overflowing = all
+          .filter((el) => !bellEl || (!el.contains(bellEl) && !bellEl.contains(el)))
+          .filter((el) => el.scrollWidth > el.clientWidth + 1 && getComputedStyle(el).overflowX === 'visible')
+          .map((el) => `${el.tagName}.${el.className}`.slice(0, 80));
+        const outside = all.some((el) => el.getBoundingClientRect().right > width + 0.5);
+        const bell = bellEl?.getBoundingClientRect();
+        const underBell = all.filter((el) => {
+          if (!bellEl || !bell || bellEl.contains(el) || el.contains(bellEl)) return false;
+          const r = el.getBoundingClientRect();
+          return r.width > 0 && r.left < bell.right - 0.5 && bell.left < r.right - 0.5 && r.top < bell.bottom - 0.5 && bell.top < r.bottom - 0.5;
+        }).length;
+        return { overflowing, outside, underBell };
+      });
+      expect(header, `cabeçalho em ${path}`).toEqual({ overflowing: [], outside: false, underBell: 0 });
     }
   });
 });

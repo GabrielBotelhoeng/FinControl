@@ -43,6 +43,7 @@ test.describe('desktop', () => {
     await shoot(page, emprestimo!, 'emprestimo.png');
     await shoot(page, '/planejamento', 'planejamento.png');
     await shoot(page, '/relatorios', 'relatorios.png');
+    await shoot(page, '/notificacoes', 'notificacoes.png');
   });
 });
 
