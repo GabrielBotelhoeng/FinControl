@@ -10,10 +10,13 @@ describe('plainText (A12)', () => {
   it('negrito que quebra linha sai; asteriscos de parágrafos diferentes não se juntam', () => {
     expect(plainText('**Despesas:\nR$ 500**')).toBe('Despesas:\nR$ 500');
     expect(plainText('a ** b\n\nc ** d')).toBe('a ** b\n\nc ** d');
+    expect(plainText('**Cálculo:\nR$ 20 * 3 = R$ 60**')).toBe('Cálculo:\nR$ 20 * 3 = R$ 60');
   });
 
   it('conta com asteriscos continua conta; marcador sozinho na linha não engole a próxima', () => {
     expect(plainText('R$ 20 * 3 * 2 = R$ 120')).toBe('R$ 20 * 3 * 2 = R$ 120');
+    expect(plainText('R$ 20 *3* 2 = R$ 120')).toBe('R$ 20 *3* 2 = R$ 120');
+    expect(plainText('Meta *no ritmo*.')).toBe('Meta no ritmo.');
     expect(plainText('Resumo\n*\nTotal: R$ 500')).toBe('Resumo\n*\nTotal: R$ 500');
     expect(plainText('  * Total: R$ 500')).toBe('- Total: R$ 500');
   });

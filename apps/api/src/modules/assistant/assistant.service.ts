@@ -58,10 +58,11 @@ const textOf = (blocks: AiBlock[]) =>
 export function plainText(text: string): string {
   return text
     // Negrito pode quebrar linha, mas nunca atravessa um parágrafo (linha em branco).
-    .replace(/\*\*((?:(?!\n\s*\n)[^*])+?)\*\*/g, '$1')
+    .replace(/\*\*((?:(?!\n\s*\n)(?!\*\*)[\s\S])+?)\*\*/g, '$1')
     .replace(/__(.+?)__/g, '$1')
     // Itálico sem espaço logo dentro dos asteriscos: "R$ 20 * 3" continua uma conta.
-    .replace(/(^|[\s(])\*([^*\s](?:[^*\n]*[^*\s])?)\*(?=[\s).,:;!?]|$)/gm, '$1$2')
+    // ...e só número entre asteriscos ("20 *3* 2") também é conta, não itálico.
+    .replace(/(^|[\s(])\*([^*\s](?:[^*\n]*[^*\s])?)\*(?=[\s).,:;!?]|$)/gm, (m: string, before: string, inner: string) => (/^[\d.,]+$/.test(inner) ? m : before + inner))
     .replace(/`([^`\n]+)`/g, '$1')
     .replace(/^#{1,6}\s+/gm, '')
     .replace(/^([ \t]*)[*•][ \t]+/gm, '$1- ')
