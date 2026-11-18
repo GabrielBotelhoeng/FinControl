@@ -1,4 +1,6 @@
-import { monthOf, type AccountType, type DateOnly, type ReportBalanceDTO, type ReportExpenseDTO, type TransactionStatus, type TransactionType } from '@fincontrol/shared';
+import {
+  monthOf, type AccountType, type DateOnly, type ReportBalanceDTO, type ReportExpenseDTO, type TransactionNature, type TransactionStatus, type TransactionType,
+} from '@fincontrol/shared';
 import type { Prisma } from '../../generated/prisma/client';
 import { fromDateOnly, toDateOnly } from '../../infra/date-mapping';
 import type { Db } from '../../infra/prisma';
@@ -16,6 +18,7 @@ export type CsvRow = {
   description: string;
   type: TransactionType;
   status: TransactionStatus;
+  nature: TransactionNature | null;
   category: string | null;
   account: string;
   destination: string | null;
@@ -102,7 +105,7 @@ export function createReportsRepository(db: Db) {
       const rows = await db.transaction.findMany({
         where: { userId, OR: [{ status: 'paid', paidDate: range }, { status: 'pending', dueDate: range }] },
         select: {
-          type: true, status: true, amount: true, description: true, dueDate: true, paidDate: true,
+          type: true, status: true, nature: true, amount: true, description: true, dueDate: true, paidDate: true,
           category: { select: { name: true } }, account: { select: { name: true } }, destinationAccount: { select: { name: true } },
         },
       });
@@ -112,6 +115,7 @@ export function createReportsRepository(db: Db) {
           description: r.description,
           type: r.type,
           status: r.status,
+          nature: r.nature,
           category: r.category?.name ?? null,
           account: r.account.name,
           destination: r.destinationAccount?.name ?? null,

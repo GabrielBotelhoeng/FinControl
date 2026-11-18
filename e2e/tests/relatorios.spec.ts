@@ -2,7 +2,7 @@ import { readFile } from 'node:fs/promises';
 import { expect, test } from '@playwright/test';
 import { enterDemo } from './helpers';
 
-test('relatórios da demo: resumo, categorias, dívidas e os downloads em CSV e PDF', async ({ page }) => {
+test('relatórios da demo: resumo, categorias, dívidas e os downloads em CSV, Excel e PDF', async ({ page }) => {
   await enterDemo(page);
   // O painel mostra o total de dívidas da demo (cartão e financiamento) e leva aos relatórios.
   const debts = page.getByRole('region', { name: 'Total de dívidas' });
@@ -26,6 +26,15 @@ test('relatórios da demo: resumo, categorias, dívidas e os downloads em CSV e 
   const text = await readFile((await csv.path())!, 'utf-8');
   expect(text.startsWith('\uFEFFData;Descrição;Tipo;Categoria;Conta;Conta de destino;Situação;Valor\r\n')).toBe(true);
   expect(text.split('\r\n').length).toBeGreaterThan(20);
+
+  const xlsxDownload = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Baixar Excel' }).click();
+  const xlsx = await xlsxDownload;
+  expect(xlsx.suggestedFilename()).toMatch(/^fincontrol-analise-\d{4}-\d{2}_\d{4}-\d{2}\.xlsx$/);
+  // O conteúdo de cada aba é conferido no teste da API; aqui, que o arquivo baixado é um .xlsx (zip, "PK").
+  const xlsxBytes = await readFile((await xlsx.path())!);
+  expect(xlsxBytes.subarray(0, 2).toString('latin1')).toBe('PK');
+  if (process.env.XLSX_OUT) await xlsx.saveAs(process.env.XLSX_OUT);
 
   const pdfDownload = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Baixar PDF' }).click();
