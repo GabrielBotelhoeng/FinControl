@@ -288,6 +288,10 @@ describe('relatórios', () => {
     // O tipo do exceljs pede o Buffer antigo do Node; o conteúdo é o mesmo.
     await wb.xlsx.load(res.body as Parameters<typeof wb.xlsx.load>[0]);
     expect(wb.worksheets.map((w) => w.name)).not.toContain('Ano contra ano');
+    // Sem despesas nem contas, o total é 0 e não uma soma que incluiria a própria célula (referência circular).
+    const totalRow = (name: string) => wb.getWorksheet(name)!.getRow(4);
+    expect(totalRow('Por categoria').getCell(2).value).toBe(0);
+    expect(totalRow('Saldos').getCell(2).value).toBe(0);
     expect((await request(app).get('/api/v1/reports/export.xlsx?from=2026-12&to=2026-12').set(user.auth)).status).toBe(422);
   });
 });
