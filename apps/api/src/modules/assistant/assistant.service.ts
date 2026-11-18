@@ -110,7 +110,9 @@ export function createAssistantService(deps: AssistantServiceDeps) {
 
       const categories = await deps.categoriesRepo.list(claims.userId);
       const names = (type: string) => categories.filter((c) => c.type === type).map((c) => c.name);
-      const system = systemPrompt(profile.name, today, names('expense'), names('income'));
+      // Só o primeiro nome vai para a Anthropic (como dizem o aceite e a política de privacidade).
+      const firstName = profile.name.trim().split(/\s+/)[0] || 'a pessoa';
+      const system = systemPrompt(firstName, today, names('expense'), names('income'));
       const messages: AiMessage[] = history.map((m) => ({ role: m.role, content: m.content }));
       const usage = { input: 0, output: 0, rounds: 0 };
       const started = Date.now();

@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { forgetConversations } from '../assistant/storage';
 import { forgetThisDevice } from '../push/push-client';
 import type { AuthGateway, AuthSession, AuthUser } from './gateway';
 
@@ -32,6 +33,8 @@ export function AuthProvider({ gateway, children }: { gateway: AuthGateway; chil
   const signOut = useCallback(async () => {
     // Web Push (sub-projeto 5, Parte B): os avisos desta conta não ficam neste aparelho para a próxima pessoa.
     await forgetThisDevice();
+    // Assistente (A6): a conversa desta conta não fica na aba para a próxima pessoa.
+    forgetConversations();
     try {
       await gateway.signOut();
     } catch {

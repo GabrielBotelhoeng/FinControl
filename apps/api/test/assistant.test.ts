@@ -100,7 +100,7 @@ describe('Assistente com IA', () => {
   });
 
   it('responde direto, com o prompt curto levando hoje, o nome e as categorias', async () => {
-    const user = await newUser({ name: 'Gabriel' });
+    const user = await newUser({ name: 'Gabriel Botelho' });
     await consent(user);
     ai.script.push(text('Você está bem!'));
     const res = await ask(user);
@@ -109,6 +109,7 @@ describe('Assistente com IA', () => {
     const [call] = ai.calls;
     expect(call!.system).toContain('2026-11-11 (quarta-feira)');
     expect(call!.system).toContain('Gabriel');
+    expect(call!.system).not.toContain('Botelho');
     expect(call!.system).toMatch(/Categorias de despesa: .*Alimentação/);
     expect(call!.max_tokens).toBe(700);
     expect(call!.tools.map((t) => t.name)).toEqual(['resumo_periodo', 'buscar_lancamentos', 'orcamento_mes', 'metas', 'saldos_e_dividas']);

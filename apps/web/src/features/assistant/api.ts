@@ -4,6 +4,8 @@ import { toast } from 'sonner';
 import { ApiError } from '../../lib/api-client';
 import { useApi } from '../../lib/api-context';
 
+export { validConversation } from './storage';
+
 const KEY = ['assistant', 'config'];
 
 export function useAssistantConfig() {
@@ -22,21 +24,6 @@ export function useConsent() {
       return queryClient.invalidateQueries({ queryKey: KEY });
     },
   });
-}
-
-/** A6: conversa salva fora do formato (aba antiga, edição manual) é descartada em vez de travar as perguntas. */
-export function validConversation(raw: unknown): AssistantMessage[] {
-  if (!Array.isArray(raw)) return [];
-  // Pares completos (pergunta e resposta), alternando e começando pela pessoa. Uma pergunta sem resposta no fim
-  // (a aba recarregou enquanto esperava) é descartada.
-  const list: unknown[] = raw.length % 2 === 0 ? raw : raw.slice(0, -1);
-  const ok = list.every(
-    (m: unknown, i) =>
-      typeof m === 'object' && m !== null &&
-      (m as AssistantMessage).role === (i % 2 === 0 ? 'user' : 'assistant') &&
-      typeof (m as AssistantMessage).content === 'string' && (m as AssistantMessage).content.trim() !== '',
-  );
-  return ok ? (list as AssistantMessage[]) : [];
 }
 
 /**

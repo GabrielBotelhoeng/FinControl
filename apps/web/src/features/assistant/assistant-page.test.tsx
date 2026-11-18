@@ -80,12 +80,12 @@ describe('AssistantPage', () => {
   });
 
   it('A6: a conversa fica na aba e "Nova conversa" limpa', async () => {
-    sessionStorage.setItem('fincontrol:assistente', JSON.stringify([{ role: 'user', content: 'oi' }, { role: 'assistant', content: 'Olá!' }]));
+    sessionStorage.setItem('fincontrol:assistente:u1', JSON.stringify([{ role: 'user', content: 'oi' }, { role: 'assistant', content: 'Olá!' }]));
     render(api(on));
     expect(await screen.findByText('Olá!')).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Nova conversa' }));
     expect(screen.queryByText('Olá!')).not.toBeInTheDocument();
-    expect(sessionStorage.getItem('fincontrol:assistente')).toBeNull();
+    expect(sessionStorage.getItem('fincontrol:assistente:u1')).toBeNull();
     expect(screen.getByRole('list', { name: 'Sugestões' })).toBeInTheDocument();
   });
 
@@ -111,8 +111,34 @@ describe('AssistantPage', () => {
     expect(await screen.findByRole('button', { name: 'Aceitar e começar' })).toBeInTheDocument();
   });
 
+  it('a conversa salva é por conta: a de outra pessoa na mesma aba não aparece', async () => {
+    sessionStorage.setItem('fincontrol:assistente:outra', JSON.stringify([{ role: 'user', content: 'oi' }, { role: 'assistant', content: 'Segredo da outra conta' }]));
+    render(api(on));
+    expect(await screen.findByRole('list', { name: 'Sugestões' })).toBeInTheDocument();
+    expect(screen.queryByText('Segredo da outra conta')).not.toBeInTheDocument();
+  });
+
+  it('"Nova conversa" durante a espera: a resposta que chega depois não volta', async () => {
+    let answer: (v: unknown) => void = () => undefined;
+    render(api(on, () => new Promise((resolve) => (answer = resolve))));
+    await userEvent.click(await screen.findByRole('button', { name: SUGGESTIONS[2] }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Nova conversa' }));
+    answer({ reply: 'Resposta atrasada' });
+    await waitFor(() => expect(screen.getByRole('list', { name: 'Sugestões' })).toBeInTheDocument());
+    expect(screen.queryByText('Resposta atrasada')).not.toBeInTheDocument();
+  });
+
+  it('com o assistente desligado, quem aceitou ainda pode retirar o consentimento', async () => {
+    const a = api({ enabled: false, allowed: false, consented: true });
+    render(a);
+    await userEvent.click(await screen.findByRole('button', { name: 'Retirar consentimento' }));
+    await userEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Retirar' }));
+    await waitFor(() => expect(a.del).toHaveBeenCalledWith('/assistant/consent'));
+    expect(screen.queryByLabelText('Sua pergunta')).not.toBeInTheDocument();
+  });
+
   it('conversa salva fora do formato é descartada', async () => {
-    sessionStorage.setItem('fincontrol:assistente', JSON.stringify([{ role: 'assistant', content: 'quebrado' }, { role: 'user', content: 'x' }]));
+    sessionStorage.setItem('fincontrol:assistente:u1', JSON.stringify([{ role: 'assistant', content: 'quebrado' }, { role: 'user', content: 'x' }]));
     render(api(on));
     expect(await screen.findByRole('list', { name: 'Sugestões' })).toBeInTheDocument();
     expect(screen.queryByText('quebrado')).not.toBeInTheDocument();

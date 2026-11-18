@@ -11,7 +11,8 @@ import { Panel } from '../../components/ui/panel';
 import { EmptyState, ErrorState, ListSkeleton } from '../../components/ui/states';
 import { cn } from '../../lib/cn';
 import { useAuth } from '../auth/auth-context';
-import { useAsk, useAssistantConfig, useConsent, validConversation } from './api';
+import { useAsk, useAssistantConfig, useConsent } from './api';
+import { loadConversation, saveConversation } from './storage';
 
 export const SUGGESTIONS = [
   'Quanto gastei este mês e com o quê?',
@@ -21,27 +22,6 @@ export const SUGGESTIONS = [
   'Como estão minhas metas?',
   'Quanto devo no cartão e nos empréstimos?',
 ];
-
-/** A6: a conversa fica só nesta aba e some ao fechar. */
-const STORAGE_KEY = 'fincontrol:assistente';
-
-function loadConversation(): AssistantMessage[] {
-  try {
-    const raw = sessionStorage.getItem(STORAGE_KEY);
-    return raw ? validConversation(JSON.parse(raw)) : [];
-  } catch {
-    return [];
-  }
-}
-
-function saveConversation(messages: AssistantMessage[]) {
-  try {
-    if (messages.length === 0) sessionStorage.removeItem(STORAGE_KEY);
-    else sessionStorage.setItem(STORAGE_KEY, JSON.stringify(messages));
-  } catch {
-    // sem armazenamento (aba privada): a conversa vive só na memória
-  }
-}
 
 function ConsentPanel() {
   const consent = useConsent();
@@ -90,18 +70,47 @@ function Bubble({ message }: { message: AssistantMessage }) {
   );
 }
 
-function Chat() {
-  const ask = useAsk();
+function RevokeDialog({ open, onOpenChange, onRevoke }: { open: boolean; onOpenChange: (open: boolean) => void; onRevoke?: () => void }) {
   const consent = useConsent();
-  const [messages, setMessages] = useState<AssistantMessage[]>(loadConversation);
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title="Retirar o consentimento"
+      description="A conversa será apagada, e o assistente vai pedir o aceite de novo antes da próxima pergunta."
+    >
+      <div className="flex justify-end gap-2">
+        <Button variant="secondary" onClick={() => onOpenChange(false)}>
+          Cancelar
+        </Button>
+        <Button
+          variant="danger"
+          loading={consent.isPending}
+          onClick={() => {
+            onRevoke?.();
+            consent.mutate(false, { onError: (err) => toast.error(err.message) });
+          }}
+        >
+          Retirar
+        </Button>
+      </div>
+    </Dialog>
+  );
+}
+
+function Chat({ userId }: { userId: string }) {
+  const ask = useAsk();
+  const [messages, setMessages] = useState<AssistantMessage[]>(() => loadConversation(userId));
+  // Muda a cada "Nova conversa": uma resposta que chegue depois não ressuscita a conversa apagada.
+  const generation = useRef(0);
   const [draft, setDraft] = useState('');
   const [revoking, setRevoking] = useState(false);
   const endRef = useRef<HTMLLIElement>(null);
 
   useEffect(() => {
-    saveConversation(messages);
+    saveConversation(userId, messages);
     endRef.current?.scrollIntoView?.({ block: 'end', behavior: 'smooth' });
-  }, [messages, ask.isPending]);
+  }, [userId, messages, ask.isPending]);
 
   function send(text: string) {
     const question = text.trim();
@@ -109,15 +118,24 @@ function Chat() {
     const next: AssistantMessage[] = [...messages, { role: 'user', content: question }];
     setMessages(next);
     setDraft('');
+    const current = generation.current;
     ask.mutate(next, {
-      onSuccess: ({ reply }) => setMessages([...next, { role: 'assistant', content: reply }]),
+      onSuccess: ({ reply }) => {
+        if (generation.current === current) setMessages([...next, { role: 'assistant', content: reply }]);
+      },
       // A pergunta volta para a caixa: a conversa continua alternando e a pessoa tenta de novo.
       onError: (err) => {
+        if (generation.current !== current) return;
         setMessages(messages);
         setDraft(question);
         toast.error(err.message);
       },
     });
+  }
+
+  function clear() {
+    generation.current += 1;
+    setMessages([]);
   }
 
   const last = messages.at(-1);
@@ -193,7 +211,7 @@ function Chat() {
         <span>O assistente pode errar. Confira os números importantes nos relatórios.</span>
         <div className="flex gap-4">
           {messages.length > 0 && (
-            <button type="button" className="inline-flex items-center gap-1 font-medium text-primary hover:underline" onClick={() => setMessages([])}>
+            <button type="button" className="inline-flex items-center gap-1 font-medium text-primary hover:underline" onClick={clear}>
               <RotateCcw aria-hidden className="h-3.5 w-3.5" strokeWidth={1.75} />
               Nova conversa
             </button>
@@ -203,28 +221,7 @@ function Chat() {
           </button>
         </div>
       </div>
-      <Dialog
-        open={revoking}
-        onOpenChange={setRevoking}
-        title="Retirar o consentimento"
-        description="A conversa será apagada, e o assistente vai pedir o aceite de novo antes da próxima pergunta."
-      >
-        <div className="flex justify-end gap-2">
-          <Button variant="secondary" onClick={() => setRevoking(false)}>
-            Cancelar
-          </Button>
-          <Button
-            variant="danger"
-            loading={consent.isPending}
-            onClick={() => {
-              setMessages([]);
-              consent.mutate(false, { onError: (err) => toast.error(err.message) });
-            }}
-          >
-            Retirar
-          </Button>
-        </div>
-      </Dialog>
+      <RevokeDialog open={revoking} onOpenChange={setRevoking} onRevoke={clear} />
     </div>
   );
 }
@@ -232,8 +229,10 @@ function Chat() {
 /** Assistente com IA (spec 2026-11-18): conversa sobre os próprios dados, só leitura. */
 export default function AssistantPage() {
   const config = useAssistantConfig();
-  const { isDemo } = useAuth();
+  const { isDemo, user } = useAuth();
+  const [revoking, setRevoking] = useState(false);
   const c = config.data;
+  const usable = Boolean(c?.enabled && c.allowed);
 
   return (
     <>
@@ -263,7 +262,16 @@ export default function AssistantPage() {
         </Panel>
       )}
       {c?.enabled && c.allowed && !c.consented && <ConsentPanel />}
-      {c?.enabled && c.allowed && c.consented && <Chat />}
+      {usable && c?.consented && user && <Chat key={user.id} userId={user.id} />}
+      {/* Retirar o consentimento vale sempre, mesmo com o assistente desligado ou a conta fora da lista. */}
+      {!usable && c?.consented && (
+        <>
+          <button type="button" className="mt-4 text-xs font-medium text-muted hover:underline" onClick={() => setRevoking(true)}>
+            Retirar consentimento
+          </button>
+          <RevokeDialog open={revoking} onOpenChange={setRevoking} />
+        </>
+      )}
     </>
   );
 }

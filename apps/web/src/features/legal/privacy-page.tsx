@@ -56,7 +56,8 @@ export default function PrivacyPage() {
           </li>
         </List>
         <p>
-          No seu navegador, o app guarda apenas a sessão de login e a preferência de tema. Não usamos cookies de rastreamento, ferramentas
+          No seu navegador, o app guarda apenas a sessão de login, a preferência de tema e, se você usar o assistente, a conversa
+          atual, que fica só na aba aberta e é apagada ao fechar a aba ou sair da conta. Não usamos cookies de rastreamento, ferramentas
           de análise de audiência nem publicidade.
         </p>
       </Section>
