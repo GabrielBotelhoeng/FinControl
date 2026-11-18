@@ -13,7 +13,7 @@ _Atualizado em 2026-11-17 (sub-projeto 5, Parte B)._
   - só endereços de serviços de push conhecidos (Google, Mozilla, Apple, Microsoft), contra SSRF;
   - `public/push-sw.js`, carregado pelo service worker do PWA, mostra o aviso e abre o app só no próprio site.
 - **Desligar:** `POST /push/unsubscribe` com o endereço no corpo, porque o log grava as URLs.
-- **Testes:** 129 em shared, 259 na API e 170 na web, além de 13 E2E. O E2E pegou o `import default` do `web-push` 4, que é ESM só com exports nomeados e que o Vitest aceitava.
+- **Testes:** 129 em shared, 260 na API e 172 na web, além de 13 E2E. O E2E pegou o `import default` do `web-push` 4, que é ESM só com exports nomeados e que o Vitest aceitava.
 - **Revisão final (revisor novo):** a lista contra SSRF resistiu a todas as tentativas de contorno. Corrigidos: sair da conta cancela a assinatura do navegador (os avisos de uma pessoa não chegam para a próxima); abrir o Perfil confirma a assinatura no servidor antes de mostrar "ligado"; no máximo 10 aparelhos por pessoa e assinatura que só falha há 30 dias é apagada; falha de envio vai para o log (status e host); chaves VAPID com formato validado; avisos reservados de forma atômica (dois envios juntos não repetem, e sem nenhum aparelho recebendo eles voltam para o próximo); clique na notificação abre janela nova se a atual não for do service worker; iPad reconhecido.
 - **Teste manual em produção:** ativar no navegador e receber o aviso de teste.
 

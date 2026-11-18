@@ -170,4 +170,30 @@ describe('Web Push (sub-projeto 5, Parte B)', () => {
     expect(a.body.sent + b.body.sent).toBe(1);
     expect(fake.sent.filter((s) => s.payload.title === 'Aluguel')).toHaveLength(1);
   });
+
+  it('aviso lido entre o cálculo e a reserva não vai; falha antes de entregar desfaz a reserva', async () => {
+    const user = await newUser();
+    const { bill } = await withBills(user);
+    await bill('Aluguel', '2026-11-12');
+    await subscribe(user, 'celular');
+    await request(app).get('/api/v1/notifications').set(user.auth);
+    const key = (await testDb.notification.findFirstOrThrow()).key;
+
+    // Repositório que, entre o cálculo e a reserva, vê o aviso lido.
+    const { createPushRepository } = await import('../src/modules/push/push.repository');
+    const { createPushService } = await import('../src/modules/push/push.service');
+    const repo = createPushRepository(testDb);
+    const notifications = { list: async () => ({ items: [{ key, kind: 'bill_due' as const, priority: 2, title: 'Aluguel', body: 'x', href: '/', action: 'Pagar', date: '2026-11-12', read: false }], unreadCount: 1 }) };
+    const logger = { error: () => undefined };
+    await testDb.notification.updateMany({ data: { readAt: new Date() } });
+    const readFirst = createPushService({ repo, notifications, sender: fake.sender, publicKey: 'k', logger, clock: () => new Date() });
+    expect(await readFirst.sendDaily()).toMatchObject({ sent: 0 });
+    expect(await testDb.notification.count({ where: { pushedAt: { not: null } } })).toBe(0);
+
+    // Aviso não lido, mas a leitura das assinaturas falha depois da reserva: a reserva volta.
+    await testDb.notification.updateMany({ data: { readAt: null } });
+    const broken = createPushService({ repo: { ...repo, forUser: async () => Promise.reject(new Error('banco')) }, notifications, sender: fake.sender, publicKey: 'k', logger, clock: () => new Date() });
+    expect(await broken.sendDaily()).toMatchObject({ sent: 0 });
+    expect(await testDb.notification.count({ where: { pushedAt: { not: null } } })).toBe(0);
+  });
 });

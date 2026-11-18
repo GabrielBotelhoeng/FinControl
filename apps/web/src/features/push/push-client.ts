@@ -64,7 +64,10 @@ export const browserPushClient: PushClient = {
     return toJson(sub);
   },
   async unsubscribe() {
-    const sub = await (await registration()).pushManager.getSubscription();
+    // `getRegistration` responde na hora (sem registro, `undefined`); `controller` é nulo depois de um Shift+F5
+    // mesmo com assinatura ativa, então não serve para decidir.
+    const reg = await navigator.serviceWorker.getRegistration();
+    const sub = await reg?.pushManager.getSubscription();
     if (!sub) return null;
     const { endpoint } = sub;
     await sub.unsubscribe();
@@ -79,8 +82,6 @@ export const browserPushClient: PushClient = {
  */
 export async function forgetThisDevice(client: PushClient = browserPushClient): Promise<void> {
   if (client.support() !== 'supported') return;
-  // Sem service worker no controle da página (ex.: `vite dev`), não há assinatura e não vale esperar por ele.
-  if (client === browserPushClient && !navigator.serviceWorker.controller) return;
   try {
     await client.unsubscribe();
   } catch {

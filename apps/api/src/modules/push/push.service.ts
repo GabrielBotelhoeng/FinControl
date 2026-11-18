@@ -37,12 +37,17 @@ export function createPushService(deps: PushServiceDeps) {
     let removed = 0;
     for (const t of targets) {
       const result = await deps.sender(t, payload);
-      if (result === 'sent') {
-        sent += 1;
-        await deps.repo.markSuccess(t.endpoint, deps.clock());
-      } else if (result === 'gone' || deps.clock().getTime() - (t.lastSuccessAt ?? t.createdAt).getTime() > STALE_DAYS * DAY_MS) {
-        removed += 1;
-        await deps.repo.removeEndpoint(t.endpoint);
+      // Depois do envio, uma gravação que falhe não pode esconder que o aparelho recebeu: vai para o log e segue.
+      try {
+        if (result === 'sent') {
+          sent += 1;
+          await deps.repo.markSuccess(t.endpoint, deps.clock());
+        } else if (result === 'gone' || deps.clock().getTime() - (t.lastSuccessAt ?? t.createdAt).getTime() > STALE_DAYS * DAY_MS) {
+          removed += 1;
+          await deps.repo.removeEndpoint(t.endpoint);
+        }
+      } catch (err) {
+        deps.logger.error({ err }, 'Web Push: falha ao registrar o resultado do envio');
       }
     }
     return { sent, removed };
@@ -76,6 +81,7 @@ export function createPushService(deps: PushServiceDeps) {
       let sent = 0;
       let removed = 0;
       for (const userId of users) {
+        let pending: { keys: string[]; at: Date } | null = null;
         try {
           const { items } = await deps.notifications.list(userId);
           const unread = items.filter((i) => !i.read);
@@ -84,6 +90,7 @@ export function createPushService(deps: PushServiceDeps) {
           const news = unread.filter((i) => reserved.has(i.key));
           const first = news[0];
           if (!first) continue;
+          pending = { keys: news.map((i) => i.key), at: now };
           const more = news.length - 1;
           const result = await deliver(userId, {
             title: first.title,
@@ -93,10 +100,13 @@ export function createPushService(deps: PushServiceDeps) {
           });
           sent += result.sent;
           removed += result.removed;
-          if (result.sent === 0) await deps.repo.release(userId, news.map((i) => i.key), now);
+          if (result.sent === 0) await deps.repo.release(userId, pending.keys, now);
+          pending = null;
         } catch (err) {
           // Uma pessoa com erro não impede o envio para as outras.
           deps.logger.error({ err, userId }, 'Push diário: falha ao enviar para um usuário');
+          // Falhou antes de algum aparelho receber: os avisos voltam para o próximo envio.
+          if (pending) await deps.repo.release(userId, pending.keys, pending.at).catch(() => undefined);
         }
       }
       return { users: users.length, sent, removed };

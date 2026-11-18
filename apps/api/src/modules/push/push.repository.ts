@@ -48,7 +48,8 @@ export function createPushRepository(db: Db) {
     async reserve(userId: string, keys: string[], at: Date): Promise<Set<string>> {
       if (keys.length === 0) return new Set();
       const rows = await db.notification.updateManyAndReturn({
-        where: { userId, key: { in: keys }, pushedAt: null }, data: { pushedAt: at }, select: { key: true },
+        // `readAt: null` de novo aqui: a pessoa pode ter lido entre o cálculo da lista e a reserva.
+        where: { userId, key: { in: keys }, pushedAt: null, readAt: null }, data: { pushedAt: at }, select: { key: true },
       });
       return new Set(rows.map((r) => r.key));
     },

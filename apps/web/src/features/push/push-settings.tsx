@@ -61,9 +61,11 @@ export function PushSettings({ isDemo, client = browserPushClient }: { isDemo: b
   const disable = () =>
     run(async () => {
       const endpoint = await client.unsubscribe();
-      if (endpoint) await api.post('/push/unsubscribe', { endpoint });
+      // O navegador já não recebe nada: a tela mostra desligado mesmo se a limpeza no servidor falhar (o próximo
+      // envio recebe 404/410 e apaga a assinatura de qualquer jeito).
       setState('off');
       toast.success('Avisos desligados neste aparelho.');
+      if (endpoint) await api.post('/push/unsubscribe', { endpoint }).catch(() => undefined);
     });
   const test = () =>
     run(async () => {
@@ -88,7 +90,14 @@ export function PushSettings({ isDemo, client = browserPushClient }: { isDemo: b
           <span className="text-xs text-muted">Todo dia às 8h, um aviso com o que é novo na central. Só neste aparelho.</span>
         </div>
       </div>
-      {config.isPending ? null : message ? (
+      {config.isPending ? null : config.isError ? (
+        <div className="flex flex-wrap items-center gap-3">
+          <p className="text-sm text-muted">Não foi possível verificar os avisos no celular.</p>
+          <Button size="sm" variant="secondary" onClick={() => config.refetch()}>
+            Tentar de novo
+          </Button>
+        </div>
+      ) : message ? (
         <p className="text-sm text-muted">{message}</p>
       ) : state === 'loading' ? null : state === 'on' ? (
         <div className="flex flex-wrap items-center gap-2">

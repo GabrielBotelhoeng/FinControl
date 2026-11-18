@@ -100,4 +100,26 @@ describe('PushSettings (W4)', () => {
     await forgetThisDevice(unsupported);
     expect(unsupported.unsubscribe).not.toHaveBeenCalled();
   });
+
+  it('desligar no navegador mostra desligado mesmo se o servidor falhar', async () => {
+    const c = client({ permission: () => 'granted', current: async () => SUB });
+    const a = fakeApi({
+      'GET /push/config': { enabled: true, publicKey: 'BKey' },
+      'POST /push/subscriptions': undefined,
+      'POST /push/unsubscribe': () => new Error('rede'),
+    });
+    renderApp(<PushSettings isDemo={false} client={c} />, { api: a });
+    await userEvent.click(await screen.findByRole('button', { name: 'Desligar neste aparelho' }));
+    expect(await screen.findByRole('button', { name: 'Receber no celular e no navegador' })).toBeInTheDocument();
+  });
+
+  it('erro ao carregar a configuração mostra a mensagem e "Tentar de novo"', async () => {
+    let fail = true;
+    const a = fakeApi({ 'GET /push/config': () => (fail ? new Error('rede') : { enabled: true, publicKey: 'BKey' }) });
+    renderApp(<PushSettings isDemo={false} client={client()} />, { api: a });
+    expect(await screen.findByText('Não foi possível verificar os avisos no celular.')).toBeInTheDocument();
+    fail = false;
+    await userEvent.click(screen.getByRole('button', { name: 'Tentar de novo' }));
+    expect(await screen.findByRole('button', { name: 'Receber no celular e no navegador' })).toBeInTheDocument();
+  });
 });
