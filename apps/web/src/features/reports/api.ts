@@ -7,12 +7,13 @@ export function useReport(from: YearMonth, to: YearMonth) {
   return useQuery({ queryKey: ['reports', from, to], queryFn: () => api.get<ReportDTO>('/reports', { from, to }) });
 }
 
-export type ExportKind = 'pdf' | 'csv';
+export type ExportKind = 'pdf' | 'xlsx' | 'csv';
 
 /** R11: o mesmo nome que a API manda (a web não lê o `Content-Disposition`, que o CORS esconderia). */
 export function exportFilename(kind: ExportKind, from: YearMonth, to: YearMonth): string {
   const slug = from === to ? from : `${from}_${to}`;
-  return kind === 'pdf' ? `fincontrol-relatorio-${slug}.pdf` : `fincontrol-lancamentos-${slug}.csv`;
+  if (kind === 'pdf') return `fincontrol-relatorio-${slug}.pdf`;
+  return kind === 'xlsx' ? `fincontrol-analise-${slug}.xlsx` : `fincontrol-lancamentos-${slug}.csv`;
 }
 
 /** Entrega o arquivo ao navegador por um link temporário. */

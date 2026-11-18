@@ -1,5 +1,6 @@
 import type { ReportDTO } from '@fincontrol/shared';
 import { inflateSync } from 'node:zlib';
+import ExcelJS from 'exceljs';
 import { PDFDocument } from 'pdf-lib';
 import request from 'supertest';
 import { beforeEach, describe, expect, it } from 'vitest';
@@ -236,6 +237,58 @@ describe('relatórios', () => {
     expect(text).toContain('janeiro a novembro de 2026');
     expect(text).toContain('Nada pago no período.');
     expect((await request(app).get('/api/v1/reports/export.pdf?from=2026-12&to=2026-12').set(user.auth)).status).toBe(422);
+  });
+
+  it('Excel (critérios 1 a 3): abas, Tabela com filtro, fórmulas e "Cerveja" agrupada', async () => {
+    const user = await newUser();
+    const { checking, food } = await scenario(user);
+    const leisure = await categoryId(app, user, 'Lazer', 'expense');
+    const beer = (description: string, amount: number, date: string) =>
+      createTransaction(app, user, { type: 'expense', amount, description, accountId: checking.id, categoryId: leisure, nature: 'variable', dueDate: date, status: 'paid', paidDate: date });
+    await beer('Cerveja', 2000, '2026-11-01');
+    await beer('Cerveja', 3000, '2026-11-07');
+    await beer('CERVEJA', 2500, '2026-11-08');
+    await beer('cerveja (2/3)', 1500, '2026-11-09');
+    void food;
+
+    const res = await request(app).get('/api/v1/reports/export.xlsx?from=2026-11&to=2026-11').set(user.auth).buffer(true).parse(binary);
+    expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toBe('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    expect(res.headers['content-disposition']).toBe('attachment; filename="fincontrol-analise-2026-11.xlsx"');
+    const wb = new ExcelJS.Workbook();
+    // O tipo do exceljs pede o Buffer antigo do Node; o conteúdo é o mesmo.
+    await wb.xlsx.load(res.body as Parameters<typeof wb.xlsx.load>[0]);
+    expect(wb.worksheets.map((w) => w.name)).toEqual([
+      'Resumo', 'Lançamentos', 'Por categoria', 'Mensal', 'Ano contra ano', 'Onde o dinheiro vai', 'Dia da semana', 'Pequenos gastos', 'Fixos e variáveis', 'Dívidas', 'Saldos',
+    ]);
+
+    const lanc = wb.getWorksheet('Lançamentos')!;
+    expect(lanc.getTable('Lancamentos')).toBeDefined();
+    expect(lanc.getRow(1).values).toEqual([undefined, 'Data', 'Mês', 'Dia da semana', 'Descrição', 'Tipo', 'Categoria', 'Natureza', 'Conta', 'Conta de destino', 'Situação', 'Valor']);
+
+    const where = wb.getWorksheet('Onde o dinheiro vai')!;
+    const beerRow = where.getRows(4, where.rowCount - 3)!.find((r) => r.getCell(1).value === 'Cerveja')!;
+    expect([beerRow.getCell(2).value, beerRow.getCell(3).value, beerRow.getCell(5).value]).toEqual([4, 90, 'Lazer']);
+
+    const cat = wb.getWorksheet('Por categoria')!;
+    const food2 = cat.getRows(4, cat.rowCount - 3)!.find((r) => r.getCell(1).value === 'Alimentação')!;
+    const variation = food2.getCell(4).value as { formula: string; result: number };
+    expect(variation.formula).toBe(`IF(C${food2.number}=0,"",(B${food2.number}-C${food2.number})/C${food2.number})`);
+    expect(variation.result).toBe(3);
+
+    const resumo = wb.getWorksheet('Resumo')!;
+    expect(resumo.getCell('B4').value).toBe(5000);
+    expect((resumo.getCell('B6').value as { formula: string }).formula).toBe('B4-B5');
+  });
+
+  it('Excel de período maior que 12 meses não tem "Ano contra ano"; período validado', async () => {
+    const user = await newUser();
+    const res = await request(app).get('/api/v1/reports/export.xlsx?from=2025-01&to=2026-11').set(user.auth).buffer(true).parse(binary);
+    const wb = new ExcelJS.Workbook();
+    // O tipo do exceljs pede o Buffer antigo do Node; o conteúdo é o mesmo.
+    await wb.xlsx.load(res.body as Parameters<typeof wb.xlsx.load>[0]);
+    expect(wb.worksheets.map((w) => w.name)).not.toContain('Ano contra ano');
+    expect((await request(app).get('/api/v1/reports/export.xlsx?from=2026-12&to=2026-12').set(user.auth)).status).toBe(422);
   });
 });
 

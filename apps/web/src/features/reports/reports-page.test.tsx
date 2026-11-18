@@ -112,7 +112,7 @@ describe('ReportsPage', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('Falhou ao carregar.');
   });
 
-  it('R11: "Baixar CSV" e "Baixar PDF" buscam o arquivo pela API e salvam com o nome do período', async () => {
+  it('R11 e E10: "Baixar CSV", "Baixar PDF" e "Baixar Excel" buscam o arquivo pela API e salvam com o nome do período', async () => {
     const createObjectURL = vi.fn(() => 'blob:fake');
     Object.assign(URL, { createObjectURL, revokeObjectURL: vi.fn() });
     const names: string[] = [];
@@ -128,8 +128,11 @@ describe('ReportsPage', () => {
     await user.click(screen.getByRole('button', { name: 'Baixar PDF' }));
     await waitFor(() => expect(toast.success).toHaveBeenCalledWith('Relatório baixado.'));
     expect(client.download).toHaveBeenCalledWith('/reports/export.pdf', { from: '2026-11', to: '2026-11' });
-    expect(names).toEqual(['fincontrol-lancamentos-2026-11.csv', 'fincontrol-relatorio-2026-11.pdf']);
-    expect(createObjectURL).toHaveBeenCalledTimes(2);
+    await user.click(screen.getByRole('button', { name: 'Baixar Excel' }));
+    await waitFor(() => expect(toast.success).toHaveBeenCalledWith('Planilha de análise baixada.'));
+    expect(client.download).toHaveBeenCalledWith('/reports/export.xlsx', { from: '2026-11', to: '2026-11' });
+    expect(names).toEqual(['fincontrol-lancamentos-2026-11.csv', 'fincontrol-relatorio-2026-11.pdf', 'fincontrol-analise-2026-11.xlsx']);
+    expect(createObjectURL).toHaveBeenCalledTimes(3);
     click.mockRestore();
   });
 

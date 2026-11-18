@@ -1,6 +1,15 @@
 # HANDOFF — FinControl
 
-_Atualizado em 2026-11-17 (sub-projeto 5, Parte B)._
+_Atualizado em 2026-11-18 (exportação em Excel)._
+
+## Exportação em Excel para análise (2026-11-18, branch feat/excel)
+
+- **Spec:** `docs/superpowers/specs/2026-11-18-fincontrol-excel-analise-design.md` (E1–E10), com o escopo combinado com o usuário. Sem migration.
+- **Entregue:** `GET /reports/export.xlsx` (`exceljs`) e o botão "Baixar Excel" nos relatórios. As abas são Resumo, Lançamentos (Tabela do Excel com filtros), Por categoria (variação em fórmula e "antes × agora" contra a média dos 3 meses anteriores), Mensal, Ano contra ano (até 12 meses), Onde o dinheiro vai (descrições agrupadas), Dia da semana (média diária no fim de semana e nos dias úteis), Pequenos gastos (abaixo de R$ 50), Fixos e variáveis, Dívidas e Saldos. O arquivo recalcula ao abrir (`fullCalcOnLoad`).
+- **Dependência:** o `uuid` do `exceljs` foi forçado para a versão 11 (`overrides` na raiz), sem o alerta da 8.
+- **E2E:** confere só a assinatura do `.xlsx` (o carregador do Playwright não lê o `exceljs`); o conteúdo é testado na API. `XLSX_OUT=<arquivo>` salva a planilha baixada da demo.
+- **Pendente do Web Push:** as chaves VAPID ainda não estão na Vercel (comando no fim da conversa de 2026-11-18).
+
 
 ## Sub-projeto 5, Parte B: Web Push (2026-11-17, branch feat/web-push)
 

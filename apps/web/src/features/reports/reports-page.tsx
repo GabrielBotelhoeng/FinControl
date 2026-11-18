@@ -1,5 +1,5 @@
 import { monthOf, todayInSaoPaulo, type ReportCategoryDTO, type ReportDTO, type YearMonth } from '@fincontrol/shared';
-import { ArrowDownRight, ArrowUpRight, ChevronLeft, ChevronRight, FileSpreadsheet, FileText, Sparkles } from 'lucide-react';
+import { ArrowDownRight, ArrowUpRight, ChevronLeft, ChevronRight, FileDown, FileSpreadsheet, FileText, Sparkles } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { Link } from 'react-router';
 import { toast } from 'sonner';
@@ -191,7 +191,7 @@ function DownloadButtons({ from, to }: { from: YearMonth; to: YearMonth }) {
     try {
       const blob = await api.download(`/reports/export.${kind}`, { from, to });
       saveFile(blob, exportFilename(kind, from, to));
-      toast.success(kind === 'pdf' ? 'Relatório baixado.' : 'Lançamentos baixados.');
+      toast.success(kind === 'pdf' ? 'Relatório baixado.' : kind === 'xlsx' ? 'Planilha de análise baixada.' : 'Lançamentos baixados.');
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Não foi possível baixar o arquivo.');
     } finally {
@@ -204,8 +204,12 @@ function DownloadButtons({ from, to }: { from: YearMonth; to: YearMonth }) {
         <FileText aria-hidden className="h-4 w-4" strokeWidth={1.75} />
         Baixar PDF
       </Button>
-      <Button variant="secondary" loading={busy === 'csv'} disabled={busy !== null} onClick={() => download('csv')}>
+      <Button variant="secondary" loading={busy === 'xlsx'} disabled={busy !== null} onClick={() => download('xlsx')}>
         <FileSpreadsheet aria-hidden className="h-4 w-4" strokeWidth={1.75} />
+        Baixar Excel
+      </Button>
+      <Button variant="secondary" loading={busy === 'csv'} disabled={busy !== null} onClick={() => download('csv')}>
+        <FileDown aria-hidden className="h-4 w-4" strokeWidth={1.75} />
         Baixar CSV
       </Button>
     </>
