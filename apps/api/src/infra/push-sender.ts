@@ -1,5 +1,6 @@
 // O web-push 4 é ESM só com exports nomeados (sem `default`).
 import { sendNotification } from 'web-push';
+import type { Logger } from './logger';
 
 export type PushTarget = { endpoint: string; p256dh: string; auth: string };
 export type PushPayload = { title: string; body: string; url: string; tag: string };
@@ -10,7 +11,7 @@ export type PushSender = (target: PushTarget, payload: PushPayload) => Promise<P
 export type VapidKeys = { publicKey: string; privateKey: string; subject: string };
 
 /** Envio real pela biblioteca `web-push` (spec do sub-projeto 5, Parte B, W1). Nos testes, entra um falso. */
-export function createWebPushSender(vapid: VapidKeys): PushSender {
+export function createWebPushSender(vapid: VapidKeys, logger: Pick<Logger, 'warn'>): PushSender {
   return async (target, payload) => {
     try {
       await sendNotification(
@@ -22,7 +23,10 @@ export function createWebPushSender(vapid: VapidKeys): PushSender {
       return 'sent';
     } catch (err) {
       const status = (err as { statusCode?: number }).statusCode;
-      return status === 404 || status === 410 ? 'gone' : 'failed';
+      if (status === 404 || status === 410) return 'gone';
+      // Só o status e o host: o caminho do endereço e as chaves identificam o aparelho e não vão para o log.
+      logger.warn({ status: status ?? null, host: new URL(target.endpoint).host, message: (err as Error).message }, 'Web Push: envio falhou');
+      return 'failed';
     }
   };
 }

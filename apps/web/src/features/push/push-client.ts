@@ -38,7 +38,8 @@ function toJson(sub: PushSubscription): BrowserSubscription {
   return { endpoint: json.endpoint ?? sub.endpoint, keys: { p256dh: json.keys?.p256dh ?? '', auth: json.keys?.auth ?? '' } };
 }
 
-const isIos = () => /iPad|iPhone|iPod/.test(navigator.userAgent);
+// O iPadOS 13+ se apresenta como Mac: o toque denuncia o iPad.
+const isIos = () => /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 const isStandalone = () => window.matchMedia?.('(display-mode: standalone)').matches || (navigator as { standalone?: boolean }).standalone === true;
 
 export const browserPushClient: PushClient = {
@@ -70,3 +71,19 @@ export const browserPushClient: PushClient = {
     return endpoint;
   },
 };
+
+/**
+ * Ao sair da conta, este navegador deixa de receber os avisos dela: sem isso, quem entrasse depois no mesmo
+ * aparelho veria os avisos (nomes e valores) da pessoa anterior. O servidor descobre a assinatura cancelada no
+ * próximo envio (404/410) e a apaga. Nunca impede a saída.
+ */
+export async function forgetThisDevice(client: PushClient = browserPushClient): Promise<void> {
+  if (client.support() !== 'supported') return;
+  // Sem service worker no controle da página (ex.: `vite dev`), não há assinatura e não vale esperar por ele.
+  if (client === browserPushClient && !navigator.serviceWorker.controller) return;
+  try {
+    await client.unsubscribe();
+  } catch {
+    // Sem service worker ou sem rede: sair continua valendo.
+  }
+}

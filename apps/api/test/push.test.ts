@@ -9,11 +9,12 @@ import { categoryId, createAccount, createTransaction } from './helpers/factorie
 
 const SECRET = process.env.CRON_SECRET!;
 
-/** Envio falso: guarda o que foi mandado; um endereço com "gone" responde como assinatura expirada. */
+/** Envio falso: guarda o que foi mandado; "gone" responde como assinatura expirada e "fail" como falha. */
 function fakeSender() {
   const sent: { target: PushTarget; payload: PushPayload }[] = [];
   const sender = async (target: PushTarget, payload: PushPayload): Promise<PushResult> => {
     if (target.endpoint.includes('gone')) return 'gone';
+    if (target.endpoint.includes('fail')) return 'failed';
     sent.push({ target, payload });
     return 'sent';
   };
@@ -134,5 +135,39 @@ describe('Web Push (sub-projeto 5, Parte B)', () => {
     await request(app).patch('/api/v1/me').set(user.auth).send({ notificationPrefs: { bills: false, invoices: true, budget: true, goals: true, billDays: 3 } });
     expect((await cron()).body).toMatchObject({ sent: 0 });
     expect((await request(app).get('/api/v1/internal/cron/send-push')).status).toBe(401);
+  });
+
+  it('no máximo 10 aparelhos por pessoa: o mais antigo sai', async () => {
+    const user = await newUser();
+    for (let i = 0; i < 12; i += 1) {
+      await subscribe(user, `aparelho-${i}`);
+      await testDb.pushSubscription.updateMany({ where: { endpoint: endpoint(`aparelho-${i}`) }, data: { createdAt: new Date(Date.UTC(2026, 0, i + 1)) } });
+    }
+    const left = (await testDb.pushSubscription.findMany({ orderBy: { createdAt: 'asc' } })).map((s) => s.endpoint);
+    expect(left).toHaveLength(10);
+    expect(left[0]).toBe(endpoint('aparelho-2'));
+  });
+
+  it('assinatura que só falha há mais de 30 dias é apagada; a recente fica', async () => {
+    const user = await newUser();
+    await subscribe(user, 'fail-velho');
+    await subscribe(user, 'fail-novo');
+    await testDb.pushSubscription.updateMany({ where: { endpoint: endpoint('fail-velho') }, data: { createdAt: new Date('2026-09-01T00:00:00Z') } });
+    expect((await request(app).post('/api/v1/push/test').set(user.auth)).body).toEqual({ sent: 0 });
+    expect((await testDb.pushSubscription.findMany()).map((s) => s.endpoint)).toEqual([endpoint('fail-novo')]);
+  });
+
+  it('nenhum aparelho recebeu: os avisos voltam para o próximo envio; dois envios juntos não repetem', async () => {
+    const user = await newUser();
+    const { bill } = await withBills(user);
+    await bill('Aluguel', '2026-11-12');
+    await subscribe(user, 'fail-celular');
+    expect((await cron()).body).toMatchObject({ sent: 0 });
+    expect(await testDb.notification.count({ where: { pushedAt: { not: null } } })).toBe(0);
+
+    await subscribe(user, 'celular');
+    const [a, b] = await Promise.all([cron(), cron()]);
+    expect(a.body.sent + b.body.sent).toBe(1);
+    expect(fake.sent.filter((s) => s.payload.title === 'Aluguel')).toHaveLength(1);
   });
 });

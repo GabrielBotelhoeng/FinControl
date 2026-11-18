@@ -45,10 +45,12 @@ describe('PushSettings (W4)', () => {
     expect(await screen.findByText('Ligado neste aparelho')).toBeInTheDocument();
   });
 
-  it('ligado: manda o aviso de teste e desliga neste aparelho', async () => {
+  it('ligado: confirma a assinatura no servidor, manda o aviso de teste e desliga neste aparelho', async () => {
     const c = client({ permission: () => 'granted', current: async () => SUB });
     const a = api();
     renderApp(<PushSettings isDemo={false} client={c} />, { api: a });
+    // Assinatura que já estava no navegador (de outra conta, ou apagada no servidor) passa a ser desta conta.
+    await waitFor(() => expect(a.post).toHaveBeenCalledWith('/push/subscriptions', SUB));
     await userEvent.click(await screen.findByRole('button', { name: 'Enviar um aviso de teste' }));
     await waitFor(() => expect(toast.success).toHaveBeenCalledWith('Aviso de teste enviado. Ele chega em alguns segundos.'));
     await userEvent.click(screen.getByRole('button', { name: 'Desligar neste aparelho' }));
@@ -77,5 +79,25 @@ describe('PushSettings (W4)', () => {
     const box = await group();
     await waitFor(() => expect(box).toHaveTextContent(text));
     expect(screen.queryByRole('button', { name: 'Receber no celular e no navegador' })).not.toBeInTheDocument();
+  });
+
+  it('se o servidor não confirma a assinatura, mostra desligado (não finge que está ligado)', async () => {
+    const c = client({ permission: () => 'granted', current: async () => SUB });
+    const a = fakeApi({ 'GET /push/config': { enabled: true, publicKey: 'BKey' }, 'POST /push/subscriptions': () => new Error('rede') });
+    renderApp(<PushSettings isDemo={false} client={c} />, { api: a });
+    expect(await screen.findByRole('button', { name: 'Receber no celular e no navegador' })).toBeInTheDocument();
+    expect(screen.queryByText('Ligado neste aparelho')).not.toBeInTheDocument();
+  });
+
+  it('sair da conta cancela a assinatura deste navegador (forgetThisDevice), sem travar se falhar', async () => {
+    const { forgetThisDevice } = await import('./push-client');
+    const ok = client();
+    await forgetThisDevice(ok);
+    expect(ok.unsubscribe).toHaveBeenCalled();
+    const broken = client({ unsubscribe: vi.fn(async () => Promise.reject(new Error('sem rede'))) });
+    await expect(forgetThisDevice(broken)).resolves.toBeUndefined();
+    const unsupported = client({ support: () => 'unsupported' });
+    await forgetThisDevice(unsupported);
+    expect(unsupported.unsubscribe).not.toHaveBeenCalled();
   });
 });

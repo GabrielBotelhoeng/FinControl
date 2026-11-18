@@ -17,8 +17,9 @@ const envSchema = z.object({
     .optional(),
   CRON_SECRET: z.string().min(32),
   // Web Push (sub-projeto 5, Parte B, W1): as três juntas, ou nenhuma (push desligado).
-  VAPID_PUBLIC_KEY: z.string().min(1).optional(),
-  VAPID_PRIVATE_KEY: z.string().min(1).optional(),
+  // base64url: a pública tem 65 bytes (87 caracteres) e a privada 32 (43). Chave trocada falharia todo envio em silêncio.
+  VAPID_PUBLIC_KEY: z.string().regex(/^[A-Za-z0-9_-]{87}$/, 'Chave pública VAPID inválida').optional(),
+  VAPID_PRIVATE_KEY: z.string().regex(/^[A-Za-z0-9_-]{43}$/, 'Chave privada VAPID inválida').optional(),
   VAPID_SUBJECT: z.string().regex(/^(mailto:|https:\/\/)/, 'Use mailto: ou https://').optional(),
 }).refine(
   (e) => [e.VAPID_PUBLIC_KEY, e.VAPID_PRIVATE_KEY, e.VAPID_SUBJECT].every((v) => v === undefined) || [e.VAPID_PUBLIC_KEY, e.VAPID_PRIVATE_KEY, e.VAPID_SUBJECT].every((v) => v !== undefined),

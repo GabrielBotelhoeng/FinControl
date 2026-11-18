@@ -15,6 +15,10 @@ export type PushServiceDeps = {
   clock: () => Date;
 };
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+/** Assinatura que falha e não recebe nada há este tempo é apagada (endereço que nunca funcionou ou morreu). */
+const STALE_DAYS = 30;
+
 const TEST_PAYLOAD: PushPayload = {
   title: 'Os avisos do FinControl estão ligados',
   body: 'É assim que os avisos de contas, faturas, orçamento e metas vão chegar.',
@@ -36,7 +40,7 @@ export function createPushService(deps: PushServiceDeps) {
       if (result === 'sent') {
         sent += 1;
         await deps.repo.markSuccess(t.endpoint, deps.clock());
-      } else if (result === 'gone') {
+      } else if (result === 'gone' || deps.clock().getTime() - (t.lastSuccessAt ?? t.createdAt).getTime() > STALE_DAYS * DAY_MS) {
         removed += 1;
         await deps.repo.removeEndpoint(t.endpoint);
       }
@@ -75,8 +79,9 @@ export function createPushService(deps: PushServiceDeps) {
         try {
           const { items } = await deps.notifications.list(userId);
           const unread = items.filter((i) => !i.read);
-          const fresh = await deps.repo.unpushed(userId, unread.map((i) => i.key));
-          const news = unread.filter((i) => fresh.has(i.key));
+          const now = deps.clock();
+          const reserved = await deps.repo.reserve(userId, unread.map((i) => i.key), now);
+          const news = unread.filter((i) => reserved.has(i.key));
           const first = news[0];
           if (!first) continue;
           const more = news.length - 1;
@@ -88,7 +93,7 @@ export function createPushService(deps: PushServiceDeps) {
           });
           sent += result.sent;
           removed += result.removed;
-          if (result.sent > 0) await deps.repo.markPushed(userId, news.map((i) => i.key), deps.clock());
+          if (result.sent === 0) await deps.repo.release(userId, news.map((i) => i.key), now);
         } catch (err) {
           // Uma pessoa com erro não impede o envio para as outras.
           deps.logger.error({ err, userId }, 'Push diário: falha ao enviar para um usuário');

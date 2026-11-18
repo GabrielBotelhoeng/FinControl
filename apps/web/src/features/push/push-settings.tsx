@@ -24,14 +24,21 @@ export function PushSettings({ isDemo, client = browserPushClient }: { isDemo: b
   useEffect(() => {
     if (!usable) return;
     let alive = true;
+    // A assinatura do navegador só conta como "ligada" depois de confirmada no servidor: ele pode tê-la apagado
+    // (expirada) ou ela pode ser de quem usou o aparelho antes. O POST é idempotente e passa a assinatura para cá.
     client
       .current()
-      .then((sub) => alive && setState(sub && client.permission() === 'granted' ? 'on' : 'off'))
+      .then(async (sub) => {
+        if (!sub || client.permission() !== 'granted') return 'off' as const;
+        await api.post('/push/subscriptions', sub);
+        return 'on' as const;
+      })
+      .then((next) => alive && setState(next))
       .catch(() => alive && setState('off'));
     return () => {
       alive = false;
     };
-  }, [usable, client]);
+  }, [usable, client, api]);
 
   const run = async (action: () => Promise<void>) => {
     setBusy(true);

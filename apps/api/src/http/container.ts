@@ -82,7 +82,7 @@ export function buildContainer(deps: AppDeps) {
   const vapid = VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY && VAPID_SUBJECT ? { publicKey: VAPID_PUBLIC_KEY, privateKey: VAPID_PRIVATE_KEY, subject: VAPID_SUBJECT } : null;
   const push = createPushService({
     repo: createPushRepository(deps.db), notifications, logger: deps.logger, clock: deps.clock,
-    sender: vapid ? (deps.pushSender ?? createWebPushSender(vapid)) : null, publicKey: vapid?.publicKey ?? null,
+    sender: vapid ? (deps.pushSender ?? createWebPushSender(vapid, deps.logger)) : null, publicKey: vapid?.publicKey ?? null,
   });
   const reports = createReportsService({ repo: createReportsRepository(deps.db), debts, recurrences, clock: deps.clock });
   const demo = createDemoService({
