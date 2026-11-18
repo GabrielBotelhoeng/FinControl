@@ -126,7 +126,7 @@ export function createAccountsRepository(db: DbClient) {
     /** Nome de uma dívida com parcela de acordo pendente nesta conta, ou `null` (bloqueia o arquivamento, V7). */
     async pendingDebtName(userId: string, id: string): Promise<string | null> {
       const row = await db.transaction.findFirst({
-        where: { userId, accountId: id, status: 'pending', debtId: { not: null } },
+        where: { userId, accountId: id, status: 'pending', debtId: { not: null }, installmentNumber: { not: null } },
         select: { debt: { select: { name: true } } },
       });
       return row?.debt?.name ?? null;

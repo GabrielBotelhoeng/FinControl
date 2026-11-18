@@ -7,7 +7,7 @@ import { NotFoundError, UnprocessableError } from '../../http/errors';
 import type { AccountsRepository } from '../accounts/accounts.repository';
 import type { CategoriesRepository } from '../categories/categories.repository';
 import {
-  ActiveAgreementError, activeAgreement, lastAnchor, ledgerOf,
+  activeAgreement, agreementInstallments, lastAnchor, ledgerOf,
   type DebtData, type DebtsRepository, type NewDebtTransaction,
 } from './debts.repository';
 
@@ -26,9 +26,16 @@ export type DebtsServiceDeps = {
 export function createDebtsService(deps: DebtsServiceDeps) {
   const today = () => todayInSaoPaulo(deps.clock());
 
+  /** O acordo ativo trava atualizar, pagar avulso e fechar outro — menos quando já foi todo pago (revisão final). */
+  const blockingAgreement = (d: DebtData, t: string) => activeAgreement(d.events) !== null && debtSummary(ledgerOf(d), t).balance > 0;
+  const assertNoBlockingAgreement = (d: DebtData, t: string) => {
+    if (blockingAgreement(d, t)) throw new UnprocessableError(ACTIVE_AGREEMENT_MESSAGE);
+  };
+
   function toDTO(d: DebtData, t = today()): DebtDTO {
     const summary = debtSummary(ledgerOf(d), t);
-    const pending = d.transactions
+    // Só as parcelas do acordo ativo: um pagamento avulso desmarcado não é "próxima parcela" (revisão final).
+    const pending = agreementInstallments(d)
       .filter((x) => x.status === 'pending')
       .sort((a, b) => (a.dueDate < b.dueDate ? -1 : a.dueDate > b.dueDate ? 1 : 0));
     const next = pending[0];
@@ -37,7 +44,7 @@ export function createDebtsService(deps: DebtsServiceDeps) {
       ...summary,
       status: debtStatus({
         balance: summary.balance,
-        lastAnchorIsAgreement: activeAgreement(d.events) !== null,
+        lastAnchorIsAgreement: blockingAgreement(d, t),
         hasOverdueInstallment: pending.some((x) => x.dueDate < t),
       }),
       nextDue: next ? { date: next.dueDate, amount: next.amount } : null,
@@ -48,13 +55,10 @@ export function createDebtsService(deps: DebtsServiceDeps) {
     const a = activeAgreement(d.events);
     if (!a) return null;
     // Parcelas deste acordo: as criadas junto com ele ou depois (as de um acordo cancelado ficam de fora).
-    const schedule = d.transactions
-      .filter((x) => x.installmentNumber !== null && x.createdAt >= a.recordedAt)
-      .sort((x, y) => x.installmentNumber! - y.installmentNumber!)
-      .map((x) => ({
-        transactionId: x.id, number: x.installmentNumber!, dueDate: x.dueDate, amount: x.amount, paidDate: x.paidDate,
-        overdue: x.status === 'pending' && x.dueDate < t,
-      }));
+    const schedule = agreementInstallments(d).map((x) => ({
+      transactionId: x.id, number: x.installmentNumber!, dueDate: x.dueDate, amount: x.amount, paidDate: x.paidDate,
+      overdue: x.status === 'pending' && x.dueDate < t,
+    }));
     return { date: a.date, total: a.amount, downPayment: a.downPayment, installments: a.installments, installmentAmount: a.installmentAmount, schedule };
   }
 
@@ -102,15 +106,6 @@ export function createDebtsService(deps: DebtsServiceDeps) {
 
   const categoryId = async (userId: string) => (await deps.categoriesRepo.ensure(userId, DEBT_CATEGORY)).id;
 
-  const withAgreementGuard = async <T>(fn: () => Promise<T>): Promise<T> => {
-    try {
-      return await fn();
-    } catch (err) {
-      if (err instanceof ActiveAgreementError) throw new UnprocessableError(ACTIVE_AGREEMENT_MESSAGE);
-      throw err;
-    }
-  };
-
   return {
     /** V9: as não quitadas primeiro, do maior saldo ao menor; depois as quitadas. */
     async list(userId: string): Promise<DebtDTO[]> {
@@ -155,7 +150,8 @@ export function createDebtsService(deps: DebtsServiceDeps) {
 
     async addValuation(userId: string, id: string, input: DebtValuationInput): Promise<DebtDetailDTO> {
       await getOwned(userId, id);
-      await withAgreementGuard(() => deps.repo.addValuation(userId, id, { date: today(), amount: input.amount, note: input.note || null }));
+      const t = today();
+      await deps.repo.addValuation(userId, id, (d) => assertNoBlockingAgreement(d, t), { date: t, amount: input.amount, note: input.note || null });
       return detail(userId, id);
     },
 
@@ -169,8 +165,11 @@ export function createDebtsService(deps: DebtsServiceDeps) {
     async createAgreement(userId: string, id: string, input: DebtAgreementInput): Promise<DebtDetailDTO> {
       const d = await getOwned(userId, id);
       const t = today();
-      if (activeAgreement(d.events)) throw new UnprocessableError(ACTIVE_AGREEMENT_MESSAGE);
-      if (toDTO(d, t).balance === 0) throw new UnprocessableError('Esta dívida já está quitada.');
+      const check = (cur: DebtData) => {
+        assertNoBlockingAgreement(cur, t);
+        if (debtSummary(ledgerOf(cur), t).balance === 0) throw new UnprocessableError('Esta dívida já está quitada.');
+      };
+      check(d);
       if (input.firstDueDate < t) throw new UnprocessableError('O 1º vencimento do acordo não pode estar no passado.');
       if (input.firstDueDate > addDays(t, 366)) throw new UnprocessableError('O 1º vencimento do acordo deve ser em até 1 ano.');
       await assertPayingAccount(userId, input.accountId);
@@ -180,8 +179,9 @@ export function createDebtsService(deps: DebtsServiceDeps) {
       const rows: NewDebtTransaction[] = [];
       if (input.downPayment > 0) {
         rows.push({
+          // Número 0: a entrada faz parte do acordo e tem as mesmas travas das parcelas em Lançamentos (revisão final).
           ...base, amount: input.downPayment, description: `Entrada do acordo ${d.row.name}`, status: 'paid', dueDate: t, paidDate: t,
-          installmentNumber: null, installmentTotal: null, createdAt: new Date(recordedAt.getTime() + 1),
+          installmentNumber: 0, installmentTotal: null, createdAt: new Date(recordedAt.getTime() + 1),
         });
       }
       const firstMonth = monthOf(input.firstDueDate);
@@ -193,22 +193,22 @@ export function createDebtsService(deps: DebtsServiceDeps) {
           createdAt: new Date(recordedAt.getTime() + 2),
         });
       }
-      await withAgreementGuard(() =>
-        deps.repo.createAgreement(
-          userId, id,
-          { date: t, downPayment: input.downPayment, installments: input.installments, installmentAmount: input.installmentAmount, recordedAt },
-          rows,
-        ),
+      await deps.repo.createAgreement(
+        userId, id, check,
+        { date: t, downPayment: input.downPayment, installments: input.installments, installmentAmount: input.installmentAmount, recordedAt },
+        rows,
       );
       return detail(userId, id);
     },
 
     async cancelAgreement(userId: string, id: string): Promise<DebtDetailDTO> {
-      const d = await getOwned(userId, id);
-      const agreement = activeAgreement(d.events);
-      if (!agreement) throw new UnprocessableError('Esta dívida não tem acordo ativo.');
+      await getOwned(userId, id);
       const t = today();
-      await deps.repo.cancelAgreement(userId, id, agreement.id, { date: t, amount: toDTO(d, t).balance });
+      await deps.repo.cancelAgreement(userId, id, (d) => {
+        const agreement = activeAgreement(d.events);
+        if (!agreement) throw new UnprocessableError('Esta dívida não tem acordo ativo.');
+        return { agreementId: agreement.id, amount: debtSummary(ledgerOf(d), t).balance, date: t };
+      });
       return detail(userId, id);
     },
 
@@ -216,22 +216,25 @@ export function createDebtsService(deps: DebtsServiceDeps) {
     async addPayment(userId: string, id: string, input: DebtPaymentInput): Promise<DebtDetailDTO> {
       const d = await getOwned(userId, id);
       const t = today();
-      if (activeAgreement(d.events)) throw new UnprocessableError(ACTIVE_AGREEMENT_MESSAGE);
-      if (input.date > t) throw new UnprocessableError('A data do pagamento não pode estar no futuro.');
-      const anchorDate = lastAnchor(d.events)?.date;
-      if (anchorDate && input.date < anchorDate) {
-        throw new UnprocessableError('A data do pagamento não pode ser anterior à última atualização do valor da dívida.');
-      }
-      const balance = toDTO(d, t).balance;
-      if (balance === 0) throw new UnprocessableError('Esta dívida já está quitada.');
-      if (input.amount > balance) throw new UnprocessableError('O pagamento é maior que o saldo da dívida. Atualize o valor antes, se ele mudou.');
+      // Conferido de novo dentro da trava: dois pagamentos do saldo inteiro ao mesmo tempo não passam (revisão final).
+      const check = (cur: DebtData) => {
+        assertNoBlockingAgreement(cur, t);
+        if (input.date > t) throw new UnprocessableError('A data do pagamento não pode estar no futuro.');
+        const anchorDate = lastAnchor(cur.events)?.date;
+        if (anchorDate && input.date < anchorDate) {
+          throw new UnprocessableError('A data do pagamento não pode ser anterior à última atualização do valor da dívida.');
+        }
+        const balance = debtSummary(ledgerOf(cur), t).balance;
+        if (balance === 0) throw new UnprocessableError('Esta dívida já está quitada.');
+        if (input.amount > balance) throw new UnprocessableError('O pagamento é maior que o saldo da dívida. Atualize o valor antes, se ele mudou.');
+      };
+      check(d);
       await assertPayingAccount(userId, input.accountId);
-      await withAgreementGuard(async () =>
-        deps.repo.addPayment(userId, id, {
-          amount: input.amount, description: `Pagamento ${d.row.name}`, accountId: input.accountId, categoryId: await categoryId(userId),
-          status: 'paid', dueDate: input.date, paidDate: input.date, installmentNumber: null, installmentTotal: null, createdAt: new Date(),
-        }),
-      );
+      const category = await categoryId(userId);
+      await deps.repo.addPayment(userId, id, check, {
+        amount: input.amount, description: `Pagamento ${d.row.name}`, accountId: input.accountId, categoryId: category,
+        status: 'paid', dueDate: input.date, paidDate: input.date, installmentNumber: null, installmentTotal: null, createdAt: new Date(),
+      });
       return detail(userId, id);
     },
   };

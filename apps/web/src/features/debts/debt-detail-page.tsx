@@ -43,7 +43,7 @@ function timelineEntry(item: DebtTimelineItemDTO): { icon: LucideIcon; title: st
         detail: [
           item.downPayment > 0 ? `Entrada de ${formatBRL(item.downPayment)}` : null,
           `${item.installments}x de ${formatBRL(item.installmentAmount)}`,
-          item.delta < 0 ? `${formatBRL(-item.delta)} de desconto` : null,
+          item.delta < 0 ? `${formatBRL(-item.delta)} de desconto` : item.delta > 0 ? `${formatBRL(item.delta)} de juros e multas` : null,
         ]
           .filter(Boolean)
           .join(' · '),
@@ -116,7 +116,8 @@ function DebtDetail({ id }: { id: string }) {
   const d = debt.data;
   const close = () => setDialog(null);
   const open = d && d.status !== 'paid_off';
-  const inAgreement = d?.agreement != null;
+  // Acordo todo pago não trava mais nada: dá para atualizar o valor se o credor disser que falta algo.
+  const inAgreement = d?.agreement != null && d.status !== 'paid_off';
 
   return (
     <>

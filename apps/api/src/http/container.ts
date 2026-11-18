@@ -16,7 +16,7 @@ import { createCategoriesService } from '../modules/categories/categories.servic
 import { createDashboardRepository } from '../modules/dashboard/dashboard.repository';
 import { createDashboardService } from '../modules/dashboard/dashboard.service';
 import { createDemoRepository } from '../modules/demo/demo.repository';
-import { createDebtsRepository } from '../modules/debts/debts.repository';
+import { createDebtsRepository, lastAnchor } from '../modules/debts/debts.repository';
 import { createDebtsService } from '../modules/debts/debts.service';
 import { createDemoService } from '../modules/demo/demo.service';
 import { createGoalsRepository } from '../modules/goals/goals.repository';
@@ -52,8 +52,14 @@ export function buildContainer(deps: AppDeps) {
   const validateRefs = createRefsValidator(accounts, categories);
   const recurrencesRepo = createRecurrencesRepository(deps.db);
   const recurrences = createRecurrencesService({ repo: recurrencesRepo, transactions: transactionsRepo, validateRefs, clock: deps.clock });
+  const debtsRepo = createDebtsRepository(deps.db);
   const transactions = createTransactionsService({
     repo: transactionsRepo, validateRefs, recurrences, clock: deps.clock,
+    debtAnchor: async (userId, debtId) => {
+      const data = await debtsRepo.findOne(userId, debtId);
+      const anchor = data ? lastAnchor(data.events) : null;
+      return anchor ? { date: anchor.date, recordedAt: anchor.recordedAt } : null;
+    },
     // As N parcelas de uma compra no cartão são gravadas numa única transação do banco (decisão R10), no mesmo
     // estilo usado abaixo para o seed da demo: repositório recriado sobre o client da transação interativa.
     async createInstallments(userId: string, rows: NewTransaction[]): Promise<TransactionRow[]> {
@@ -76,7 +82,7 @@ export function buildContainer(deps: AppDeps) {
   const cardsRepo = createCardsRepository(deps.db);
   const cards = createCardsService({ repo: cardsRepo, accountsRepo, accounts, transactionsRepo, clock: deps.clock });
   const debtsReader = createDebtsReader(deps.db);
-  const debts = createDebtsService({ repo: createDebtsRepository(deps.db), accountsRepo, categoriesRepo, clock: deps.clock });
+  const debts = createDebtsService({ repo: debtsRepo, accountsRepo, categoriesRepo, clock: deps.clock });
   const dashboardRepo = createDashboardRepository(deps.db);
   const dashboard = createDashboardService({
     repo: dashboardRepo, transactions: transactionsRepo, recurrences, accountsRepo, cards, loansRepo, budgets, debts: debtsReader, clock: deps.clock,

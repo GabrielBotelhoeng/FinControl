@@ -84,7 +84,7 @@ export function createDemoRepository(db: DbClient) {
         data: [
           {
             ...base, amount: BigInt(a.downPayment), description: `Entrada do acordo ${d.name}`, nature: 'variable', status: 'paid',
-            dueDate: fromDateOnly(a.date), paidDate: fromDateOnly(a.date), createdAt: at(),
+            dueDate: fromDateOnly(a.date), paidDate: fromDateOnly(a.date), installmentNumber: 0, createdAt: at(),
           },
           ...a.schedule.map((s) => ({
             ...base, amount: BigInt(a.installmentAmount), description: `Acordo ${d.name} (${s.number}/${a.schedule.length})`, nature: 'fixed' as const,

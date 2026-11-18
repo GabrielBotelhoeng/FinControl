@@ -1,5 +1,5 @@
 import {
-  addMonthsToYm, DEBT_KIND_LABELS, dateInMonth, debtKindSchema, monthOf, todayInSaoPaulo, type DebtDetailDTO, type DebtKind,
+  addDays, addMonthsToYm, DEBT_KIND_LABELS, dateInMonth, debtKindSchema, monthOf, todayInSaoPaulo, type DebtDetailDTO, type DebtKind,
 } from '@fincontrol/shared';
 import { useState, type ReactNode } from 'react';
 import { flushSync } from 'react-dom';
@@ -219,6 +219,7 @@ export function AgreementDialog({ debt, onClose }: DialogProps) {
     if (!(n >= 1 && n <= 120)) next.installments = 'Informe de 1 a 120 parcelas.';
     if (!installmentAmount) next.installmentAmount = 'Informe o valor da parcela.';
     if (!firstDueDate || firstDueDate < today) next.firstDueDate = 'O 1º vencimento não pode estar no passado.';
+    else if (firstDueDate > addDays(today, 366)) next.firstDueDate = 'O 1º vencimento deve ser em até 1 ano.';
     const account = firstPayer(payers, accountId);
     if (!account) next.accountId = 'Cadastre uma conta (que não seja cartão).';
     setErrors(next);
@@ -248,7 +249,7 @@ export function AgreementDialog({ debt, onClose }: DialogProps) {
           <MoneyInput value={installmentAmount} onChange={setInstallmentAmount} />
         </Field>
         <Field label="Vencimento da 1ª parcela" error={errors.firstDueDate}>
-          <Input type="date" value={firstDueDate} min={today} onChange={(e) => setFirstDueDate(e.target.value)} />
+          <Input type="date" value={firstDueDate} min={today} max={addDays(today, 366)} onChange={(e) => setFirstDueDate(e.target.value)} />
         </Field>
       </div>
       <AccountSelect value={accountId} onChange={setAccountId} error={errors.accountId} />

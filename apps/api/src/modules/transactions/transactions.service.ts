@@ -15,6 +15,9 @@ export const LOAN_INSTALLMENT_MESSAGES = {
 export const DEBT_INSTALLMENT_MESSAGES = {
   remove: 'Esta é uma parcela de acordo de dívida. Para apagá-la, cancele o acordo na página Dívidas.',
   amount: 'O valor de uma parcela de acordo vem do acordo. Para mudar, cancele o acordo e feche outro na página Dívidas.',
+  /** O valor atualizado (ou o acordo) da dívida já contou este pagamento: mexer nele agora contaria duas vezes (V3). */
+  frozen: 'Este pagamento já está incluído numa atualização de valor ou num acordo posterior da dívida e não pode ser desmarcado nem pago de novo.',
+  beforeAnchor: 'A data do pagamento não pode ser anterior à última atualização do valor da dívida.',
 } as const;
 import type { RecurrencesService } from '../recurrences/recurrences.service';
 import { assertCardCreateRules, assertCardEditRules, assertNotCardTransaction, buildCardPurchaseRows } from './transactions.cards';
@@ -30,6 +33,8 @@ export type TransactionsServiceDeps = {
   validateRefs: ValidateRefs;
   recurrences: RecurrencesService;
   clock: () => Date;
+  /** Última âncora da dívida (sub-projeto 6, V3): trava pagar e desmarcar pagamentos que ela já contou. */
+  debtAnchor: (userId: string, debtId: string) => Promise<{ date: DateOnly; recordedAt: Date } | null>;
   /** Grava as N parcelas de uma compra no cartão numa única transação do banco (decisão R10). */
   createInstallments: (userId: string, rows: NewTransaction[]) => Promise<TransactionRow[]>;
 };
@@ -50,6 +55,15 @@ export function createTransactionsService(deps: TransactionsServiceDeps) {
     const date = paidDate ?? t;
     if (date > t) throw new UnprocessableError('A data de pagamento não pode estar no futuro.');
     return date;
+  }
+
+  /** V3: um lançamento registrado antes da última âncora já está no valor dela; pagar ou desmarcar contaria duas vezes. */
+  async function assertDebtPaymentMovable(userId: string, current: TransactionRow, paidDate: DateOnly | null) {
+    if (!current.debtId) return;
+    const anchor = await deps.debtAnchor(userId, current.debtId);
+    if (!anchor) return;
+    if (current.createdAt <= anchor.recordedAt) throw new UnprocessableError(DEBT_INSTALLMENT_MESSAGES.frozen);
+    if (paidDate && paidDate < anchor.date) throw new UnprocessableError(DEBT_INSTALLMENT_MESSAGES.beforeAnchor);
   }
 
   async function isCard(userId: string, accountId: string): Promise<boolean> {
@@ -183,13 +197,16 @@ export function createTransactionsService(deps: TransactionsServiceDeps) {
     async pay(userId: string, id: string, paidDate?: DateOnly): Promise<TransactionDTO> {
       const current = await getOwned(userId, id);
       assertNotCardTransaction(await isCard(userId, current.accountId));
-      const row = await repo.update(userId, id, { status: 'paid', paidDate: resolvePaidDate('paid', paidDate) });
+      const resolved = resolvePaidDate('paid', paidDate);
+      await assertDebtPaymentMovable(userId, current, resolved);
+      const row = await repo.update(userId, id, { status: 'paid', paidDate: resolved });
       return toTransactionDTO(row, today());
     },
 
     async unpay(userId: string, id: string): Promise<TransactionDTO> {
       const current = await getOwned(userId, id);
       assertNotCardTransaction(await isCard(userId, current.accountId));
+      await assertDebtPaymentMovable(userId, current, null);
       return toTransactionDTO(await repo.update(userId, id, { status: 'pending', paidDate: null }), today());
     },
   };

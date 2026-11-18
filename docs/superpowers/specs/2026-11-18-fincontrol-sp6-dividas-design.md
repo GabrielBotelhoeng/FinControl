@@ -74,3 +74,15 @@ A conta que paga não pode ser cartão nem estar arquivada (422), como no empré
 
 - Um pagamento editado em Lançamentos para uma data anterior à última âncora deixa de contar no saldo de hoje, porque a regra V3 o considera já incluído naquela âncora. Pela página da dívida, isso é impedido (V8).
 - A soma das parcelas do acordo pode diferir do valor que o credor cobra na última parcela, por arredondamento. A pessoa corrige o valor depois do acordo com "Cancelar acordo" e "Atualizar valor".
+
+## 7. Revisão final (revisor novo)
+
+Nenhum vazamento entre usuários. Corrigidos, cada um com teste:
+
+- **Pagamento contado duas vezes (Alto):** desmarcar e pagar de novo um lançamento que uma atualização ou um acordo posterior já tinha contado mudava a data de pagamento e o descontava outra vez. Agora pagar ou desmarcar um pagamento registrado antes da última âncora dá 422, e pagar com data anterior a ela também.
+- **Entrada do acordo:** passou a ser a parcela de número 0, com as mesmas travas das outras (não pode ser apagada nem mudar de valor em Lançamentos).
+- **"Próxima parcela" e atraso** olham só as parcelas do acordo ativo. A trava de arquivar a conta olha só as parcelas de acordo.
+- **Corridas:** pagar, atualizar, fechar e cancelar acordo travam a dívida e conferem saldo e acordo dentro da transação. Dois pagamentos do saldo inteiro, ou dois cancelamentos ao mesmo tempo, não passam juntos.
+- **Acordo todo pago** não trava mais "Atualizar valor" (o credor pode dizer que falta algo).
+- **Banco:** a migration `20261118235500_dividas_checagens` exige os campos do acordo não nulos e impede um lançamento com `loan_id` e `debt_id` ao mesmo tempo.
+- **Web:** o 1º vencimento do acordo é limitado a 1 ano também no formulário, e a linha do tempo mostra os juros quando o acordo sai mais caro que o saldo.

@@ -115,6 +115,13 @@ describe('DebtDetailPage', () => {
     expect(screen.getByRole('button', { name: 'Cancelar acordo' })).toBeInTheDocument();
   });
 
+  it('acordo todo pago: volta "Atualizar valor" e some "Cancelar acordo"', async () => {
+    renderDetail(fakeApi({ 'GET /debts/d1': detail({ status: 'paid_off', balance: 0, fraction: 1, nextDue: null }), 'GET /accounts': accounts }));
+    expect(await screen.findByRole('button', { name: 'Atualizar valor' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Cancelar acordo' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Registrar pagamento' })).not.toBeInTheDocument();
+  });
+
   it('em aberto: registrar pagamento envia valor, data e conta; maior que o saldo avisa sem chamar a API', async () => {
     const open = detail({ status: 'open', agreement: null, nextDue: null, lastAnchorDate: '2026-11-01' });
     const client = fakeApi({ 'GET /debts/d1': open, 'GET /accounts': accounts, 'POST /debts/d1/payments': open });
