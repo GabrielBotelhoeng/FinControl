@@ -36,7 +36,7 @@ Gestão financeira pessoal: contas, cartões de crédito, empréstimos e financi
 - **Metas**: objetivos com valor e prazo, depósitos e retiradas, percentual alcançado, situação (no ritmo, atrasada, concluída) e quanto guardar por mês até o prazo. Há um atalho para a meta de reserva de emergência, com 6 meses do gasto médio.
 - **Relatórios**: por mês, ano ou últimos 12 meses, com resumo e taxa de poupança, gastos e receitas por categoria comparados com o período anterior, evolução mensal, evolução das dívidas (cartões com parcelas futuras e saldo devedor dos empréstimos), maiores despesas e o saldo de cada conta no fim do período.
 - **Exportação**: o relatório em PDF (A4, gerado na API) e os lançamentos em CSV no formato do Excel brasileiro (`;`, vírgula decimal, acentos certos e proteção contra fórmulas).
-- **Notificações**: um sino em todas as telas com os avisos não lidos: contas vencidas e a vencer, faturas fechadas ou vencidas, categorias perto do limite ou estouradas e metas concluídas. Os mais urgentes vêm primeiro, cada aviso leva à tela que resolve o assunto e some sozinho quando ele se resolve. No Perfil, a pessoa escolhe o que receber e com quantos dias de antecedência.
+- **Notificações**: um sino em todas as telas com os avisos não lidos: contas vencidas e a vencer, faturas fechadas ou vencidas, categorias perto do limite ou estouradas e metas concluídas. Os mais urgentes vêm primeiro, cada aviso leva à tela que resolve o assunto e some sozinho quando ele se resolve. No Perfil, a pessoa escolhe o que receber e com quantos dias de antecedência, e pode ligar os **avisos no celular e no navegador** (Web Push): todo dia às 8h, uma mensagem com o que é novo.
 - **Lançamentos**: receitas e despesas, fixas ou variáveis, pagas ou pendentes, com vencimento e categoria.
 - **Recorrências**: o lançamento se repete (toda semana, todo mês ou todo ano) e cada mês ganha a sua ocorrência, que pode ser paga ou editada. Dá para editar “só esta” ou “esta e as próximas”, sem mexer no que já foi pago.
 - **Histórico com filtros combinados**: período, conta, categoria, tipo, situação e busca, com paginação.
@@ -75,6 +75,7 @@ As decisões, com as alternativas descartadas e os motivos, estão nas specs do 
 - **O cartão é uma conta** do tipo `credit_card`. A compra é uma despesa nessa conta, com o mês da fatura gravado, e o pagamento é uma transferência. Assim, cartão, saldo e painel usam o mesmo livro-caixa.
 - **As contas do empréstimo ficam em `packages/shared`** (tabela Price): a API calcula o detalhe, e o formulário mostra a taxa real antes de salvar com as mesmas funções.
 - **O PDF é gerado na API com `pdf-lib`**, JavaScript puro com as fontes padrão embutidas, sem ler arquivos do disco na função da Vercel. O download usa `fetch` com o token, para ele nunca ir parar na URL.
+- **Web Push sem serviço externo** (VAPID, biblioteca `web-push`): a API só aceita endereços de assinatura dos serviços de push conhecidos (contra SSRF), e cada aviso vai por push uma vez só.
 - **Notificações calculadas na hora:** cada aviso sai dos dados atuais, e o banco guarda só a memória dele (chave estável, quando apareceu e quando foi lido). Assim, um aviso de conta já paga nunca fica para trás.
 - **Taxas do Banco Central** vêm da API Olinda (`taxaJuros` v2). Um cron semanal guarda o período mais recente de cada modalidade. Se a API falhar, os dados anteriores ficam. Os testes usam respostas gravadas, sem rede.
 
@@ -90,9 +91,9 @@ As decisões, com as alternativas descartadas e os motivos, estão nas specs do 
 
 | Camada | Quantidade | Como roda |
 |---|---|---|
-| `packages/shared` | 128 | Unitários (Vitest) |
-| `apps/api` | 247 | Integração contra **Postgres real**: rotas HTTP, regras de saldo, recorrência, cartão e fatura, empréstimos, relatórios, CSV e PDF, sincronização com o Banco Central e isolamento entre usuários |
-| `apps/web` | 160 | Componentes e fluxos (Testing Library), com o provedor de identidade simulado |
+| `packages/shared` | 129 | Unitários (Vitest) |
+| `apps/api` | 255 | Integração contra **Postgres real**: rotas HTTP, regras de saldo, recorrência, cartão e fatura, empréstimos, relatórios, CSV e PDF, sincronização com o Banco Central e isolamento entre usuários |
+| `apps/web` | 168 | Componentes e fluxos (Testing Library), com o provedor de identidade simulado |
 | `e2e` | 13 | Chromium contra a pilha inteira |
 
 O E2E roda a **web buildada como em produção**, a **API real** e o **Postgres real**. A única peça simulada é o provedor de identidade: um servidor Auth mínimo ([`e2e/fake-auth.ts`](e2e/fake-auth.ts)) que fala o mesmo protocolo do Supabase e assina JWTs ES256 de verdade. Assim, a API valida os tokens pelo mesmo caminho de produção (JWKS, issuer e audience), sem segredos no CI e sem sujar o projeto real. Os cenários seguem os critérios de aceite da spec:
@@ -148,4 +149,4 @@ Dois projetos na Vercel a partir deste monorepo: `fincontrol-web` (raiz `apps/we
 
 ## Roadmap
 
-São 7 sub-projetos. O 1 (fundação e fluxo de caixa), o 2 (crédito: cartões, empréstimos e financiamentos), o 3 (planejamento e metas), o 4 (relatórios e exportação) e a central de notificações do 5 estão prontos. Depois vêm os avisos no celular (Web Push) e um assistente financeiro com IA. Cada um sai com spec, plano, testes e deploy.
+São 7 sub-projetos. O 1 (fundação e fluxo de caixa), o 2 (crédito: cartões, empréstimos e financiamentos), o 3 (planejamento e metas), o 4 (relatórios e exportação) e o 5 (notificações na central e no celular) estão prontos. Depois vem um assistente financeiro com IA. Cada um sai com spec, plano, testes e deploy.

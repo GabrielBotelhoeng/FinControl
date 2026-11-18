@@ -1,6 +1,21 @@
 # HANDOFF — FinControl
 
-_Atualizado em 2026-11-17 (sub-projeto 5, Parte A)._
+_Atualizado em 2026-11-17 (sub-projeto 5, Parte B)._
+
+## Sub-projeto 5, Parte B: Web Push (2026-11-17, branch feat/web-push)
+
+- **Spec:** seção "Parte B" de `docs/superpowers/specs/2026-11-17-fincontrol-sp5-notificacoes-design.md` (decisões W1–W7).
+- **Migration:** `web_push` (tabela `push_subscriptions` e `notifications.pushed_at`). **Antes do deploy da API, aplicar no Supabase** pelo comando do usuário.
+- **Chaves VAPID:** as de produção estão em `.secrets/vapid.env` (o contato VAPID é o endereço do site, não um e-mail). Vão para as variáveis `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` e `VAPID_SUBJECT` do projeto `fincontrol-api` na Vercel. Sem elas, o push fica desligado e o Perfil mostra "ainda não estão disponíveis". As chaves de teste ficam em `apps/api/.env.test`.
+- **Entregue:**
+  - ativação no Perfil (bloco Notificações), com aviso de teste e desligar neste aparelho; explica os casos de bloqueio, de navegador sem suporte e do iPhone sem o app instalado;
+  - envio diário às 08:00 de Brasília (cron `send-push`, `0 11 * * *`): uma mensagem por pessoa com os avisos novos não lidos, cada aviso uma vez só, sem contas demo; assinatura expirada é apagada;
+  - só endereços de serviços de push conhecidos (Google, Mozilla, Apple, Microsoft), contra SSRF;
+  - `public/push-sw.js`, carregado pelo service worker do PWA, mostra o aviso e abre o app só no próprio site.
+- **Desligar:** `POST /push/unsubscribe` com o endereço no corpo, porque o log grava as URLs.
+- **Testes:** 129 em shared, 255 na API e 168 na web, além de 13 E2E. O E2E pegou o `import default` do `web-push` 4, que é ESM só com exports nomeados e que o Vitest aceitava.
+- **Teste manual em produção:** ativar no navegador e receber o aviso de teste.
+
 
 ## Sub-projeto 5, Parte A: central de notificações (2026-11-17, branch feat/notificacoes)
 
