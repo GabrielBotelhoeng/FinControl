@@ -38,7 +38,7 @@ function systemPrompt(name: string, today: string, expense: string[], income: st
     'Você é o assistente do FinControl, um app de finanças pessoais. Ajude a pessoa a entender e controlar o próprio dinheiro.',
     `Hoje é ${today} (${weekday}). Você fala com ${name}.`,
     'Responda em português do Brasil simples, direto e curto (até 120 palavras, a menos que peçam detalhe).',
-    'Texto puro: sem markdown, sem asteriscos, sem # e sem tabelas. Para listas, use linhas começando com "- ".',
+    'Texto puro: a tela não interpreta markdown. Nunca use **negrito**, asteriscos, # ou tabelas. Para listas, use linhas começando com "- ".',
     'Valores no formato R$ 1.234,56. Os números das ferramentas estão em reais.',
     'Use as ferramentas para buscar os números e nunca invente valores. Se não houver dados, diga isso.',
     'Você só consulta: não cria, edita nem apaga nada. Se pedirem um lançamento, explique onde fazer no app.',
@@ -50,6 +50,22 @@ function systemPrompt(name: string, today: string, expense: string[], income: st
 
 const textOf = (blocks: AiBlock[]) =>
   blocks.flatMap((b) => (b.type === 'text' ? [b.text] : [])).join('\n').trim();
+
+/**
+ * A12: a tela mostra texto puro. O modelo às vezes usa markdown mesmo pedindo que não use (visto em produção):
+ * tira negrito, itálico, títulos e crases, e troca "* " e "• " por "- " no começo da linha.
+ */
+export function plainText(text: string): string {
+  return text
+    .replace(/\*\*(.+?)\*\*/g, '$1')
+    .replace(/__(.+?)__/g, '$1')
+    .replace(/(^|[\s(])\*([^*\n]+)\*(?=[\s).,:;!?]|$)/gm, '$1$2')
+    .replace(/`([^`\n]+)`/g, '$1')
+    .replace(/^#{1,6}\s+/gm, '')
+    .replace(/^(\s*)[*•]\s+/gm, '$1- ')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
 
 export function createAssistantService(deps: AssistantServiceDeps) {
   async function access(claims: AuthClaims) {
@@ -130,7 +146,7 @@ export function createAssistantService(deps: AssistantServiceDeps) {
           usage.input += res.usage.input_tokens;
           usage.output += res.usage.output_tokens;
           if (res.stop_reason !== 'tool_use' || lastRound) {
-            const reply = textOf(res.content);
+            const reply = plainText(textOf(res.content));
             return { reply: reply || 'Não consegui montar uma resposta agora. Pode perguntar de outro jeito?' };
           }
           usage.rounds += 1;
