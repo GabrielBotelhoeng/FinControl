@@ -131,16 +131,20 @@ export function createAssistantTools(deps: AssistantToolsDeps) {
   async function buscarLancamentos(userId: string, input: unknown) {
     const f = parseInput(searchSchema, input);
     const month = currentMonth();
-    const from = f.de ?? startOfMonth(addMonthsToYm(month, -2));
+    // Sem início, 3 meses até o fim (ou até hoje): "só até janeiro" olha novembro a janeiro, sem dar erro.
     const to = f.ate ?? endOfMonth(month);
+    const from = f.de ?? startOfMonth(addMonthsToYm(monthOf(to), -2));
     if (from > to) throw new ToolInputError('A data inicial vem depois da final.');
     const categories = await deps.categoriesRepo.list(userId);
     const names = new Map(categories.map((c) => [c.id, c.name]));
     let categoryId: string | undefined;
     if (f.categoria) {
-      const found = categories.find((c) => fold(c.name) === fold(f.categoria!));
-      if (!found) throw new ToolInputError(`Categoria não encontrada. As categorias são: ${[...new Set(categories.map((c) => c.name))].join(', ')}.`);
-      categoryId = found.id;
+      const type = f.tipo === 'despesa' ? 'expense' : f.tipo === 'receita' ? 'income' : undefined;
+      const found = categories.filter((c) => fold(c.name) === fold(f.categoria!) && (!type || c.type === type));
+      if (found.length === 0) throw new ToolInputError(`Categoria não encontrada. As categorias são: ${[...new Set(categories.map((c) => c.name))].join(', ')}.`);
+      // "Outros" existe como despesa e como receita: sem o tipo, não dá para saber qual.
+      if (found.length > 1) throw new ToolInputError(`Há uma categoria "${found[0]!.name}" de despesa e outra de receita. Informe o tipo.`);
+      categoryId = found[0]!.id;
     }
     const query: ListTransactionsQuery = {
       from, to, limit: SEARCH_PAGE,

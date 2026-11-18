@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ApiError } from '../../lib/api-client';
 import { fakeApi, fakeGateway, signedIn } from '../../test/fakes';
 import { renderApp } from '../../test/render';
-import { recentHistory } from './api';
+import { recentHistory, validConversation } from './api';
 import AssistantPage, { SUGGESTIONS } from './assistant-page';
 
 const toast = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn() }));
@@ -89,10 +89,43 @@ describe('AssistantPage', () => {
     expect(screen.getByRole('list', { name: 'Sugestões' })).toBeInTheDocument();
   });
 
-  it('retirar o consentimento volta para a tela de aceite', async () => {
+  it('retirar o consentimento pede confirmação, avisa e volta para a tela de aceite', async () => {
     render(api(on));
     await userEvent.click(await screen.findByRole('button', { name: 'Retirar consentimento' }));
+    await userEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Retirar' }));
     expect(await screen.findByRole('button', { name: 'Aceitar e começar' })).toBeInTheDocument();
+    expect(toast.success).toHaveBeenCalledWith('Consentimento retirado.');
+  });
+
+  it('409 na pergunta (consentimento retirado em outra aba) volta para a tela de aceite', async () => {
+    let consented = true;
+    const a = fakeApi({
+      'GET /assistant/config': () => ({ ...on, consented }),
+      'POST /assistant/chat': () => {
+        consented = false;
+        return new ApiError(409, 'Conflito', 'Aceite o envio dos dados ao assistente antes de perguntar.');
+      },
+    });
+    render(a);
+    await userEvent.click(await screen.findByRole('button', { name: SUGGESTIONS[1] }));
+    expect(await screen.findByRole('button', { name: 'Aceitar e começar' })).toBeInTheDocument();
+  });
+
+  it('conversa salva fora do formato é descartada', async () => {
+    sessionStorage.setItem('fincontrol:assistente', JSON.stringify([{ role: 'assistant', content: 'quebrado' }, { role: 'user', content: 'x' }]));
+    render(api(on));
+    expect(await screen.findByRole('list', { name: 'Sugestões' })).toBeInTheDocument();
+    expect(screen.queryByText('quebrado')).not.toBeInTheDocument();
+  });
+});
+
+describe('validConversation (A6)', () => {
+  it('aceita pares, descarta pergunta sem resposta no fim e recusa formato errado', () => {
+    const pair = [{ role: 'user', content: 'a' }, { role: 'assistant', content: 'b' }];
+    expect(validConversation(pair)).toEqual(pair);
+    expect(validConversation([...pair, { role: 'user', content: 'c' }])).toEqual(pair);
+    expect(validConversation({})).toEqual([]);
+    expect(validConversation([{ role: 'user', content: 1 }, { role: 'assistant', content: 'b' }])).toEqual([]);
   });
 });
 

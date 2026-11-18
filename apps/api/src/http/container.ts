@@ -1,5 +1,6 @@
 import { createAnthropicClient } from '../infra/ai-client';
 import { createBcbClient } from '../infra/bcb-client';
+import { createAssistantRepository } from '../modules/assistant/assistant.repository';
 import { createAssistantService } from '../modules/assistant/assistant.service';
 import { createAssistantTools } from '../modules/assistant/assistant.tools';
 import { createAccountsRepository } from '../modules/accounts/accounts.repository';
@@ -91,7 +92,7 @@ export function buildContainer(deps: AppDeps) {
   const { ANTHROPIC_API_KEY, AI_MODEL, AI_ALLOWED_EMAILS } = deps.config;
   const assistant = createAssistantService({
     ai: deps.aiClient ?? (ANTHROPIC_API_KEY ? createAnthropicClient({ apiKey: ANTHROPIC_API_KEY, model: AI_MODEL, logger: deps.logger }) : null),
-    allowedEmails: AI_ALLOWED_EMAILS,
+    allowedEmails: AI_ALLOWED_EMAILS, usage: createAssistantRepository(deps.db),
     tools: createAssistantTools({ reports, transactions, categoriesRepo, budgets, goals, accounts, dashboard, clock: deps.clock }),
     profileRepo: createProfileRepository(deps.db), categoriesRepo, logger: deps.logger, clock: deps.clock,
   });

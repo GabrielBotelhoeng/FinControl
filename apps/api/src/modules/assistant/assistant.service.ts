@@ -5,13 +5,15 @@ import type { Logger } from '../../infra/logger';
 import type { AuthClaims } from '../../infra/token-verifier';
 import type { CategoriesRepository } from '../categories/categories.repository';
 import type { ProfileRepository } from '../profile/profile.repository';
+import type { AssistantRepository } from './assistant.repository';
 import { ToolInputError, type AssistantTools } from './assistant.tools';
 
 export type AssistantServiceDeps = {
   /** `null` sem `ANTHROPIC_API_KEY` (A3): assistente desligado. */
   ai: AiClient | null;
-  /** A4: vazio = toda conta real pode usar. Já em minúsculas. */
+  /** A4: e-mails liberados, em minúsculas; `*` libera toda conta real e a lista vazia não libera ninguém. */
   allowedEmails: string[];
+  usage: AssistantRepository;
   tools: AssistantTools;
   profileRepo: Pick<ProfileRepository, 'find' | 'setAiConsent'>;
   categoriesRepo: Pick<CategoriesRepository, 'list'>;
@@ -22,6 +24,11 @@ export type AssistantServiceDeps = {
 /** A8: respostas curtas e no máximo 4 rodadas de ferramenta por pergunta. */
 export const MAX_TOKENS = 700;
 export const MAX_TOOL_ROUNDS = 4;
+/** A9: tetos por dia (São Paulo), guardados no banco: valem entre instâncias da função. */
+export const DAILY_LIMIT_PER_USER = 100;
+export const DAILY_LIMIT_TOTAL = 400;
+/** Prazo da pergunta inteira (todas as rodadas): passou disso, "ocupado" em vez de prender a função. */
+export const DEADLINE_MS = 60_000;
 
 const WEEKDAYS = ['domingo', 'segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira', 'sábado'];
 
@@ -47,7 +54,8 @@ const textOf = (blocks: AiBlock[]) =>
 export function createAssistantService(deps: AssistantServiceDeps) {
   async function access(claims: AuthClaims) {
     const profile = await deps.profileRepo.find(claims.userId);
-    const listed = deps.allowedEmails.length === 0 || (claims.email !== null && deps.allowedEmails.includes(claims.email.toLowerCase()));
+    // O e-mail vem do token do Supabase, que exige confirmação no cadastro por e-mail (e o Google já confirma).
+    const listed = deps.allowedEmails.includes('*') || (claims.email !== null && deps.allowedEmails.includes(claims.email.toLowerCase()));
     // A3: a demo é pública e nunca usa os créditos.
     const allowed = Boolean(profile && !profile.isDemo && !claims.isAnonymous && listed);
     return { profile, allowed, consented: Boolean(profile?.aiConsentAt) };
@@ -67,8 +75,10 @@ export function createAssistantService(deps: AssistantServiceDeps) {
       try {
         results.push({ type: 'tool_result', tool_use_id: b.id, content: JSON.stringify(await deps.tools.run(userId, b.name, b.input)) });
       } catch (err) {
-        if (!(err instanceof ToolInputError)) throw err;
-        results.push({ type: 'tool_result', tool_use_id: b.id, content: err.message, is_error: true });
+        // Pedido fora das regras (ex.: mês além do planejamento) volta para o modelo corrigir, em vez de derrubar a pergunta.
+        const forModel = err instanceof ToolInputError || (err instanceof AppError && err.status < 500);
+        if (!forModel) throw err;
+        results.push({ type: 'tool_result', tool_use_id: b.id, content: (err as Error).message, is_error: true });
       }
     }
     return results;
@@ -93,17 +103,24 @@ export function createAssistantService(deps: AssistantServiceDeps) {
     async chat(claims: AuthClaims, history: AssistantMessage[]): Promise<AssistantReplyDTO> {
       const { ai, profile, consented } = await guard(claims);
       if (!consented) throw new ConflictError('Aceite o envio dos dados ao assistente antes de perguntar.');
+      const today = todayInSaoPaulo(deps.clock());
+      const used = await deps.usage.requestsOn(claims.userId, today);
+      if (used.user >= DAILY_LIMIT_PER_USER) throw new AppError(429, 'Limite do dia', `Você chegou a ${DAILY_LIMIT_PER_USER} perguntas hoje. O assistente volta amanhã.`);
+      if (used.total >= DAILY_LIMIT_TOTAL) throw new AppError(503, 'Limite do dia', 'O assistente atingiu o limite de uso de hoje. Ele volta amanhã.');
 
       const categories = await deps.categoriesRepo.list(claims.userId);
       const names = (type: string) => categories.filter((c) => c.type === type).map((c) => c.name);
-      const system = systemPrompt(profile.name, todayInSaoPaulo(deps.clock()), names('expense'), names('income'));
+      const system = systemPrompt(profile.name, today, names('expense'), names('income'));
       const messages: AiMessage[] = history.map((m) => ({ role: m.role, content: m.content }));
       const usage = { input: 0, output: 0, rounds: 0 };
+      const started = Date.now();
+      let outcome = 'ok';
 
       try {
         for (;;) {
           // Na última rodada, `tool_choice: none`: o modelo tem de responder com o que já buscou. As ferramentas
           // continuam declaradas, porque a API recusa histórico com `tool_use` sem elas.
+          if (Date.now() - started > DEADLINE_MS) throw new AiError('busy', 'Prazo da pergunta esgotado');
           const lastRound = usage.rounds >= MAX_TOOL_ROUNDS;
           const res = await ai({
             system, tools: deps.tools.definitions, messages, max_tokens: MAX_TOKENS, ...(lastRound ? { tool_choice: { type: 'none' } } : {}),
@@ -119,13 +136,16 @@ export function createAssistantService(deps: AssistantServiceDeps) {
           messages.push({ role: 'user', content: await runTools(claims.userId, res.content) });
         }
       } catch (err) {
+        outcome = err instanceof AiError ? err.kind : 'error';
         if (!(err instanceof AiError)) throw err;
         if (err.kind === 'credit') throw new AppError(503, 'Créditos esgotados', 'Os créditos do assistente acabaram. Recarregue o saldo na Anthropic para voltar a usar.');
         if (err.kind === 'busy') throw new AppError(503, 'Assistente ocupado', 'O assistente está ocupado. Tente de novo em instantes.');
         throw new AppError(503, 'Assistente indisponível', 'O assistente está com um problema de configuração.');
       } finally {
         // A8: acompanhar o gasto de créditos pelo log, sem o conteúdo da conversa.
-        deps.logger.info({ userId: claims.userId, inputTokens: usage.input, outputTokens: usage.output, toolRounds: usage.rounds }, 'Assistente: pergunta respondida');
+        deps.logger.info({ userId: claims.userId, outcome, inputTokens: usage.input, outputTokens: usage.output, toolRounds: usage.rounds }, 'Assistente: pergunta');
+        // Toda pergunta conta no limite, mesmo a que falhou: os tokens já gastos também.
+        await deps.usage.record(claims.userId, today, usage.input, usage.output).catch((e: unknown) => deps.logger.error({ err: e }, 'Assistente: falha ao registrar o uso'));
       }
     },
   };

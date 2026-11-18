@@ -1,5 +1,7 @@
 import { ASSISTANT_MAX_CHARS, ASSISTANT_MAX_MESSAGES, type AssistantConfigDTO, type AssistantMessage, type AssistantReplyDTO } from '@fincontrol/shared';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
+import { ApiError } from '../../lib/api-client';
 import { useApi } from '../../lib/api-context';
 
 const KEY = ['assistant', 'config'];
@@ -14,8 +16,27 @@ export function useConsent() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (accept: boolean) => (accept ? api.post<void>('/assistant/consent') : api.del('/assistant/consent')),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: KEY }),
+    // O aviso fica aqui, e não no `mutate` da tela: ao retirar, a conversa desmonta antes do sucesso.
+    onSuccess: (_d, accept) => {
+      if (!accept) toast.success('Consentimento retirado.');
+      return queryClient.invalidateQueries({ queryKey: KEY });
+    },
   });
+}
+
+/** A6: conversa salva fora do formato (aba antiga, edição manual) é descartada em vez de travar as perguntas. */
+export function validConversation(raw: unknown): AssistantMessage[] {
+  if (!Array.isArray(raw)) return [];
+  // Pares completos (pergunta e resposta), alternando e começando pela pessoa. Uma pergunta sem resposta no fim
+  // (a aba recarregou enquanto esperava) é descartada.
+  const list: unknown[] = raw.length % 2 === 0 ? raw : raw.slice(0, -1);
+  const ok = list.every(
+    (m: unknown, i) =>
+      typeof m === 'object' && m !== null &&
+      (m as AssistantMessage).role === (i % 2 === 0 ? 'user' : 'assistant') &&
+      typeof (m as AssistantMessage).content === 'string' && (m as AssistantMessage).content.trim() !== '',
+  );
+  return ok ? (list as AssistantMessage[]) : [];
 }
 
 /**
@@ -29,7 +50,12 @@ export function recentHistory(all: AssistantMessage[]): AssistantMessage[] {
 
 export function useAsk() {
   const api = useApi();
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (all: AssistantMessage[]) => api.post<AssistantReplyDTO>('/assistant/chat', { messages: recentHistory(all) }),
+    // 403/409: a conta saiu da lista ou o consentimento foi retirado em outra aba; a tela volta ao estado certo.
+    onError: (err) => {
+      if (err instanceof ApiError && (err.status === 403 || err.status === 409)) void queryClient.invalidateQueries({ queryKey: KEY });
+    },
   });
 }

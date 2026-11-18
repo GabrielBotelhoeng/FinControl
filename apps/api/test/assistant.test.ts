@@ -68,6 +68,19 @@ describe('Assistente com IA', () => {
     expect((await request(off).post('/api/v1/assistant/consent').set(user.auth)).status).toBe(503);
   });
 
+  it('A4: sem lista de e-mails, ninguém usa', async () => {
+    const closed = buildTestApp({ aiClient: ai.client, config: { ...loadConfig(), AI_ALLOWED_EMAILS: [] } }).app;
+    const user = await newUser();
+    expect((await request(closed).get('/api/v1/assistant/config').set(user.auth)).body.allowed).toBe(false);
+  });
+
+  it('A3: conta que saiu da demo (perfil demo, token não anônimo) continua bloqueada', async () => {
+    const user = await newUser();
+    await request(app).get('/api/v1/assistant/config').set(user.auth);
+    await testDb.profile.update({ where: { id: user.id }, data: { isDemo: true } });
+    expect((await request(app).get('/api/v1/assistant/config').set(user.auth)).body.allowed).toBe(false);
+  });
+
   it('A4: com a lista de e-mails, só quem está nela usa', async () => {
     const listed = buildTestApp({ aiClient: ai.client, config: { ...loadConfig(), AI_ALLOWED_EMAILS: ['ana@x.com'] } }).app;
     const ana = await newUser({ email: 'Ana@X.com' });
@@ -162,6 +175,63 @@ describe('Assistente com IA', () => {
     expect(res.body.reply).toMatch(/Não consegui/);
   });
 
+  it('isolamento: as ferramentas de uma pessoa nunca veem os lançamentos de outra', async () => {
+    const ana = await newUser();
+    const bia = await newUser();
+    await consent(ana);
+    const account = await createAccount(app, bia, { name: 'Conta da Bia' });
+    const food = await categoryId(app, bia, 'Alimentação', 'expense');
+    await createTransaction(app, bia, { type: 'expense', amount: 9900, description: 'Cerveja da Bia', accountId: account.id, nature: 'variable', categoryId: food, dueDate: '2026-11-05' });
+    ai.script.push(
+      toolUse({ name: 'buscar_lancamentos', input: { texto: 'cerveja' } }, { name: 'saldos_e_dividas' }, { name: 'resumo_periodo', input: { de: '2026-11', ate: '2026-11' } }),
+      text('Nada.'),
+    );
+    await ask(ana);
+    const all = toolResults(ai.calls[1]!).map((r) => r.content).join(' ');
+    expect(all).not.toContain('Bia');
+    expect(JSON.parse(toolResults(ai.calls[1]!)[0]!.content)).toMatchObject({ quantidade: 0 });
+  });
+
+  it('erros de regra das ferramentas voltam para o modelo; categoria homônima pede o tipo; só a data final olha os 3 meses antes', async () => {
+    const user = await newUser();
+    await consent(user);
+    ai.script.push(
+      toolUse(
+        { name: 'orcamento_mes', input: { mes: '2028-01' } },
+        { name: 'buscar_lancamentos', input: { categoria: 'Outros' } },
+        { name: 'buscar_lancamentos', input: { categoria: 'Outros', tipo: 'receita' } },
+        { name: 'buscar_lancamentos', input: { ate: '2026-01-31' } },
+      ),
+      text('Pronto.'),
+    );
+    expect((await ask(user)).status).toBe(200);
+    const [budget, homonym, income, onlyEnd] = toolResults(ai.calls[1]!);
+    expect(budget).toMatchObject({ is_error: true });
+    expect(homonym).toMatchObject({ is_error: true });
+    expect(homonym!.content).toMatch(/Informe o tipo/);
+    expect(income!.is_error).toBeUndefined();
+    expect(JSON.parse(onlyEnd!.content).periodo).toEqual({ de: '2025-11-01', ate: '2026-01-31' });
+  });
+
+  it('A9: o uso do dia fica no banco; passou de 100 perguntas, 429; passou do teto geral, 503', async () => {
+    const user = await newUser();
+    await consent(user);
+    ai.script.push(text('a'));
+    await ask(user);
+    expect(await testDb.aiUsage.findMany({ select: { requests: true, inputTokens: true, outputTokens: true } })).toEqual([{ requests: 1, inputTokens: 100, outputTokens: 20 }]);
+
+    await testDb.aiUsage.updateMany({ data: { requests: 100 } });
+    const limited = await ask(user);
+    expect(limited.status).toBe(429);
+    expect(limited.body.detail).toMatch(/100 perguntas hoje/);
+
+    const other = await newUser();
+    await consent(other);
+    await testDb.aiUsage.updateMany({ data: { requests: 400 } });
+    expect((await ask(other)).status).toBe(503);
+    expect(ai.calls).toHaveLength(1);
+  });
+
   it('A11: créditos esgotados e sobrecarga viram 503 com mensagem clara', async () => {
     const user = await newUser();
     await consent(user);
@@ -171,6 +241,24 @@ describe('Assistente com IA', () => {
     expect(credit.body.detail).toMatch(/créditos do assistente acabaram/);
     ai.script.push(new AiError('busy', 'Overloaded'));
     expect((await ask(user)).body.detail).toMatch(/ocupado/);
+    ai.script.push(new AiError('config', 'invalid x-api-key'));
+    const config = await ask(user);
+    expect(config.status).toBe(503);
+    expect(config.body.detail).toMatch(/configuração/);
+    // Pergunta que falhou também conta no limite do dia.
+    expect((await testDb.aiUsage.findFirst())!.requests).toBe(3);
+  });
+
+  it('A8: a última rodada termina com os resultados das ferramentas e ainda declara as ferramentas', async () => {
+    const user = await newUser();
+    await consent(user);
+    for (let i = 0; i < MAX_TOOL_ROUNDS; i += 1) ai.script.push(toolUse({ name: 'metas' }));
+    ai.script.push(text('fim'));
+    await ask(user);
+    const last = ai.calls.at(-1)!;
+    expect(last.tools).toHaveLength(5);
+    expect(last.messages.at(-1)!.role).toBe('user');
+    expect(toolResults(last)).toHaveLength(1);
   });
 
   it('A5: o consentimento grava a hora do aceite', async () => {

@@ -5,17 +5,17 @@ _Atualizado em 2026-11-18 (assistente com IA)._
 ## Assistente com IA (2026-11-18, branch feat/assistente)
 
 - **Spec:** `docs/superpowers/specs/2026-11-18-fincontrol-assistente-ia-design.md` (A1–A12).
-- **Migration:** `20261118120000_assistente` (coluna `profiles.ai_consent_at`). **Antes do deploy da API, aplicar no Supabase.**
+- **Migration:** `20261118120000_assistente` (coluna `profiles.ai_consent_at` e tabela `ai_usage`). **Antes do deploy da API, aplicar no Supabase.**
 - **Variáveis na Vercel (`fincontrol-api`):**
-  - `ANTHROPIC_API_KEY` (começa com `sk-ant-api03-`): sem ela, o assistente fica desligado. **Quem cadastra é o usuário**, pelo comando `! cd apps/api && npx vercel env add ANTHROPIC_API_KEY production`, porque o agente não pode digitar chaves;
-  - `AI_ALLOWED_EMAILS` (opcional): lista de e-mails que podem usar;
+  - `ANTHROPIC_API_KEY` (o console gera chaves `sk-ant-usr-`; as antigas são `sk-ant-api03-`): sem ela, o assistente fica desligado. **Quem cadastra é o usuário**, pelo comando `! cd apps/api && npx vercel env add ANTHROPIC_API_KEY production`, porque o agente não pode digitar chaves;
+  - `AI_ALLOWED_EMAILS`: os e-mails que podem usar (`*` libera todas as contas reais; vazia, ninguém usa);
   - `AI_MODEL` (opcional): o padrão é `claude-haiku-4-5-20251001`.
 - **Entregue:**
   - `/assistente` no menu do computador, no Perfil e no atalho do painel;
   - consentimento na primeira vez e seção nova na política de privacidade;
   - 5 ferramentas só de leitura (resumo do período, busca de lançamentos, orçamento, metas, saldos e dívidas);
   - conversa só na aba (`sessionStorage`), com as últimas 7 mensagens enviadas a cada pergunta;
-  - 30 perguntas por hora por pessoa; tokens de cada resposta no log;
+  - limites de 100 perguntas por pessoa e 400 no total por dia, guardados em `ai_usage` com os tokens gastos, e 30 por hora contra rajadas;
   - a demo não usa o assistente.
 - **Testes:** 133 em shared, 283 na API e 182 na web, além de 13 E2E (o de 360 px cobre `/assistente`).
 

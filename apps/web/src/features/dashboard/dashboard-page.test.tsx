@@ -26,10 +26,20 @@ const routes = (over: Record<string, unknown> = {}) => ({
   'GET /dashboard/by-category': [{ categoryId: 'c1', name: 'Moradia', icon: 'house', color: '#6366F1', total: 180000 }],
   'GET /accounts': [],
   'GET /categories': [],
+  'GET /assistant/config': { enabled: false, allowed: false, consented: false },
   ...over,
 });
 
 describe('DashboardPage', () => {
+  it('A12: o atalho do assistente aparece só para quem pode usar', async () => {
+    const { unmount } = renderApp(<DashboardPage />, { api: fakeApi(routes()) });
+    await screen.findByLabelText('Saldo total');
+    expect(screen.queryByRole('link', { name: 'Perguntar ao assistente' })).not.toBeInTheDocument();
+    unmount();
+    renderApp(<DashboardPage />, { api: fakeApi(routes({ 'GET /assistant/config': { enabled: true, allowed: true, consented: false } })) });
+    expect(await screen.findByRole('link', { name: 'Perguntar ao assistente' })).toHaveAttribute('href', '/assistente');
+  });
+
   it('mostra o saldo herói, a previsão, a comparação e "—" sem mês anterior', async () => {
     renderApp(<DashboardPage />, { api: fakeApi(routes()) });
     expect(await screen.findByLabelText('Saldo total')).toHaveTextContent(/R\$\s*12\.480,50/);

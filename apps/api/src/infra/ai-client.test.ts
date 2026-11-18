@@ -43,6 +43,10 @@ describe('createAnthropicClient (A2, A11)', () => {
     expect(await kindOf(client(400, error('messages: bad')).ai(req))).toBe('config');
   });
 
+  it('resposta 200 com corpo inválido é "ocupado", não erro interno', async () => {
+    expect(await kindOf(client(200, '{"content": [').ai(req))).toBe('busy');
+  });
+
   it('falha de rede é "ocupado"', async () => {
     const fetchFn = (async () => {
       throw new TypeError('fetch failed');

@@ -4,13 +4,14 @@ import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router';
 import { toast } from 'sonner';
 import { Button } from '../../components/ui/button';
+import { Dialog } from '../../components/ui/dialog';
 import { controlClass } from '../../components/ui/field';
 import { PageHeader } from '../../components/ui/page-header';
 import { Panel } from '../../components/ui/panel';
 import { EmptyState, ErrorState, ListSkeleton } from '../../components/ui/states';
 import { cn } from '../../lib/cn';
 import { useAuth } from '../auth/auth-context';
-import { useAsk, useAssistantConfig, useConsent } from './api';
+import { useAsk, useAssistantConfig, useConsent, validConversation } from './api';
 
 export const SUGGESTIONS = [
   'Quanto gastei este mês e com o quê?',
@@ -27,7 +28,7 @@ const STORAGE_KEY = 'fincontrol:assistente';
 function loadConversation(): AssistantMessage[] {
   try {
     const raw = sessionStorage.getItem(STORAGE_KEY);
-    return raw ? (JSON.parse(raw) as AssistantMessage[]) : [];
+    return raw ? validConversation(JSON.parse(raw)) : [];
   } catch {
     return [];
   }
@@ -50,10 +51,14 @@ function ConsentPanel() {
       <h2 className="font-display text-xl font-semibold tracking-tight">Antes de começar</h2>
       <div className="grid gap-2 text-sm text-muted">
         <p>
-          Para responder, o assistente usa a inteligência artificial da Anthropic. Vão para ela a sua pergunta, as mensagens desta conversa e os
-          dados financeiros que o assistente consultar para responder, como lançamentos, categorias, saldos, orçamento e metas.
+          Para responder, o assistente usa a inteligência artificial da Anthropic. Vão para ela o seu primeiro nome, a lista das suas
+          categorias, a sua pergunta, as mensagens desta conversa e os dados financeiros que o assistente consultar para responder, como
+          lançamentos, saldos, orçamento e metas.
         </p>
-        <p>A Anthropic não usa esses dados para treinar modelos. O FinControl não guarda a conversa: ela some quando você fecha a aba.</p>
+        <p>
+          A Anthropic não usa esses dados para treinar modelos e os guarda por até 30 dias, para segurança. O FinControl não guarda a
+          conversa: ela some quando você fecha a aba.
+        </p>
         <p>O assistente só consulta. Ele não cria, não altera e não apaga nada.</p>
       </div>
       <div className="flex flex-wrap items-center gap-4">
@@ -90,6 +95,7 @@ function Chat() {
   const consent = useConsent();
   const [messages, setMessages] = useState<AssistantMessage[]>(loadConversation);
   const [draft, setDraft] = useState('');
+  const [revoking, setRevoking] = useState(false);
   const endRef = useRef<HTMLLIElement>(null);
 
   useEffect(() => {
@@ -114,8 +120,13 @@ function Chat() {
     });
   }
 
+  const last = messages.at(-1);
   return (
     <div className="grid max-w-3xl gap-4">
+      {/* Uma região só para o leitor de tela: anuncia "pensando" e a última resposta, sem repetir a conversa. */}
+      <div role="status" className="sr-only">
+        {ask.isPending ? 'Pensando…' : last?.role === 'assistant' ? `Assistente: ${last.content}` : ''}
+      </div>
       {messages.length === 0 ? (
         <Panel className="grid gap-4 p-6">
           <p className="text-sm text-muted">Pergunte sobre seus gastos, receitas, orçamento, metas ou dívidas. Algumas ideias:</p>
@@ -135,12 +146,12 @@ function Chat() {
         </Panel>
       ) : (
         <Panel className="p-4 sm:p-6">
-          <ul aria-label="Conversa" aria-live="polite" className="grid gap-3">
+          <ul aria-label="Conversa" className="grid gap-3">
             {messages.map((m, i) => (
               <Bubble key={i} message={m} />
             ))}
             {ask.isPending && (
-              <li className="flex items-center gap-2 text-sm text-muted" role="status">
+              <li className="flex items-center gap-2 text-sm text-muted" aria-hidden>
                 <Bot aria-hidden className="h-4 w-4 animate-pulse" strokeWidth={1.75} />
                 Pensando…
               </li>
@@ -187,18 +198,33 @@ function Chat() {
               Nova conversa
             </button>
           )}
-          <button
-            type="button"
-            className="font-medium hover:underline"
-            onClick={() => {
-              setMessages([]);
-              consent.mutate(false, { onSuccess: () => toast.success('Consentimento retirado.'), onError: (err) => toast.error(err.message) });
-            }}
-          >
+          <button type="button" className="font-medium hover:underline" onClick={() => setRevoking(true)}>
             Retirar consentimento
           </button>
         </div>
       </div>
+      <Dialog
+        open={revoking}
+        onOpenChange={setRevoking}
+        title="Retirar o consentimento"
+        description="A conversa será apagada, e o assistente vai pedir o aceite de novo antes da próxima pergunta."
+      >
+        <div className="flex justify-end gap-2">
+          <Button variant="secondary" onClick={() => setRevoking(false)}>
+            Cancelar
+          </Button>
+          <Button
+            variant="danger"
+            loading={consent.isPending}
+            onClick={() => {
+              setMessages([]);
+              consent.mutate(false, { onError: (err) => toast.error(err.message) });
+            }}
+          >
+            Retirar
+          </Button>
+        </div>
+      </Dialog>
     </div>
   );
 }

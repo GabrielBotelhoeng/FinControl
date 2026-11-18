@@ -24,7 +24,7 @@ const envSchema = z.object({
   // Assistente com IA (spec 2026-11-18): sem a chave, o assistente fica desligado (A3).
   ANTHROPIC_API_KEY: z.string().startsWith('sk-ant-', 'Chave da Anthropic inválida').optional(),
   AI_MODEL: z.string().min(1).default('claude-haiku-4-5-20251001'),
-  // A4: e-mails separados por vírgula que podem usar o assistente; vazio ou ausente = toda conta real.
+  // A4: e-mails separados por vírgula que podem usar o assistente; `*` libera toda conta real; vazio = ninguém.
   AI_ALLOWED_EMAILS: z
     .string()
     .optional()

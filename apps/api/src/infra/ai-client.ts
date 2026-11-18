@@ -28,7 +28,7 @@ export class AiError extends Error {
 }
 
 const URL = 'https://api.anthropic.com/v1/messages';
-const TIMEOUT_MS = 45_000;
+const TIMEOUT_MS = 30_000;
 
 export function createAnthropicClient(opts: { apiKey: string; model: string; fetchFn?: typeof fetch; logger: Pick<Logger, 'error'> }): AiClient {
   const fetchFn = opts.fetchFn ?? fetch;
@@ -42,9 +42,18 @@ export function createAnthropicClient(opts: { apiKey: string; model: string; fet
         signal: AbortSignal.timeout(TIMEOUT_MS),
       });
     } catch (err) {
+      opts.logger.error({ message: (err as Error).message }, 'Assistente: falha de rede ao chamar a Anthropic');
       throw new AiError('busy', `Falha de rede: ${(err as Error).message}`);
     }
-    if (res.ok) return (await res.json()) as AiResponse;
+    if (res.ok) {
+      // O prazo também vale para a leitura do corpo; corpo cortado ou inválido é "ocupado", não erro interno.
+      try {
+        return (await res.json()) as AiResponse;
+      } catch (err) {
+        opts.logger.error({ message: (err as Error).message }, 'Assistente: resposta da Anthropic ilegível');
+        throw new AiError('busy', 'Resposta ilegível da Anthropic');
+      }
+    }
 
     const text = await res.text().catch(() => '');
     let message = text.slice(0, 300);
