@@ -50,7 +50,7 @@ export function DebtForm({ open, onOpenChange }: { open: boolean; onOpenChange: 
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange} title="Nova dívida">
+    <Dialog open={open} onOpenChange={(o) => (o || !create.isPending) && onOpenChange(o)} title="Nova dívida">
       <form onSubmit={submit} className="grid gap-5" noValidate>
         <Field label="Nome" error={errors.name}>
           <Input value={name} onChange={(e) => setName(e.target.value)} maxLength={80} placeholder="Ex.: Crediário do sofá" autoFocus />
@@ -86,7 +86,7 @@ export function DebtForm({ open, onOpenChange }: { open: boolean; onOpenChange: 
           </p>
         )}
         <div className="flex justify-end gap-2 pt-1">
-          <Button variant="ghost" onClick={() => onOpenChange(false)}>
+          <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={create.isPending}>
             Cancelar
           </Button>
           <Button type="submit" loading={create.isPending}>

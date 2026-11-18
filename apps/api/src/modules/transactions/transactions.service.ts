@@ -33,8 +33,15 @@ export type TransactionsServiceDeps = {
   validateRefs: ValidateRefs;
   recurrences: RecurrencesService;
   clock: () => Date;
-  /** Última âncora da dívida (sub-projeto 6, V3): trava pagar e desmarcar pagamentos que ela já contou. */
-  debtAnchor: (userId: string, debtId: string) => Promise<{ date: DateOnly; recordedAt: Date } | null>;
+  /**
+   * Pagar ou desmarcar um lançamento de dívida (sub-projeto 6, V3) com a dívida travada: recebe a última âncora e o
+   * repositório da transação. A âncora trava os pagamentos que ela já contou; a trava evita correr com o cancelamento.
+   */
+  withDebtLock: <T>(
+    userId: string,
+    debtId: string,
+    fn: (anchor: { date: DateOnly; recordedAt: Date } | null, repo: Pick<TransactionsRepository, 'update'>) => Promise<T>,
+  ) => Promise<T>;
   /** Grava as N parcelas de uma compra no cartão numa única transação do banco (decisão R10). */
   createInstallments: (userId: string, rows: NewTransaction[]) => Promise<TransactionRow[]>;
 };
@@ -58,12 +65,16 @@ export function createTransactionsService(deps: TransactionsServiceDeps) {
   }
 
   /** V3: um lançamento registrado antes da última âncora já está no valor dela; pagar ou desmarcar contaria duas vezes. */
-  async function assertDebtPaymentMovable(userId: string, current: TransactionRow, paidDate: DateOnly | null) {
-    if (!current.debtId) return;
-    const anchor = await deps.debtAnchor(userId, current.debtId);
-    if (!anchor) return;
-    if (current.createdAt <= anchor.recordedAt) throw new UnprocessableError(DEBT_INSTALLMENT_MESSAGES.frozen);
-    if (paidDate && paidDate < anchor.date) throw new UnprocessableError(DEBT_INSTALLMENT_MESSAGES.beforeAnchor);
+  /** Muda a situação; num lançamento de dívida, só depois de conferir a última âncora com a dívida travada. */
+  async function setStatus(userId: string, current: TransactionRow, patch: { status: TransactionStatus; paidDate: DateOnly | null }) {
+    if (!current.debtId) return repo.update(userId, current.id, patch);
+    return deps.withDebtLock(userId, current.debtId, async (anchor, txRepo) => {
+      if (anchor) {
+        if (current.createdAt <= anchor.recordedAt) throw new UnprocessableError(DEBT_INSTALLMENT_MESSAGES.frozen);
+        if (patch.paidDate && patch.paidDate < anchor.date) throw new UnprocessableError(DEBT_INSTALLMENT_MESSAGES.beforeAnchor);
+      }
+      return txRepo.update(userId, current.id, patch);
+    });
   }
 
   async function isCard(userId: string, accountId: string): Promise<boolean> {
@@ -197,17 +208,14 @@ export function createTransactionsService(deps: TransactionsServiceDeps) {
     async pay(userId: string, id: string, paidDate?: DateOnly): Promise<TransactionDTO> {
       const current = await getOwned(userId, id);
       assertNotCardTransaction(await isCard(userId, current.accountId));
-      const resolved = resolvePaidDate('paid', paidDate);
-      await assertDebtPaymentMovable(userId, current, resolved);
-      const row = await repo.update(userId, id, { status: 'paid', paidDate: resolved });
+      const row = await setStatus(userId, current, { status: 'paid', paidDate: resolvePaidDate('paid', paidDate) });
       return toTransactionDTO(row, today());
     },
 
     async unpay(userId: string, id: string): Promise<TransactionDTO> {
       const current = await getOwned(userId, id);
       assertNotCardTransaction(await isCard(userId, current.accountId));
-      await assertDebtPaymentMovable(userId, current, null);
-      return toTransactionDTO(await repo.update(userId, id, { status: 'pending', paidDate: null }), today());
+      return toTransactionDTO(await setStatus(userId, current, { status: 'pending', paidDate: null }), today());
     },
   };
 }

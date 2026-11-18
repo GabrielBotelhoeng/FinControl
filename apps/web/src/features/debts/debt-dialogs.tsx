@@ -9,6 +9,7 @@ import { Button } from '../../components/ui/button';
 import { Dialog } from '../../components/ui/dialog';
 import { controlClass, Field, Input, Select } from '../../components/ui/field';
 import { MoneyInput } from '../../components/ui/money-input';
+import { ErrorState } from '../../components/ui/states';
 import { ApiError } from '../../lib/api-client';
 import { cn } from '../../lib/cn';
 import { formatBRL, formatDate } from '../../lib/format';
@@ -32,7 +33,7 @@ function useErrors() {
 function Actions({ onClose, loading, submit }: { onClose: () => void; loading: boolean; submit: string }) {
   return (
     <div className="flex justify-end gap-2 pt-1">
-      <Button variant="ghost" onClick={onClose}>
+      <Button variant="ghost" onClick={onClose} disabled={loading}>
         Cancelar
       </Button>
       <Button type="submit" loading={loading}>
@@ -42,9 +43,12 @@ function Actions({ onClose, loading, submit }: { onClose: () => void; loading: b
   );
 }
 
-function FormDialog({ title, onClose, onSubmit, children }: { title: string; onClose: () => void; onSubmit: () => void; children: ReactNode }) {
+type FormDialogProps = { title: string; pending: boolean; onClose: () => void; onSubmit: () => void; children: ReactNode };
+
+/** Enquanto o envio não termina, o diálogo não fecha: reabrir e enviar de novo registraria o pagamento duas vezes. */
+function FormDialog({ title, pending, onClose, onSubmit, children }: FormDialogProps) {
   return (
-    <Dialog open onOpenChange={(o) => !o && onClose()} title={title}>
+    <Dialog open onOpenChange={(o) => !o && !pending && onClose()} title={title}>
       <form
         onSubmit={(e) => {
           e.preventDefault();
@@ -68,6 +72,7 @@ function usePayers() {
 function AccountSelect({ value, onChange, error }: { value: string; onChange: (v: string) => void; error?: string | undefined }) {
   const { accounts, payers } = usePayers();
   const effective = value || payers[0]?.id || '';
+  if (accounts.isError) return <ErrorState message={accounts.error.message} onRetry={() => accounts.refetch()} />;
   return (
     <Field label="Conta que paga" error={error ?? (accounts.data && payers.length === 0 ? 'Cadastre uma conta (que não seja cartão).' : undefined)}>
       <Select value={effective} onChange={(e) => onChange(e.target.value)} disabled={!accounts.data}>
@@ -106,7 +111,7 @@ export function EditDebtDialog({ debt, onClose }: DialogProps) {
   }
 
   return (
-    <FormDialog title="Editar dívida" onClose={onClose} onSubmit={submit}>
+    <FormDialog title="Editar dívida" pending={update.isPending} onClose={onClose} onSubmit={submit}>
       <Field label="Nome" error={errors.name}>
         <Input value={name} onChange={(e) => setName(e.target.value)} maxLength={80} autoFocus />
       </Field>
@@ -146,7 +151,7 @@ export function ValuationDialog({ debt, onClose }: DialogProps) {
   }
 
   return (
-    <FormDialog title="Atualizar valor" onClose={onClose} onSubmit={submit}>
+    <FormDialog title="Atualizar valor" pending={valuation.isPending} onClose={onClose} onSubmit={submit}>
       <p className="text-sm text-muted">Use quando o credor mandar um valor novo, com juros e multa ou com desconto.</p>
       <Field label="Quanto você deve hoje" error={errors.amount}>
         <MoneyInput value={amount} onChange={setAmount} autoFocus />
@@ -182,7 +187,7 @@ export function NoteDialog({ debt, onClose }: DialogProps) {
   }
 
   return (
-    <FormDialog title="Registrar negociação" onClose={onClose} onSubmit={submit}>
+    <FormDialog title="Registrar negociação" pending={add.isPending} onClose={onClose} onSubmit={submit}>
       <Field label="O que aconteceu" error={errors.text}>
         <textarea
           className={cn(controlClass, 'h-28 resize-none py-3')}
@@ -203,7 +208,7 @@ export function NoteDialog({ debt, onClose }: DialogProps) {
 
 export function AgreementDialog({ debt, onClose }: DialogProps) {
   const create = useDebtAgreement();
-  const { payers } = usePayers();
+  const { accounts, payers } = usePayers();
   const { errors, setErrors, fail } = useErrors();
   const today = todayInSaoPaulo();
   const [downPayment, setDownPayment] = useState<number | null>(null);
@@ -221,7 +226,8 @@ export function AgreementDialog({ debt, onClose }: DialogProps) {
     if (!firstDueDate || firstDueDate < today) next.firstDueDate = 'O 1º vencimento não pode estar no passado.';
     else if (firstDueDate > addDays(today, 366)) next.firstDueDate = 'O 1º vencimento deve ser em até 1 ano.';
     const account = firstPayer(payers, accountId);
-    if (!account) next.accountId = 'Cadastre uma conta (que não seja cartão).';
+    if (!accounts.data) next.accountId = 'As contas ainda não carregaram.';
+    else if (!account) next.accountId = 'Cadastre uma conta (que não seja cartão).';
     setErrors(next);
     if (Object.keys(next).length || !installmentAmount) return;
     try {
@@ -234,7 +240,7 @@ export function AgreementDialog({ debt, onClose }: DialogProps) {
   }
 
   return (
-    <FormDialog title="Fechar acordo" onClose={onClose} onSubmit={submit}>
+    <FormDialog title="Fechar acordo" pending={create.isPending} onClose={onClose} onSubmit={submit}>
       <p className="text-sm text-muted">{`Saldo de hoje: ${formatBRL(debt.balance)}. A entrada é registrada como paga hoje e as parcelas entram em Lançamentos.`}</p>
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Entrada (opcional)" error={errors.downPayment}>
@@ -269,7 +275,7 @@ export function AgreementDialog({ debt, onClose }: DialogProps) {
 
 export function PaymentDialog({ debt, onClose }: DialogProps) {
   const pay = useDebtPayment();
-  const { payers } = usePayers();
+  const { accounts, payers } = usePayers();
   const { errors, setErrors, fail } = useErrors();
   const today = todayInSaoPaulo();
   const [amount, setAmount] = useState<number | null>(null);
@@ -284,7 +290,8 @@ export function PaymentDialog({ debt, onClose }: DialogProps) {
     if (!date || date > today) next.date = 'A data não pode estar no futuro.';
     else if (min && date < min) next.date = `A data não pode ser anterior a ${formatDate(min)}, a última atualização do valor.`;
     const account = firstPayer(payers, accountId);
-    if (!account) next.accountId = 'Cadastre uma conta (que não seja cartão).';
+    if (!accounts.data) next.accountId = 'As contas ainda não carregaram.';
+    else if (!account) next.accountId = 'Cadastre uma conta (que não seja cartão).';
     setErrors(next);
     if (Object.keys(next).length || !amount) return;
     try {
@@ -297,7 +304,7 @@ export function PaymentDialog({ debt, onClose }: DialogProps) {
   }
 
   return (
-    <FormDialog title="Registrar pagamento" onClose={onClose} onSubmit={submit}>
+    <FormDialog title="Registrar pagamento" pending={pay.isPending} onClose={onClose} onSubmit={submit}>
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Valor pago" error={errors.amount}>
           <MoneyInput value={amount} onChange={setAmount} autoFocus />
@@ -314,10 +321,10 @@ export function PaymentDialog({ debt, onClose }: DialogProps) {
 
 function ConfirmDialog(props: { title: string; text: string; confirm: string; loading: boolean; onConfirm: () => void; onClose: () => void }) {
   return (
-    <Dialog open onOpenChange={(o) => !o && props.onClose()} title={props.title}>
+    <Dialog open onOpenChange={(o) => !o && !props.loading && props.onClose()} title={props.title}>
       <p className="text-sm text-muted">{props.text}</p>
       <div className="mt-6 flex justify-end gap-2">
-        <Button variant="ghost" onClick={props.onClose}>
+        <Button variant="ghost" onClick={props.onClose} disabled={props.loading}>
           Voltar
         </Button>
         <Button className="bg-expense text-white" loading={props.loading} onClick={props.onConfirm}>

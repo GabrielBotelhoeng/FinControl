@@ -234,6 +234,20 @@ describe('dívidas com credores', () => {
     expect(await testDb.debtEvent.count({ where: { debtId: debt.id, note: 'Acordo cancelado' } })).toBe(1);
   });
 
+  it('cancelar o acordo enquanto uma parcela é paga: o pagamento nunca se perde (CodeRabbit)', async () => {
+    const { user, checking, debt } = await debtScenario();
+    await request(app).post(`/api/v1/debts/${debt.id}/agreement`).set(user.auth).send(agreementBody(checking.id));
+    const first = await testDb.transaction.findFirst({ where: { debtId: debt.id, installmentNumber: 1 } });
+    const [pay] = await Promise.all([
+      request(app).post(`/api/v1/transactions/${first!.id}/pay`).set(user.auth).send({ paidDate: '2026-11-11' }),
+      request(app).delete(`/api/v1/debts/${debt.id}/agreement`).set(user.auth),
+    ]);
+    const after = (await request(app).get(`/api/v1/debts/${debt.id}`).set(user.auth)).body;
+    // Pagou antes do cancelamento: a âncora já desconta os 20.000. Chegou depois: a parcela foi apagada (404).
+    expect(after.balance).toBe(pay.status === 200 ? 60000 : 80000);
+    expect(after.paid).toBe(pay.status === 200 ? 30000 : 10000);
+  });
+
   it('valores inválidos dão 400', async () => {
     const { user, debt } = await debtScenario();
     expect((await request(app).post('/api/v1/debts').set(user.auth).send({ name: '', creditor: 'x', kind: 'store', originalAmount: 1, since: '2026-01-01' })).status).toBe(400);

@@ -135,6 +135,11 @@ export function createDebtsRepository(db: Db) {
   return {
     load,
 
+    /** Roda `fn` com a dívida travada e relida: pagar ou desmarcar uma parcela não corre com o cancelamento do acordo. */
+    async withLock<T>(userId: string, debtId: string, fn: (tx: DbClient, data: DebtData) => Promise<T>): Promise<T> {
+      return db.$transaction(async (tx) => fn(tx, await lockAndCheck(tx, userId, debtId, () => {})));
+    },
+
     async findOne(userId: string, id: string): Promise<DebtData | null> {
       return (await load(userId, [id]))[0] ?? null;
     },

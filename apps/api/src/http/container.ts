@@ -55,11 +55,11 @@ export function buildContainer(deps: AppDeps) {
   const debtsRepo = createDebtsRepository(deps.db);
   const transactions = createTransactionsService({
     repo: transactionsRepo, validateRefs, recurrences, clock: deps.clock,
-    debtAnchor: async (userId, debtId) => {
-      const data = await debtsRepo.findOne(userId, debtId);
-      const anchor = data ? lastAnchor(data.events) : null;
-      return anchor ? { date: anchor.date, recordedAt: anchor.recordedAt } : null;
-    },
+    withDebtLock: (userId, debtId, fn) =>
+      debtsRepo.withLock(userId, debtId, (tx, data) => {
+        const anchor = lastAnchor(data.events);
+        return fn(anchor ? { date: anchor.date, recordedAt: anchor.recordedAt } : null, createTransactionsRepository(tx));
+      }),
     // As N parcelas de uma compra no cartão são gravadas numa única transação do banco (decisão R10), no mesmo
     // estilo usado abaixo para o seed da demo: repositório recriado sobre o client da transação interativa.
     async createInstallments(userId: string, rows: NewTransaction[]): Promise<TransactionRow[]> {
