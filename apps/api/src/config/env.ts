@@ -16,7 +16,14 @@ const envSchema = z.object({
     .refine(isValidRegex, 'Regex inválida')
     .optional(),
   CRON_SECRET: z.string().min(32),
-});
+  // Web Push (sub-projeto 5, Parte B, W1): as três juntas, ou nenhuma (push desligado).
+  VAPID_PUBLIC_KEY: z.string().min(1).optional(),
+  VAPID_PRIVATE_KEY: z.string().min(1).optional(),
+  VAPID_SUBJECT: z.string().regex(/^(mailto:|https:\/\/)/, 'Use mailto: ou https://').optional(),
+}).refine(
+  (e) => [e.VAPID_PUBLIC_KEY, e.VAPID_PRIVATE_KEY, e.VAPID_SUBJECT].every((v) => v === undefined) || [e.VAPID_PUBLIC_KEY, e.VAPID_PRIVATE_KEY, e.VAPID_SUBJECT].every((v) => v !== undefined),
+  { message: 'Informe VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY e VAPID_SUBJECT juntas', path: ['VAPID_PUBLIC_KEY'] },
+);
 
 function isValidRegex(source: string): boolean {
   try {

@@ -104,3 +104,49 @@ Parte B (Web Push), e-mail, avisos de "próxima melhor ação" (ficam para o ass
 5. Desligar "Orçamento" no Perfil tira esses avisos da lista e do contador.
 6. Nenhuma rota nova expõe dados de outro usuário.
 7. CI verde (lint, typecheck, unitários, integração e E2E), com tudo no ar e a migration aplicada.
+
+---
+
+# Parte B: avisos no celular e no navegador (Web Push)
+
+- **Data:** 2026-11-17. Decisões tomadas pelo agente, como na Parte A.
+- **Banco:** uma tabela nova e uma coluna nova, então **há migration**. Ela só vai para produção com o comando do usuário.
+
+## B1. Decisões
+
+| # | Decisão | Alternativas descartadas | Motivo |
+|---|---|---|---|
+| W1 | **Web Push padrão (VAPID) com a biblioteca `web-push` na API.** As chaves ficam nas variáveis `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` e `VAPID_SUBJECT`. Sem elas, o push fica desligado e o app mostra "indisponível". | Firebase Cloud Messaging; OneSignal | Funciona em Chrome, Edge, Firefox, Android e no iPhone com o app instalado na tela inicial (iOS 16.4+), sem conta em serviço externo. |
+| W2 | **O que vai por push são os avisos da central (Parte A) que ainda não foram enviados nem lidos.** Cada aviso vai uma vez só (coluna `pushed_at` na memória). Uma mensagem por pessoa, com o aviso mais urgente no título e "e mais N" no texto; tocar abre `/notificacoes`. | Um push por aviso | Uma notificação por dia não vira spam. As regras e preferências (N4–N7) continuam valendo. |
+| W3 | **Envio diário às 08:00 de Brasília** (cron da Vercel, `0 11 * * *`). Contas demo ficam de fora. Assinatura que o serviço de push responde como expirada (404 ou 410) é apagada. | Envio a cada hora | O plano gratuito da Vercel só permite cron diário. As contas vencem por dia. |
+| W4 | **Ativação no Perfil**, no bloco "Notificações": "Receber no celular e no navegador" pede a permissão (exige o clique da pessoa), grava a assinatura e permite desligar. Há o botão "Enviar um aviso de teste". O bloco explica os casos "bloqueado no navegador", "este navegador não suporta" e, no iPhone, "instale o app na tela inicial". | Pedir permissão ao abrir o app | Pedir sem contexto leva ao bloqueio. A pessoa decide. |
+| W5 | **Endereço da assinatura só de serviços de push conhecidos** (Google, Mozilla, Apple, Microsoft). Outro endereço dá 422. | Aceitar qualquer URL | A API faz um POST para esse endereço. Sem a lista, ela poderia ser usada para chamar endereços internos (SSRF). |
+| W6 | **Uma assinatura por navegador** (o endereço é único). Se outra pessoa entrar no mesmo navegador e ativar, a assinatura passa para ela. Excluir a conta apaga as assinaturas (cascade). | — | O aparelho recebe os avisos de quem está usando. |
+| W7 | **Service worker:** o do PWA ganha `push-sw.js` (via `importScripts`), que mostra a notificação e abre o app no clique. | Trocar o modo do PWA para `injectManifest` | Muda menos o que já funciona. |
+
+## B2. Modelo de dados
+
+- **`PushSubscription` (`push_subscriptions`):** `id`, `userId` (FK `profiles`, cascade), `endpoint` (único, até 1000), `p256dh`, `auth`, `createdAt`, `lastSuccessAt` (opcional). RLS ligado.
+- **`notifications.pushed_at`** (timestamptz, opcional).
+
+## B3. API
+
+- **`GET /push/config`:** `{ enabled, publicKey }`.
+- **`POST /push/subscriptions`:** `{ endpoint, keys: { p256dh, auth } }`. Cria ou passa para o usuário atual. Endereço fora da lista dá 422; push desligado dá 503.
+- **`DELETE /push/subscriptions`:** `{ endpoint }`, só do próprio usuário.
+- **`POST /push/test`:** manda "Os avisos do FinControl estão ligados" para as assinaturas do usuário e devolve quantas receberam.
+- **Cron `GET /internal/cron/send-push`:** W2 e W3. Devolve `{ users, sent, removed }`.
+
+## B4. Testes
+
+- **API:** assinatura (criar, trocar de dono, apagar, lista de serviços, isolamento), envio de teste, cron (só o que não foi enviado nem lido, uma mensagem por pessoa, demo de fora, assinatura expirada apagada, preferências respeitadas). O envio real é trocado por um falso nos testes.
+- **Web:** o bloco do Perfil em cada estado (indisponível, sem suporte, bloqueado, desligado, ligado), ativar, desativar e o teste.
+- **Manual em produção:** ativar no navegador e receber o aviso de teste.
+
+## B5. Critérios de aceite
+
+1. Ativar no Perfil pede a permissão e, aceita, o "aviso de teste" chega no aparelho.
+2. O envio diário manda um único push com os avisos novos, e no dia seguinte não repete os mesmos.
+3. Uma assinatura expirada é apagada no envio.
+4. Endereço de assinatura fora dos serviços conhecidos é recusado.
+5. CI verde e tudo no ar, com a migration aplicada e as chaves na Vercel.

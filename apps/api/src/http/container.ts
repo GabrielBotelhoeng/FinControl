@@ -20,6 +20,9 @@ import { createLoansService } from '../modules/loans/loans.service';
 import { createProfileRepository } from '../modules/profile/profile.repository';
 import { createProfileService } from '../modules/profile/profile.service';
 import { createProvisioner } from '../modules/profile/provisioning';
+import { createWebPushSender } from '../infra/push-sender';
+import { createPushRepository } from '../modules/push/push.repository';
+import { createPushService } from '../modules/push/push.service';
 import { createNotificationsRepository } from '../modules/notifications/notifications.repository';
 import { createNotificationsService } from '../modules/notifications/notifications.service';
 import { createDebtsReader } from '../modules/reports/debts';
@@ -75,6 +78,12 @@ export function buildContainer(deps: AppDeps) {
     repo: createNotificationsRepository(deps.db), profileRepo: createProfileRepository(deps.db), recurrences,
     cards: { accountsRepo, cards, installmentTotalsByAccount: dashboardRepo.installmentTotalsByAccount }, budgets, goals, logger: deps.logger, clock: deps.clock,
   });
+  const { VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, VAPID_SUBJECT } = deps.config;
+  const vapid = VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY && VAPID_SUBJECT ? { publicKey: VAPID_PUBLIC_KEY, privateKey: VAPID_PRIVATE_KEY, subject: VAPID_SUBJECT } : null;
+  const push = createPushService({
+    repo: createPushRepository(deps.db), notifications, logger: deps.logger, clock: deps.clock,
+    sender: vapid ? (deps.pushSender ?? createWebPushSender(vapid)) : null, publicKey: vapid?.publicKey ?? null,
+  });
   const reports = createReportsService({ repo: createReportsRepository(deps.db), debts, recurrences, clock: deps.clock });
   const demo = createDemoService({
     repo: createDemoRepository(deps.db), categories: categoriesRepo, profile, clock: deps.clock,
@@ -98,7 +107,7 @@ export function buildContainer(deps: AppDeps) {
   return {
     provisioner, profile, accountsRepo, accounts, categoriesRepo, categories,
     transactionsRepo, validateRefs, recurrencesRepo, recurrences, transactions, dashboard, demo,
-    cardsRepo, cards, bankRates, loansRepo, loans, budgets, goalsRepo, goals, debts, reports, notifications,
+    cardsRepo, cards, bankRates, loansRepo, loans, budgets, goalsRepo, goals, debts, reports, notifications, push,
   };
 }
 

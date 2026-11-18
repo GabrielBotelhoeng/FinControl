@@ -3,6 +3,7 @@ import { Router, type RequestHandler } from 'express';
 import { UnauthorizedError } from '../../http/errors';
 import type { BankRatesService } from '../bank-rates/bank-rates.service';
 import type { NotificationsService } from '../notifications/notifications.service';
+import type { PushService } from '../push/push.service';
 import type { DemoService } from './demo.service';
 
 function safeEqual(a: string, b: string): boolean {
@@ -12,7 +13,7 @@ function safeEqual(a: string, b: string): boolean {
 }
 
 /** Rotas internas chamadas pelo Vercel Cron (GET), com o segredo no header Authorization. */
-export function cronRouter(deps: { secret: string; demo: DemoService; bankRates: BankRatesService; notifications: Pick<NotificationsService, 'purge'> }): Router {
+export function cronRouter(deps: { secret: string; demo: DemoService; bankRates: BankRatesService; notifications: Pick<NotificationsService, 'purge'>; push: Pick<PushService, 'sendDaily'> }): Router {
   const r = Router();
   const guarded =
     (run: () => Promise<unknown>): RequestHandler =>
@@ -28,5 +29,9 @@ export function cronRouter(deps: { secret: string; demo: DemoService; bankRates:
   const syncBankRates = guarded(() => deps.bankRates.sync());
   r.get('/sync-bank-rates', syncBankRates);
   r.post('/sync-bank-rates', syncBankRates);
+  // Diário às 08:00 de Brasília (sub-projeto 5, Parte B, W3).
+  const sendPush = guarded(() => deps.push.sendDaily());
+  r.get('/send-push', sendPush);
+  r.post('/send-push', sendPush);
   return r;
 }

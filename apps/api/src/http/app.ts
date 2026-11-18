@@ -50,7 +50,7 @@ export function createApp(deps: AppDeps): Express {
     res.json({ status: 'ok', version: API_VERSION });
   });
 
-  app.use('/api/v1/internal/cron', cronRouter({ secret: deps.config.CRON_SECRET, demo: container.demo, bankRates: container.bankRates, notifications: container.notifications }));
+  app.use('/api/v1/internal/cron', cronRouter({ secret: deps.config.CRON_SECRET, demo: container.demo, bankRates: container.bankRates, notifications: container.notifications, push: container.push }));
 
   const api = Router();
   api.use(requireAuth(deps.verifier));

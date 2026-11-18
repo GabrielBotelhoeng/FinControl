@@ -3,6 +3,7 @@
   "regions": ["gru1"],
   "crons": [
     { "path": "/api/v1/internal/cron/cleanup-demo", "schedule": "0 6 * * *" },
-    { "path": "/api/v1/internal/cron/sync-bank-rates", "schedule": "0 7 * * 1" }
+    { "path": "/api/v1/internal/cron/sync-bank-rates", "schedule": "0 7 * * 1" },
+    { "path": "/api/v1/internal/cron/send-push", "schedule": "0 11 * * *" }
   ]
 }
