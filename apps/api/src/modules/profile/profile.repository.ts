@@ -9,6 +9,10 @@ export function createProfileRepository(db: Db) {
     update(userId: string, data: UpdateProfileInput) {
       return db.profile.update({ where: { id: userId }, data });
     },
+    /** Assistente com IA (A5): quando aceitou, ou `null` para retirar. */
+    async setAiConsent(userId: string, at: Date | null) {
+      await db.profile.update({ where: { id: userId }, data: { aiConsentAt: at } });
+    },
     async delete(userId: string) {
       await db.profile.deleteMany({ where: { id: userId } });
     },

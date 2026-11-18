@@ -1,4 +1,7 @@
+import { createAnthropicClient } from '../infra/ai-client';
 import { createBcbClient } from '../infra/bcb-client';
+import { createAssistantService } from '../modules/assistant/assistant.service';
+import { createAssistantTools } from '../modules/assistant/assistant.tools';
 import { createAccountsRepository } from '../modules/accounts/accounts.repository';
 import { createAccountsService } from '../modules/accounts/accounts.service';
 import { createBankRatesRepository } from '../modules/bank-rates/bank-rates.repository';
@@ -85,6 +88,13 @@ export function buildContainer(deps: AppDeps) {
     sender: vapid ? (deps.pushSender ?? createWebPushSender(vapid, deps.logger)) : null, publicKey: vapid?.publicKey ?? null,
   });
   const reports = createReportsService({ repo: createReportsRepository(deps.db), debts, recurrences, clock: deps.clock });
+  const { ANTHROPIC_API_KEY, AI_MODEL, AI_ALLOWED_EMAILS } = deps.config;
+  const assistant = createAssistantService({
+    ai: deps.aiClient ?? (ANTHROPIC_API_KEY ? createAnthropicClient({ apiKey: ANTHROPIC_API_KEY, model: AI_MODEL, logger: deps.logger }) : null),
+    allowedEmails: AI_ALLOWED_EMAILS,
+    tools: createAssistantTools({ reports, transactions, categoriesRepo, budgets, goals, accounts, dashboard, clock: deps.clock }),
+    profileRepo: createProfileRepository(deps.db), categoriesRepo, logger: deps.logger, clock: deps.clock,
+  });
   const demo = createDemoService({
     repo: createDemoRepository(deps.db), categories: categoriesRepo, profile, clock: deps.clock,
     // O seed grava ~170 linhas; o limite de 5 s padrão do Prisma é apertado no plano gratuito.
@@ -107,7 +117,7 @@ export function buildContainer(deps: AppDeps) {
   return {
     provisioner, profile, accountsRepo, accounts, categoriesRepo, categories,
     transactionsRepo, validateRefs, recurrencesRepo, recurrences, transactions, dashboard, demo,
-    cardsRepo, cards, bankRates, loansRepo, loans, budgets, goalsRepo, goals, debts, reports, notifications, push,
+    cardsRepo, cards, bankRates, loansRepo, loans, budgets, goalsRepo, goals, debts, reports, notifications, push, assistant,
   };
 }
 

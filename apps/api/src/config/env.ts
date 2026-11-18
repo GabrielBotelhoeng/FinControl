@@ -21,6 +21,14 @@ const envSchema = z.object({
   VAPID_PUBLIC_KEY: z.string().regex(/^[A-Za-z0-9_-]{87}$/, 'Chave pública VAPID inválida').optional(),
   VAPID_PRIVATE_KEY: z.string().regex(/^[A-Za-z0-9_-]{43}$/, 'Chave privada VAPID inválida').optional(),
   VAPID_SUBJECT: z.string().regex(/^(mailto:|https:\/\/)/, 'Use mailto: ou https://').optional(),
+  // Assistente com IA (spec 2026-11-18): sem a chave, o assistente fica desligado (A3).
+  ANTHROPIC_API_KEY: z.string().startsWith('sk-ant-', 'Chave da Anthropic inválida').optional(),
+  AI_MODEL: z.string().min(1).default('claude-haiku-4-5-20251001'),
+  // A4: e-mails separados por vírgula que podem usar o assistente; vazio ou ausente = toda conta real.
+  AI_ALLOWED_EMAILS: z
+    .string()
+    .optional()
+    .transform((v) => (v ? v.split(',').map((e) => e.trim().toLowerCase()).filter(Boolean) : [])),
 }).refine(
   (e) => [e.VAPID_PUBLIC_KEY, e.VAPID_PRIVATE_KEY, e.VAPID_SUBJECT].every((v) => v === undefined) || [e.VAPID_PUBLIC_KEY, e.VAPID_PRIVATE_KEY, e.VAPID_SUBJECT].every((v) => v !== undefined),
   { message: 'Informe VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY e VAPID_SUBJECT juntas', path: ['VAPID_PUBLIC_KEY'] },

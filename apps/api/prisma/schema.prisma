@@ -67,6 +67,10 @@ model Profile {
    * Preferências de notificação (spec do sub-projeto 5, N7); o que faltar vem dos padrões.
    */
   notificationPrefs Json               @default("{}") @map("notification_prefs")
+  /**
+   * Quando aceitou enviar dados ao assistente com IA (spec do assistente, A5); `null` = não aceitou.
+   */
+  aiConsentAt       DateTime?          @map("ai_consent_at") @db.Timestamptz
   createdAt         DateTime           @default(now()) @map("created_at") @db.Timestamptz
   updatedAt         DateTime           @updatedAt @map("updated_at") @db.Timestamptz
   accounts          Account[]

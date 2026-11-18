@@ -1,5 +1,6 @@
 import type { Router } from 'express';
 import { accountsRouter } from '../modules/accounts/accounts.routes';
+import { assistantRouter } from '../modules/assistant/assistant.routes';
 import { banksRouter } from '../modules/bank-rates/bank-rates.routes';
 import { budgetsRouter, planningRouter } from '../modules/budgets/budgets.routes';
 import { cardsRouter } from '../modules/cards/cards.routes';
@@ -30,5 +31,6 @@ export function registerRoutes(api: Router, c: Container, opts: { rateLimitEnabl
   api.use('/reports', reportsRouter(c.reports));
   api.use('/notifications', notificationsRouter(c.notifications));
   api.use('/push', pushRouter(c.push));
+  api.use('/assistant', assistantRouter(c.assistant, opts));
   api.use('/demo', demoRouter(c.demo, opts));
 }
