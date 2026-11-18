@@ -65,9 +65,9 @@ describe('Web Push (sub-projeto 5, Parte B)', () => {
     await subscribe(ana, 'mesmo');
     await subscribe(bia, 'mesmo');
     expect(await testDb.pushSubscription.findMany({ select: { userId: true } })).toEqual([{ userId: bia.id }]);
-    await request(app).delete('/api/v1/push/subscriptions').set(ana.auth).send({ endpoint: endpoint('mesmo') });
+    await request(app).post('/api/v1/push/unsubscribe').set(ana.auth).send({ endpoint: endpoint('mesmo') });
     expect(await testDb.pushSubscription.count()).toBe(1);
-    await request(app).delete('/api/v1/push/subscriptions').set(bia.auth).send({ endpoint: endpoint('mesmo') });
+    await request(app).post('/api/v1/push/unsubscribe').set(bia.auth).send({ endpoint: endpoint('mesmo') });
     expect(await testDb.pushSubscription.count()).toBe(0);
   });
 

@@ -133,7 +133,7 @@ Parte B (Web Push), e-mail, avisos de "próxima melhor ação" (ficam para o ass
 
 - **`GET /push/config`:** `{ enabled, publicKey }`.
 - **`POST /push/subscriptions`:** `{ endpoint, keys: { p256dh, auth } }`. Cria ou passa para o usuário atual. Endereço fora da lista dá 422; push desligado dá 503.
-- **`DELETE /push/subscriptions`:** `{ endpoint }`, só do próprio usuário.
+- **`POST /push/unsubscribe`:** `{ endpoint }`, só do próprio usuário. É POST com corpo para o endereço da assinatura não ir na URL, que o log de requisições grava.
 - **`POST /push/test`:** manda "Os avisos do FinControl estão ligados" para as assinaturas do usuário e devolve quantas receberam.
 - **Cron `GET /internal/cron/send-push`:** W2 e W3. Devolve `{ users, sent, removed }`.
 

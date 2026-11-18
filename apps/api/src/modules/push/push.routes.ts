@@ -13,7 +13,8 @@ export function pushRouter(service: PushService): Router {
     await service.subscribe(userIdOf(res), parse(pushSubscriptionSchema, req.body));
     res.status(204).end();
   });
-  r.delete('/subscriptions', async (req, res) => {
+  // POST com corpo: o endereço da assinatura não vai na URL (o log de requisições grava as URLs).
+  r.post('/unsubscribe', async (req, res) => {
     await service.unsubscribe(userIdOf(res), parse(pushEndpointSchema, req.body).endpoint);
     res.status(204).end();
   });

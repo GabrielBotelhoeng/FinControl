@@ -2,6 +2,8 @@ import type { BillDays, NotificationPrefs } from '@fincontrol/shared';
 import { useEffect, useState } from 'react';
 import { Panel } from '../../components/ui/panel';
 import { Segmented } from '../../components/ui/segmented';
+import { useAuth } from '../auth/auth-context';
+import { PushSettings } from '../push/push-settings';
 import { useUpdateNotificationPrefs } from './api';
 
 const TYPES: { key: 'bills' | 'invoices' | 'budget' | 'goals'; label: string; hint: string }[] = [
@@ -20,6 +22,7 @@ const DAYS: { value: `${BillDays}`; label: string }[] = [
 /** Preferências de notificação (sub-projeto 5, N7): o que avisar e com quanta antecedência. */
 export function NotificationSettings({ prefs: saved }: { prefs: NotificationPrefs }) {
   const update = useUpdateNotificationPrefs();
+  const { isDemo } = useAuth();
   // A caixa muda no próprio clique; sem salvamento pendente, volta a seguir o perfil (que a mutação corrige em erro).
   const [prefs, setPrefs] = useState(saved);
   useEffect(() => {
@@ -63,6 +66,7 @@ export function NotificationSettings({ prefs: saved }: { prefs: NotificationPref
           options={DAYS}
         />
       </div>
+      <PushSettings isDemo={isDemo} />
     </Panel>
   );
 }
