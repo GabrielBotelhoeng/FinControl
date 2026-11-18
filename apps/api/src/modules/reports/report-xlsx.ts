@@ -57,6 +57,9 @@ function sheet(wb: ExcelJS.Workbook, name: string, cols: Col[], note?: string) {
 /** Fórmula com o resultado já gravado (E4). */
 const formula = (f: string, result: number | string | null) => ({ formula: f, result: result ?? '' });
 
+/** Soma das linhas de dados (a partir da 4ª); sem linhas, 0 — `SUM(B4:B3)` incluiria a própria célula do total (referência circular). */
+const sumFrom4 = (col: string, end: number, result: number) => (end < 4 ? 0 : formula(`SUM(${col}4:${col}${end})`, result));
+
 export async function renderReportXlsx(d: XlsxData, generatedAt: Date): Promise<Buffer> {
   const wb = new ExcelJS.Workbook();
   wb.creator = 'FinControl';
@@ -119,7 +122,7 @@ export async function renderReportXlsx(d: XlsxData, generatedAt: Date): Promise<
     if (a?.highlight) row.getCell(8).font = { bold: true, color: { argb: 'FFD23752' } };
   }
   const catEnd = cat.rowCount;
-  const catTotal = cat.addRow(['Total', formula(`SUM(B4:B${catEnd})`, reais(totals.expense)), formula(`SUM(C4:C${catEnd})`, reais(totals.previousExpense)), '', '', '', '', '']);
+  const catTotal = cat.addRow(['Total', sumFrom4('B', catEnd, reais(totals.expense)), sumFrom4('C', catEnd, reais(totals.previousExpense)), '', '', '', '', '']);
   catTotal.font = { bold: true };
 
   // ---------- Mensal (E4) ----------
@@ -180,7 +183,7 @@ export async function renderReportXlsx(d: XlsxData, generatedAt: Date): Promise<
   const bal = sheet(wb, 'Saldos', [{ header: 'Conta', width: 28 }, { header: 'Saldo', width: 16, fmt: MONEY }], `Saldo das contas ativas, sem cartões, no fim do período. Útil para a ficha "Bens e Direitos" do IR.`);
   for (const b of report.balances.items) bal.addRow([safeText(b.name), reais(b.balance)]);
   const balEnd = bal.rowCount;
-  bal.addRow(['Total', formula(`SUM(B4:B${balEnd})`, reais(report.balances.total))]).font = { bold: true };
+  bal.addRow(['Total', sumFrom4('B', balEnd, reais(report.balances.total))]).font = { bold: true };
 
   for (const ws of wb.worksheets) {
     if (ws.name === 'Lançamentos') continue;
