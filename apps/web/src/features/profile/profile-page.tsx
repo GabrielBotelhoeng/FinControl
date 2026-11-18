@@ -85,6 +85,15 @@ export default function ProfilePage() {
           </Panel>
           <Panel className="flex flex-wrap items-center justify-between gap-4 p-6">
             <div>
+              <h2 className="font-semibold">Dívidas</h2>
+              <p className="text-sm text-muted">Dívidas com lojas, pessoas e contas atrasadas: negociações, acordos e pagamentos.</p>
+            </div>
+            <Link to="/dividas" className="text-sm font-medium text-primary hover:underline">
+              Ver dívidas
+            </Link>
+          </Panel>
+          <Panel className="flex flex-wrap items-center justify-between gap-4 p-6">
+            <div>
               <h2 className="font-semibold">Relatórios</h2>
               <p className="text-sm text-muted">Resumo do período, evolução das dívidas e exportação em PDF e CSV.</p>
             </div>

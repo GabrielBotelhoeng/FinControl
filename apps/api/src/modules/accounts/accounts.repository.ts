@@ -123,7 +123,15 @@ export function createAccountsRepository(db: DbClient) {
       await db.account.delete({ where: { id, userId } });
     },
 
-    /** Conta referenciada por lançamento ou recorrência (como origem ou destino). */
+    /** Nome de uma dívida com parcela de acordo pendente nesta conta, ou `null` (bloqueia o arquivamento, V7). */
+    async pendingDebtName(userId: string, id: string): Promise<string | null> {
+      const row = await db.transaction.findFirst({
+        where: { userId, accountId: id, status: 'pending', debtId: { not: null } },
+        select: { debt: { select: { name: true } } },
+      });
+      return row?.debt?.name ?? null;
+    },
+
     /** Nome de um empréstimo com parcela pendente nesta conta, ou `null` (bloqueia o arquivamento). */
     async pendingLoanName(userId: string, id: string): Promise<string | null> {
       const row = await db.transaction.findFirst({

@@ -16,6 +16,8 @@ import { createCategoriesService } from '../modules/categories/categories.servic
 import { createDashboardRepository } from '../modules/dashboard/dashboard.repository';
 import { createDashboardService } from '../modules/dashboard/dashboard.service';
 import { createDemoRepository } from '../modules/demo/demo.repository';
+import { createDebtsRepository } from '../modules/debts/debts.repository';
+import { createDebtsService } from '../modules/debts/debts.service';
 import { createDemoService } from '../modules/demo/demo.service';
 import { createGoalsRepository } from '../modules/goals/goals.repository';
 import { createGoalsService } from '../modules/goals/goals.service';
@@ -73,10 +75,11 @@ export function buildContainer(deps: AppDeps) {
   const loans = createLoansService({ repo: loansRepo, accountsRepo, categoriesRepo, bankRates });
   const cardsRepo = createCardsRepository(deps.db);
   const cards = createCardsService({ repo: cardsRepo, accountsRepo, accounts, transactionsRepo, clock: deps.clock });
-  const debts = createDebtsReader(deps.db);
+  const debtsReader = createDebtsReader(deps.db);
+  const debts = createDebtsService({ repo: createDebtsRepository(deps.db), accountsRepo, categoriesRepo, clock: deps.clock });
   const dashboardRepo = createDashboardRepository(deps.db);
   const dashboard = createDashboardService({
-    repo: dashboardRepo, transactions: transactionsRepo, recurrences, accountsRepo, cards, loansRepo, budgets, debts, clock: deps.clock,
+    repo: dashboardRepo, transactions: transactionsRepo, recurrences, accountsRepo, cards, loansRepo, budgets, debts: debtsReader, clock: deps.clock,
   });
   const notifications = createNotificationsService({
     repo: createNotificationsRepository(deps.db), profileRepo: createProfileRepository(deps.db), recurrences,
@@ -88,12 +91,12 @@ export function buildContainer(deps: AppDeps) {
     repo: createPushRepository(deps.db), notifications, logger: deps.logger, clock: deps.clock,
     sender: vapid ? (deps.pushSender ?? createWebPushSender(vapid, deps.logger)) : null, publicKey: vapid?.publicKey ?? null,
   });
-  const reports = createReportsService({ repo: createReportsRepository(deps.db), debts, recurrences, clock: deps.clock });
+  const reports = createReportsService({ repo: createReportsRepository(deps.db), debts: debtsReader, recurrences, clock: deps.clock });
   const { ANTHROPIC_API_KEY, AI_MODEL, AI_ALLOWED_EMAILS } = deps.config;
   const assistant = createAssistantService({
     ai: deps.aiClient ?? (ANTHROPIC_API_KEY ? createAnthropicClient({ apiKey: ANTHROPIC_API_KEY, model: AI_MODEL, logger: deps.logger }) : null),
     allowedEmails: AI_ALLOWED_EMAILS, usage: createAssistantRepository(deps.db),
-    tools: createAssistantTools({ reports, transactions, categoriesRepo, budgets, goals, accounts, dashboard, clock: deps.clock }),
+    tools: createAssistantTools({ reports, transactions, categoriesRepo, budgets, goals, accounts, dashboard, debts, clock: deps.clock }),
     profileRepo: createProfileRepository(deps.db), categoriesRepo, logger: deps.logger, clock: deps.clock,
   });
   const demo = createDemoService({
@@ -118,7 +121,7 @@ export function buildContainer(deps: AppDeps) {
   return {
     provisioner, profile, accountsRepo, accounts, categoriesRepo, categories,
     transactionsRepo, validateRefs, recurrencesRepo, recurrences, transactions, dashboard, demo,
-    cardsRepo, cards, bankRates, loansRepo, loans, budgets, goalsRepo, goals, debts, reports, notifications, push, assistant,
+    cardsRepo, cards, bankRates, loansRepo, loans, budgets, goalsRepo, goals, debtsReader, debts, reports, notifications, push, assistant,
   };
 }
 

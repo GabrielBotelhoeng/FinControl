@@ -1,4 +1,7 @@
 import type { DateOnly, LoanKind } from '@fincontrol/shared';
+import type { DemoAccountKey, DemoDebt } from '../../domain/demo-data';
+import type { Prisma } from '../../generated/prisma/client';
+import { DEBT_CATEGORY } from '../debts/debts.service';
 import { fromDateOnly } from '../../infra/date-mapping';
 import type { DbClient } from '../../infra/prisma';
 
@@ -47,6 +50,49 @@ export function createDemoRepository(db: DbClient) {
         select: { id: true },
       });
       return created.id;
+    },
+
+    /** Dívida com credor da demo (V13): âncoras, negociações e o acordo com os lançamentos, em ordem de registro. */
+    async createDebt(userId: string, d: DemoDebt, accountId: (key: DemoAccountKey) => string): Promise<void> {
+      let tick = Date.now();
+      const at = () => new Date((tick += 1));
+      const debt = await db.debt.create({
+        data: { userId, name: d.name, creditor: d.creditor, kind: d.kind, originalAmount: BigInt(d.originalAmount), since: fromDateOnly(d.since) },
+        select: { id: true },
+      });
+      const events: Prisma.DebtEventCreateManyInput[] = [
+        { debtId: debt.id, userId, kind: 'valuation', date: fromDateOnly(d.since), amount: BigInt(d.originalAmount), recordedAt: at() },
+      ];
+      for (const n of d.notes) {
+        events.push({ debtId: debt.id, userId, kind: 'note', date: fromDateOnly(n.date), note: n.text, amount: n.amount === null ? null : BigInt(n.amount), recordedAt: at() });
+      }
+      if (d.valuation) events.push({ debtId: debt.id, userId, kind: 'valuation', date: fromDateOnly(d.valuation.date), amount: BigInt(d.valuation.amount), recordedAt: at() });
+      const a = d.agreement;
+      if (a) {
+        const n = a.schedule.length;
+        events.push({
+          debtId: debt.id, userId, kind: 'agreement', date: fromDateOnly(a.date), recordedAt: at(), amount: BigInt(a.downPayment + n * a.installmentAmount),
+          downPayment: BigInt(a.downPayment), installments: n, installmentAmount: BigInt(a.installmentAmount),
+        });
+      }
+      await db.debtEvent.createMany({ data: events });
+      if (!a) return;
+      await db.category.createMany({ data: [{ ...DEBT_CATEGORY, userId }], skipDuplicates: true });
+      const category = await db.category.findFirstOrThrow({ where: { userId, type: 'expense', name: DEBT_CATEGORY.name }, select: { id: true } });
+      const base = { userId, debtId: debt.id, type: 'expense' as const, accountId: accountId(a.accountKey), categoryId: category.id };
+      await db.transaction.createMany({
+        data: [
+          {
+            ...base, amount: BigInt(a.downPayment), description: `Entrada do acordo ${d.name}`, nature: 'variable', status: 'paid',
+            dueDate: fromDateOnly(a.date), paidDate: fromDateOnly(a.date), createdAt: at(),
+          },
+          ...a.schedule.map((s) => ({
+            ...base, amount: BigInt(a.installmentAmount), description: `Acordo ${d.name} (${s.number}/${a.schedule.length})`, nature: 'fixed' as const,
+            status: s.paid ? ('paid' as const) : ('pending' as const), dueDate: fromDateOnly(s.dueDate), paidDate: s.paid ? fromDateOnly(s.dueDate) : null,
+            installmentNumber: s.number, installmentTotal: a.schedule.length, createdAt: at(),
+          })),
+        ],
+      });
     },
 
     async createBudget(userId: string, categoryId: string, limit: number): Promise<void> {

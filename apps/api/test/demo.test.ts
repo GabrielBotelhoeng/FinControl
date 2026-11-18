@@ -73,8 +73,18 @@ describe('conta demo', () => {
     const lastDebt = report.debts.at(-1);
     expect(lastDebt.cards).toBeGreaterThan(0);
     expect(lastDebt.loans).toBe(loan.outstanding);
-    expect(summary.body.debts).toEqual({ cards: summary.body.debts.cards, loans: loan.outstanding, total: summary.body.debts.cards + loan.outstanding });
     expect(summary.body.debts.cards).toBeGreaterThan(0);
+
+    // Sub-projeto 6 (V13): a luz em aberto com juros e o crediário em acordo (entrada e 1ª parcela pagas).
+    const debts = (await request(app).get('/api/v1/debts').set(visitor.auth)).body;
+    expect(debts.map((d: { name: string; status: string }) => [d.name, d.status])).toEqual([
+      ['Crediário da loja de móveis', 'agreement'], ['Conta de luz atrasada', 'open'],
+    ]);
+    expect(debts[0]).toMatchObject({ original: 240000, discounts: 30000, paid: 60000, balance: 150000 });
+    expect(debts[1]).toMatchObject({ original: 18740, interest: 2650, balance: 21390 });
+    expect(summary.body.debts).toEqual({
+      cards: summary.body.debts.cards, loans: loan.outstanding, others: 171390, total: summary.body.debts.cards + loan.outstanding + 171390,
+    });
 
     // Sub-projeto 5 (N11): a central mostra todos os tipos de aviso, com a vencida no topo.
     const notes = (await request(app).get('/api/v1/notifications').set(visitor.auth)).body;

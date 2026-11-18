@@ -1,6 +1,19 @@
 # HANDOFF — FinControl
 
-_Atualizado em 2026-11-18 (assistente com IA)._
+_Atualizado em 2026-11-18 (dívidas com credores)._
+
+## Sub-projeto 6: dívidas com credores (2026-11-18, branch feat/dividas)
+
+- **Spec:** `docs/superpowers/specs/2026-11-18-fincontrol-sp6-dividas-design.md` (V1–V13), com as decisões tomadas pelo agente. Fecha a seção 03 da ideia original (credores, valor original × atualizado, juros e multas, acordo, pagamentos, histórico de negociações, progresso).
+- **Migration:** `20261118221341_dividas` (tabelas `debts` e `debt_events`, coluna `transactions.debt_id`). **Antes do deploy da API, aplicar no Supabase.**
+- **Regra central (V3):** o saldo nunca é guardado. Ele sai das âncoras (atualizações de valor e acordos) menos os pagamentos feitos depois delas (`packages/shared/src/debt.ts`). Por isso, apagar ou editar um pagamento em Lançamentos não desarruma nada.
+- **Entregue:**
+  - `/dividas` e `/dividas/:id`, no menu do computador, no Perfil e no link "Ver dívidas" do painel;
+  - atualizar valor, registrar negociação, fechar e cancelar acordo (as parcelas viram lançamentos pendentes na categoria "Dívidas e acordos"), pagamento avulso, linha do tempo;
+  - `others` no total de dívidas (painel, relatório, PDF, Excel) e as dívidas na ferramenta `saldos_e_dividas` do assistente;
+  - as parcelas de acordo seguem as travas das de empréstimo (não podem ser apagadas nem mudar de valor em Lançamentos, e a conta não pode ser arquivada);
+  - na demo, "Conta de luz atrasada" em aberto e "Crediário da loja de móveis" em acordo.
+- **Testes:** 144 no shared, 308 na API e 200 na web, além de 14 E2E (novo: `e2e/tests/dividas.spec.ts`; o de 360 px cobre `/dividas` e o detalhe, e pegou uma grade sem `grid-cols-1` que cortava os cartões).
 
 ## Assistente com IA (2026-11-18, branch feat/assistente)
 

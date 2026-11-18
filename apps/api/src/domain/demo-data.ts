@@ -1,6 +1,6 @@
 import {
   addDays, addMonthsToYm, dateInMonth, endOfMonth, installmentDate, minDate as earliest, invoiceDates, invoiceFor, minDate, monthOf, splitInstallments,
-  type AccountType, type DateOnly, type LoanKind, type TransactionNature, type TransactionStatus, type TransactionType, type YearMonth,
+  type AccountType, type DateOnly, type DebtKind, type LoanKind, type TransactionNature, type TransactionStatus, type TransactionType, type YearMonth,
 } from '@fincontrol/shared';
 
 export type DemoAccountKey = 'checking' | 'savings' | 'wallet' | 'card';
@@ -59,12 +59,27 @@ export type DemoLoan = {
   accountKey: DemoAccountKey;
 };
 export type DemoBudget = { categoryName: string; limit: number };
+/** Dívida com credor da demo (sub-projeto 6, V13). As parcelas vencidas do acordo já estão pagas, no vencimento. */
+export type DemoDebt = {
+  name: string;
+  creditor: string;
+  kind: DebtKind;
+  originalAmount: number;
+  since: DateOnly;
+  valuation: { date: DateOnly; amount: number } | null;
+  notes: { date: DateOnly; text: string; amount: number | null }[];
+  agreement: {
+    date: DateOnly; downPayment: number; installmentAmount: number; accountKey: DemoAccountKey;
+    schedule: { number: number; dueDate: DateOnly; paid: boolean }[];
+  } | null;
+};
 export type DemoGoal = { name: string; targetAmount: number; targetDate: DateOnly; createdAt: DateOnly; contributions: { amount: number; date: DateOnly }[] };
 export type DemoPlan = {
   accounts: DemoAccount[];
   recurrences: DemoRecurrence[];
   transactions: DemoTransaction[];
   loans: DemoLoan[];
+  debts: DemoDebt[];
   /** Sub-projeto 3: limites calculados a partir do próprio plano, para valer em qualquer data. */
   budgets: DemoBudget[];
   goals: DemoGoal[];
@@ -309,5 +324,27 @@ export function buildDemoData(today: DateOnly, seed = 42): DemoPlan {
     },
   ];
 
-  return { accounts, recurrences, transactions, loans, budgets, goals, overdueDescription: 'Internet' };
+  // Dívidas com credores (V13): a conta de luz em aberto com juros; o crediário em acordo, com a entrada e a 1ª parcela pagas.
+  const agreementDate = addDays(today, -40);
+  const firstAgreementDue = addDays(agreementDate, 30);
+  const debts: DemoDebt[] = [
+    {
+      name: 'Conta de luz atrasada', creditor: 'Companhia de energia', kind: 'utility', originalAmount: 18740,
+      since: dateInMonth(addMonthsToYm(currentYm, -2), 10), valuation: { date: today, amount: 21390 }, notes: [], agreement: null,
+    },
+    {
+      name: 'Crediário da loja de móveis', creditor: 'Loja de móveis', kind: 'store', originalAmount: 240000,
+      since: dateInMonth(addMonthsToYm(currentYm, -6), 15), valuation: null,
+      notes: [{ date: addDays(agreementDate, -2), text: 'Liguei e pedi desconto. Ofereceram R$ 2.100,00 em 6 parcelas e uma entrada.', amount: 210000 }],
+      agreement: {
+        date: agreementDate, downPayment: 30000, installmentAmount: 30000, accountKey: 'checking',
+        schedule: Array.from({ length: 6 }, (_, i) => {
+          const dueDate = dateInMonth(addMonthsToYm(monthOf(firstAgreementDue), i), Number(firstAgreementDue.slice(8, 10)));
+          return { number: i + 1, dueDate, paid: dueDate < today };
+        }),
+      },
+    },
+  ];
+
+  return { accounts, recurrences, transactions, loans, debts, budgets, goals, overdueDescription: 'Internet' };
 }

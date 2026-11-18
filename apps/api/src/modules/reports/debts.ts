@@ -1,17 +1,20 @@
 import {
-  addMonthsToYm, cardDebtAt, dateInMonth, impliedMonthlyRate, monthOf, loanOutstandingAt, todayInSaoPaulo,
-  type CardDebtInput, type DateOnly, type DebtsDTO, type LoanDebtInput,
+  addMonthsToYm, cardDebtAt, dateInMonth, debtBalanceAt, impliedMonthlyRate, monthOf, loanOutstandingAt, todayInSaoPaulo,
+  type CardDebtInput, type DateOnly, type DebtLedger, type DebtsDTO, type LoanDebtInput,
 } from '@fincontrol/shared';
 import { toDateOnly } from '../../infra/date-mapping';
 import type { Db } from '../../infra/prisma';
+import { createDebtsRepository, ledgerOf } from '../debts/debts.repository';
 
-export type DebtSources = { cards: CardDebtInput[]; loans: LoanDebtInput[] };
+export type DebtSources = { cards: CardDebtInput[]; loans: LoanDebtInput[]; others: DebtLedger[] };
 
 /**
- * Dívidas de cartão (R5) e de empréstimo (R6) da spec do sub-projeto 4. Lê tudo de uma vez e calcula para
+ * Dívidas de cartão (R5) e de empréstimo (R6) da spec do sub-projeto 4, e com credores (V11 do sub-projeto 6). Lê tudo de uma vez e calcula para
  * qualquer data com as funções puras de `@fincontrol/shared` — o painel usa hoje, o relatório usa o fim de cada mês.
  */
 export function createDebtsReader(db: Db) {
+  const debtsRepo = createDebtsRepository(db);
+
   async function cardSources(userId: string): Promise<CardDebtInput[]> {
     // Cartões arquivados entram: ainda podem ter fatura a pagar (R16 do sub-projeto 2).
     const cards = await db.account.findMany({ where: { userId, type: 'credit_card' }, select: { id: true, initialBalance: true } });
@@ -74,8 +77,8 @@ export function createDebtsReader(db: Db) {
 
   return {
     async load(userId: string): Promise<DebtSources> {
-      const [cards, loans] = await Promise.all([cardSources(userId), loanSources(userId)]);
-      return { cards, loans };
+      const [cards, loans, others] = await Promise.all([cardSources(userId), loanSources(userId), debtsRepo.load(userId)]);
+      return { cards, loans, others: others.map(ledgerOf) };
     },
   };
 }
@@ -85,5 +88,7 @@ export type DebtsReader = ReturnType<typeof createDebtsReader>;
 export function debtsAt(sources: DebtSources, date: DateOnly): DebtsDTO {
   const cards = sources.cards.reduce((sum, c) => sum + cardDebtAt(c, date), 0);
   const loans = sources.loans.reduce((sum, l) => sum + loanOutstandingAt(l, date), 0);
-  return { cards, loans, total: cards + loans };
+  // Dívidas com credores (sub-projeto 6, V11): o mesmo saldo da página da dívida.
+  const others = sources.others.reduce((sum, d) => sum + debtBalanceAt(d, date), 0);
+  return { cards, loans, others, total: cards + loans + others };
 }
