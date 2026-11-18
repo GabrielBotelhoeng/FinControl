@@ -23,4 +23,13 @@ describe('loadConfig', () => {
   it('DATABASE_CA_CERT, se vier, precisa ser um certificado PEM', () => {
     expect(() => loadConfig({ ...process.env, DATABASE_CA_CERT: 'não é pem' })).toThrow(/DATABASE_CA_CERT/);
   });
+
+  it('VAPID: as três juntas e com o formato das chaves (Web Push)', () => {
+    const { VAPID_PUBLIC_KEY: _p, ...noPublic } = process.env;
+    expect(() => loadConfig(noPublic)).toThrow(/VAPID_PUBLIC_KEY/);
+    expect(() => loadConfig({ ...process.env, VAPID_PRIVATE_KEY: 'curta' })).toThrow(/VAPID_PRIVATE_KEY/);
+    expect(() => loadConfig({ ...process.env, VAPID_SUBJECT: 'eu@exemplo.com' })).toThrow(/VAPID_SUBJECT/);
+    const { VAPID_PUBLIC_KEY: _a, VAPID_PRIVATE_KEY: _b, VAPID_SUBJECT: _c, ...none } = process.env;
+    expect(loadConfig(none).VAPID_PUBLIC_KEY).toBeUndefined();
+  });
 });

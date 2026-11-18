@@ -10,6 +10,7 @@ import { goalsRouter } from '../modules/goals/goals.routes';
 import { loansRouter } from '../modules/loans/loans.routes';
 import { reportsRouter } from '../modules/reports/reports.routes';
 import { notificationsRouter } from '../modules/notifications/notifications.routes';
+import { pushRouter } from '../modules/push/push.routes';
 import { profileRouter } from '../modules/profile/profile.routes';
 import { transactionsRouter } from '../modules/transactions/transactions.routes';
 import type { Container } from './container';
@@ -28,5 +29,6 @@ export function registerRoutes(api: Router, c: Container, opts: { rateLimitEnabl
   api.use('/goals', goalsRouter(c.goals));
   api.use('/reports', reportsRouter(c.reports));
   api.use('/notifications', notificationsRouter(c.notifications));
+  api.use('/push', pushRouter(c.push));
   api.use('/demo', demoRouter(c.demo, opts));
 }

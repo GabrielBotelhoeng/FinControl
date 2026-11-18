@@ -211,3 +211,27 @@ describe('notificações (N7)', () => {
     expect(markReadSchema.safeParse({ keys: ['due:a:2026-11-20'] }).success).toBe(true);
   });
 });
+
+describe('Web Push (W5)', () => {
+  it('aceita só serviços de push conhecidos, em https e sem porta', async () => {
+    const { isKnownPushEndpoint, pushSubscriptionSchema } = await import('./index');
+    for (const ok of [
+      'https://fcm.googleapis.com/fcm/send/abc',
+      'https://updates.push.services.mozilla.com/wpush/v2/abc',
+      'https://web.push.apple.com/QGx',
+      'https://wns2-by3p.notify.windows.com/w/?token=abc',
+    ]) expect(isKnownPushEndpoint(ok), ok).toBe(true);
+    for (const bad of [
+      'http://fcm.googleapis.com/fcm/send/abc',
+      'https://fcm.googleapis.com:8443/x',
+      'https://fcm.googleapis.com.evil.com/x',
+      'https://localhost/x',
+      'https://169.254.169.254/latest',
+      'https://evilnotify.windows.com/x',
+      'não é url',
+    ]) expect(isKnownPushEndpoint(bad), bad).toBe(false);
+    const keys = { p256dh: 'BPk', auth: 'aa' };
+    expect(pushSubscriptionSchema.safeParse({ endpoint: 'https://fcm.googleapis.com/fcm/send/abc', keys }).success).toBe(true);
+    expect(paths(pushSubscriptionSchema.safeParse({ endpoint: 'https://localhost/x', keys }))).toEqual(['endpoint']);
+  });
+});

@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { forgetThisDevice } from '../push/push-client';
 import type { AuthGateway, AuthSession, AuthUser } from './gateway';
 
 type Status = 'loading' | 'signed-in' | 'signed-out';
@@ -29,6 +30,8 @@ export function AuthProvider({ gateway, children }: { gateway: AuthGateway; chil
 
   const getToken = useCallback(async () => (await gateway.getSession())?.accessToken ?? null, [gateway]);
   const signOut = useCallback(async () => {
+    // Web Push (sub-projeto 5, Parte B): os avisos desta conta não ficam neste aparelho para a próxima pessoa.
+    await forgetThisDevice();
     try {
       await gateway.signOut();
     } catch {
