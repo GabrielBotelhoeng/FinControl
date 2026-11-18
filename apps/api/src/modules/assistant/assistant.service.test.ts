@@ -7,6 +7,17 @@ describe('plainText (A12)', () => {
     expect(plainText(reply)).toBe('Gabriel, aqui está:\n\nÚltimos 6 meses (maio a outubro):\nSem lançamentos.\n\nMetas\n- Viagem: no ritmo\n- Reserva\n\nUse Relatórios.');
   });
 
+  it('negrito que quebra linha sai; asteriscos de parágrafos diferentes não se juntam', () => {
+    expect(plainText('**Despesas:\nR$ 500**')).toBe('Despesas:\nR$ 500');
+    expect(plainText('a ** b\n\nc ** d')).toBe('a ** b\n\nc ** d');
+  });
+
+  it('conta com asteriscos continua conta; marcador sozinho na linha não engole a próxima', () => {
+    expect(plainText('R$ 20 * 3 * 2 = R$ 120')).toBe('R$ 20 * 3 * 2 = R$ 120');
+    expect(plainText('Resumo\n*\nTotal: R$ 500')).toBe('Resumo\n*\nTotal: R$ 500');
+    expect(plainText('  * Total: R$ 500')).toBe('- Total: R$ 500');
+  });
+
   it('não mexe em texto puro, valores e listas com hífen', () => {
     const reply = 'Você gastou R$ 1.234,56 (12% a mais).\n- Mercado: R$ 500,00\n- 2 * 3 = 6';
     expect(plainText(reply)).toBe(reply);
