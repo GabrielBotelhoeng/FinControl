@@ -18,6 +18,9 @@ _Atualizado em 2026-11-18 (assistente com IA)._
   - limites de 100 perguntas por pessoa e 400 no total por dia, guardados em `ai_usage` com os tokens gastos, e 30 por hora contra rajadas;
   - a demo não usa o assistente.
 - **Testes:** 133 em shared, 283 na API e 182 na web, além de 13 E2E (o de 360 px cobre `/assistente`).
+- **No ar em 2026-11-18** (PRs #21, #22 e #23). A migration foi aplicada em produção. `AI_ALLOWED_EMAILS` libera o usuário e a Juliana.
+- **Teste em produção:** feito na conta do usuário (vazia), com perguntas reais, contexto entre perguntas, "Nova conversa", retirar e aceitar o consentimento, e a tela a 360 px (num iframe).
+- **Markdown:** o Haiku usa markdown mesmo com o pedido para não usar. O servidor limpa a resposta (`plainText` em `assistant.service.ts`).
 
 
 ## Exportação em Excel para análise (2026-11-18, branch feat/excel)
