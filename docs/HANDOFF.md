@@ -1,6 +1,24 @@
 # HANDOFF — FinControl
 
-_Atualizado em 2026-11-18 (exportação em Excel)._
+_Atualizado em 2026-11-18 (assistente com IA)._
+
+## Assistente com IA (2026-11-18, branch feat/assistente)
+
+- **Spec:** `docs/superpowers/specs/2026-11-18-fincontrol-assistente-ia-design.md` (A1–A12).
+- **Migration:** `20261118120000_assistente` (coluna `profiles.ai_consent_at`). **Antes do deploy da API, aplicar no Supabase.**
+- **Variáveis na Vercel (`fincontrol-api`):**
+  - `ANTHROPIC_API_KEY` (começa com `sk-ant-api03-`): sem ela, o assistente fica desligado. **Quem cadastra é o usuário**, pelo comando `! cd apps/api && npx vercel env add ANTHROPIC_API_KEY production`, porque o agente não pode digitar chaves;
+  - `AI_ALLOWED_EMAILS` (opcional): lista de e-mails que podem usar;
+  - `AI_MODEL` (opcional): o padrão é `claude-haiku-4-5-20251001`.
+- **Entregue:**
+  - `/assistente` no menu do computador, no Perfil e no atalho do painel;
+  - consentimento na primeira vez e seção nova na política de privacidade;
+  - 5 ferramentas só de leitura (resumo do período, busca de lançamentos, orçamento, metas, saldos e dívidas);
+  - conversa só na aba (`sessionStorage`), com as últimas 7 mensagens enviadas a cada pergunta;
+  - 30 perguntas por hora por pessoa; tokens de cada resposta no log;
+  - a demo não usa o assistente.
+- **Testes:** 133 em shared, 283 na API e 182 na web, além de 13 E2E (o de 360 px cobre `/assistente`).
+
 
 ## Exportação em Excel para análise (2026-11-18, branch feat/excel)
 

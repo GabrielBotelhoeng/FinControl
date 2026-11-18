@@ -94,6 +94,15 @@ export default function ProfilePage() {
           </Panel>
           <Panel className="flex flex-wrap items-center justify-between gap-4 p-6">
             <div>
+              <h2 className="font-semibold">Assistente</h2>
+              <p className="text-sm text-muted">Pergunte sobre seus gastos, orçamento, metas e dívidas em português simples.</p>
+            </div>
+            <Link to="/assistente" className="text-sm font-medium text-primary hover:underline">
+              Abrir o assistente
+            </Link>
+          </Panel>
+          <Panel className="flex flex-wrap items-center justify-between gap-4 p-6">
+            <div>
               <h2 className="font-semibold">Sair</h2>
               <p className="text-sm text-muted">Encerra a sessão neste aparelho.</p>
             </div>

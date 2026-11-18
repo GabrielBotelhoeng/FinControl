@@ -1,5 +1,6 @@
 import { monthOf, todayInSaoPaulo, type MonthComparison, type TransactionDTO, type YearMonth } from '@fincontrol/shared';
-import { ArrowDownRight, ArrowUpRight, CircleCheck, PieChart, Plus } from 'lucide-react';
+import { ArrowDownRight, ArrowUpRight, CircleCheck, PieChart, Plus, Sparkles } from 'lucide-react';
+import { Link } from 'react-router';
 import { useState } from 'react';
 import { Button } from '../../components/ui/button';
 import { HeroAmount } from '../../components/ui/money';
@@ -58,10 +59,19 @@ export default function DashboardPage() {
     <>
       <div className="mb-8 flex flex-wrap items-center justify-between gap-3">
         <MonthPicker value={month} onChange={setMonth} />
-        <Button onClick={() => setEditing('new')}>
-          <Plus aria-hidden className="h-4 w-4" strokeWidth={2} />
-          Novo lançamento
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Link
+            to="/assistente"
+            className="inline-flex h-11 items-center gap-2 rounded-full border border-border px-4 text-sm font-medium transition-colors hover:bg-surface-2"
+          >
+            <Sparkles aria-hidden className="h-4 w-4 text-primary" strokeWidth={1.75} />
+            Perguntar ao assistente
+          </Link>
+          <Button onClick={() => setEditing('new')}>
+            <Plus aria-hidden className="h-4 w-4" strokeWidth={2} />
+            Novo lançamento
+          </Button>
+        </div>
       </div>
 
       {summary.isPending && (

@@ -63,7 +63,7 @@ Uma seção nova na política diz:
 - o que é enviado (a pergunta, as mensagens da conversa e os dados financeiros que o assistente consulta para responder);
 - para quem vai (Anthropic, que pela política da API não usa esses dados para treinar modelos);
 - que o FinControl não guarda a conversa;
-- que dá para retirar o consentimento no Perfil.
+- que dá para retirar o consentimento na tela do assistente ("Retirar consentimento").
 
 ## 6. Testes
 

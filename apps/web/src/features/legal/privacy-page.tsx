@@ -1,6 +1,6 @@
 import { DocLink, LegalPage, List, MailLink, Section } from './legal-layout';
 
-const UPDATED_AT = '12 de novembro de 2026';
+const UPDATED_AT = '18 de novembro de 2026';
 const mail = <MailLink />;
 
 /** Página pública (fora do login), exigida pelo Google para publicar o login OAuth. */
@@ -42,6 +42,10 @@ export default function PrivacyPage() {
             <strong>Preferências:</strong> o tema escolhido (claro, escuro ou do sistema).
           </li>
           <li>
+            <strong>Assistente com IA:</strong> se você aceitar usar o assistente, guardamos a data em que aceitou. A conversa não é
+            guardada pelo FinControl.
+          </li>
+          <li>
             <strong>Modo demonstração:</strong> o botão “Experimentar sem cadastro” cria um usuário anônimo, sem nome real nem e-mail, com
             dados fictícios.
           </li>
@@ -69,6 +73,9 @@ export default function PrivacyPage() {
             <strong>Conta, finanças e demonstração:</strong> execução do serviço que você solicitou (art. 7º, V).
           </li>
           <li>
+            <strong>Assistente com IA:</strong> seu consentimento (art. 7º, I), pedido na primeira vez que você abre o assistente.
+          </li>
+          <li>
             <strong>Segurança:</strong> registros técnicos mínimos e limite de requisições por endereço IP, para evitar abusos e
             proteger as contas, com base no legítimo interesse (art. 7º, IX), sem uso para nenhuma outra finalidade.
           </li>
@@ -89,6 +96,13 @@ export default function PrivacyPage() {
           <li>
             <strong>Google:</strong> apenas se você usar o login com Google. Essa etapa acontece nos servidores do Google, que podem ficar
             fora do Brasil.
+          </li>
+          <li>
+            <strong>Anthropic:</strong> apenas se você aceitar usar o assistente com IA. Cada pergunta envia à Anthropic, nos Estados
+            Unidos, a pergunta, as mensagens da conversa e os dados financeiros que o assistente consultar para responder (lançamentos,
+            categorias, saldos, orçamento e metas). Pelos termos da API, a Anthropic não usa esses dados para treinar modelos. O assistente
+            só consulta: não cria, não altera e não apaga nada. Você retira o consentimento na tela do assistente, em “Retirar
+            consentimento”.
           </li>
         </List>
         <p>Fora isso, só compartilharíamos dados se uma lei ou ordem judicial exigisse.</p>
