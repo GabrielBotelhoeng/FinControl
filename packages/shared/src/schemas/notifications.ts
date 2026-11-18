@@ -44,12 +44,9 @@ export type NotificationListDTO = { items: NotificationDTO[]; unreadCount: numbe
 const PUSH_HOSTS = [/^fcm\.googleapis\.com$/, /^updates\.push\.services\.mozilla\.com$/, /^web\.push\.apple\.com$/, /(^|\.)push\.apple\.com$/, /(^|\.)notify\.windows\.com$/];
 
 export function isKnownPushEndpoint(endpoint: string): boolean {
-  try {
-    const url = new URL(endpoint);
-    return url.protocol === 'https:' && url.port === '' && PUSH_HOSTS.some((h) => h.test(url.hostname));
-  } catch {
-    return false;
-  }
+  // Sem `URL` (o pacote não depende de DOM nem de Node): https, só host (sem usuário nem porta) e um caminho.
+  const host = /^https:\/\/([a-z0-9.-]+)(?:[/?#]|$)/i.exec(endpoint)?.[1]?.toLowerCase();
+  return host !== undefined && PUSH_HOSTS.some((h) => h.test(host));
 }
 
 export const pushSubscriptionSchema = z.object({

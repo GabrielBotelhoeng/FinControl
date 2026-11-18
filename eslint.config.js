@@ -15,6 +15,11 @@ export default defineConfig(
     },
   },
   {
+    // Script do service worker (Web Push), servido como está pela pasta public.
+    files: ['apps/web/public/**/*.js'],
+    languageOptions: { globals: { ...globals.serviceworker } },
+  },
+  {
     files: ['apps/web/**/*.{ts,tsx}'],
     languageOptions: { globals: { ...globals.browser } },
     plugins: { 'react-hooks': reactHooks },

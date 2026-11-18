@@ -3,7 +3,7 @@
  * Mostra o aviso que a API manda e, no clique, abre (ou foca) o app no endereço do aviso, sempre no próprio site.
  */
 self.addEventListener('push', (event) => {
-  let data = {};
+  let data;
   try {
     data = event.data ? event.data.json() : {};
   } catch {

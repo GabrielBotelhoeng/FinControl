@@ -1,4 +1,5 @@
-import webpush from 'web-push';
+// O web-push 4 é ESM só com exports nomeados (sem `default`).
+import { sendNotification } from 'web-push';
 
 export type PushTarget = { endpoint: string; p256dh: string; auth: string };
 export type PushPayload = { title: string; body: string; url: string; tag: string };
@@ -12,7 +13,7 @@ export type VapidKeys = { publicKey: string; privateKey: string; subject: string
 export function createWebPushSender(vapid: VapidKeys): PushSender {
   return async (target, payload) => {
     try {
-      await webpush.sendNotification(
+      await sendNotification(
         { endpoint: target.endpoint, keys: { p256dh: target.p256dh, auth: target.auth } },
         JSON.stringify(payload),
         // 1 dia: um aviso de conta não vale nada depois disso. `urgency: normal` respeita o modo economia do celular.
