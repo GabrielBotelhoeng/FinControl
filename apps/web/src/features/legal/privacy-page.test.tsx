@@ -25,6 +25,15 @@ describe('PrivacyPage', () => {
     expect(account).toHaveTextContent(/execução do serviço que você solicitou \(art\. 7º, V\)/);
     expect(security).toHaveTextContent(/legítimo interesse \(art\. 7º, IX\)/);
     expect(account).not.toHaveTextContent(/legítimo interesse/);
+    expect(screen.getAllByText(/Assistente com IA:/)[1]!.closest('li')).toHaveTextContent(/consentimento \(art\. 7º, I\)/);
+  });
+
+  it('explica o que vai para a Anthropic no assistente e como retirar o consentimento', async () => {
+    renderApp(<PrivacyPage />, { route: '/privacidade', path: '/privacidade' });
+    const anthropic = (await screen.findByText(/^Anthropic:/)).closest('li');
+    expect(anthropic).toHaveTextContent(/Estados Unidos/);
+    expect(anthropic).toHaveTextContent(/não usa esses dados para treinar/);
+    expect(anthropic).toHaveTextContent(/Retirar consentimento/);
   });
 
   it('diz que o app é para maiores de 18 e onde cada provedor processa os dados', async () => {

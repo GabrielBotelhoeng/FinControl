@@ -1,4 +1,5 @@
 import type { AppConfig } from '../config/env';
+import type { AiClient } from '../infra/ai-client';
 import type { AuthAdmin } from '../infra/auth-admin';
 import type { Logger } from '../infra/logger';
 import type { Db } from '../infra/prisma';
@@ -16,4 +17,6 @@ export type AppDeps = {
   fetchFn?: typeof fetch;
   /** Envio de Web Push; nos testes, um falso. Sem ele, o container usa o `web-push` com as chaves VAPID. */
   pushSender?: PushSender;
+  /** Cliente da Anthropic; nos testes, um falso. Sem ele, o container usa a Messages API com `ANTHROPIC_API_KEY`. */
+  aiClient?: AiClient;
 };

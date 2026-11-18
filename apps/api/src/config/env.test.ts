@@ -32,4 +32,11 @@ describe('loadConfig', () => {
     const { VAPID_PUBLIC_KEY: _a, VAPID_PRIVATE_KEY: _b, VAPID_SUBJECT: _c, ...none } = process.env;
     expect(loadConfig(none).VAPID_PUBLIC_KEY).toBeUndefined();
   });
+  it('assistente: chave com o prefixo da Anthropic, modelo padrão e lista de e-mails normalizada', () => {
+    expect(() => loadConfig({ ...process.env, ANTHROPIC_API_KEY: 'outra' })).toThrow(/ANTHROPIC_API_KEY/);
+    const config = loadConfig({ ...process.env, AI_ALLOWED_EMAILS: ' Ana@x.com, ,bia@y.com ' });
+    expect(config.AI_MODEL).toBe('claude-haiku-4-5-20251001');
+    expect(config.AI_ALLOWED_EMAILS).toEqual(['ana@x.com', 'bia@y.com']);
+    expect(loadConfig({ ...process.env, AI_ALLOWED_EMAILS: undefined }).AI_ALLOWED_EMAILS).toEqual([]);
+  });
 });

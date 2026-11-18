@@ -1,5 +1,6 @@
 import { monthOf, todayInSaoPaulo, type MonthComparison, type TransactionDTO, type YearMonth } from '@fincontrol/shared';
-import { ArrowDownRight, ArrowUpRight, CircleCheck, PieChart, Plus } from 'lucide-react';
+import { ArrowDownRight, ArrowUpRight, CircleCheck, PieChart, Plus, Sparkles } from 'lucide-react';
+import { Link } from 'react-router';
 import { useState } from 'react';
 import { Button } from '../../components/ui/button';
 import { HeroAmount } from '../../components/ui/money';
@@ -11,6 +12,7 @@ import { BudgetCard } from './budget-card';
 import { DebtCard } from './debt-card';
 import { HealthTiles } from './health-tiles';
 import { useAccounts } from '../accounts/api';
+import { useAssistantConfig } from '../assistant/api';
 import { useCategories } from '../categories/api';
 import { TransactionForm } from '../transactions/transaction-form';
 import { TransactionRow } from '../transactions/transaction-row';
@@ -51,6 +53,7 @@ export default function DashboardPage() {
   const byCategory = useByCategory(month);
   const accounts = useAccounts(true);
   const categories = useCategories();
+  const assistant = useAssistantConfig();
   const accountById = new Map((accounts.data ?? []).map((a) => [a.id, a]));
   const categoryById = new Map((categories.data ?? []).map((c) => [c.id, c]));
 
@@ -58,10 +61,21 @@ export default function DashboardPage() {
     <>
       <div className="mb-8 flex flex-wrap items-center justify-between gap-3">
         <MonthPicker value={month} onChange={setMonth} />
-        <Button onClick={() => setEditing('new')}>
-          <Plus aria-hidden className="h-4 w-4" strokeWidth={2} />
-          Novo lançamento
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          {assistant.data?.enabled && assistant.data.allowed && (
+          <Link
+            to="/assistente"
+            className="inline-flex h-11 items-center gap-2 rounded-full border border-border px-4 text-sm font-medium transition-colors hover:bg-surface-2"
+          >
+            <Sparkles aria-hidden className="h-4 w-4 text-primary" strokeWidth={1.75} />
+            Perguntar ao assistente
+          </Link>
+          )}
+          <Button onClick={() => setEditing('new')}>
+            <Plus aria-hidden className="h-4 w-4" strokeWidth={2} />
+            Novo lançamento
+          </Button>
+        </div>
       </div>
 
       {summary.isPending && (
