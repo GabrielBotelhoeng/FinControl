@@ -21,6 +21,7 @@ Juntar gastos que estão em categorias diferentes. Exemplo do usuário: "estou g
 | T7 | **Formulário:** o campo "Tags (opcional)" vira uma etiqueta com Enter ou vírgula, cada uma com o botão de remover, e sugere as tags já usadas. | Texto separado por vírgulas | A pessoa vê exatamente o que vai ser gravado. |
 | T8 | **Linha do lançamento:** as tags aparecem depois da categoria e da conta, com "#", na mesma linha, que corta com "…" quando não cabe. | Etiquetas coloridas | Uma linha só não muda a altura da lista nem quebra a tela de 360 px. |
 | T9 | **Assistente:** `buscar_lancamentos` aceita `tag` e devolve as tags de cada lançamento. | Ferramenta nova | "Quanto gastei com bebida?" é uma busca com filtro. |
+| T10 | **Demo:** a tag "passeios" em todo Restaurante (Alimentação, no cartão), Cinema (Lazer, no cartão) e Lazer (Lazer, na conta corrente). | Demo sem tags | Sem nenhuma tag, a demo esconde o filtro e a seção Tags. "passeios" mostra uma tag juntando categorias e contas diferentes. |
 
 ## 3. Regras (em `packages/shared`)
 
@@ -36,4 +37,19 @@ Juntar gastos que estão em categorias diferentes. Exemplo do usuário: "estou g
 ## 5. Limites aceitos
 
 - As ocorrências de recorrência que já existem quando a pessoa edita "só esta" não ganham a tag nova; é o comportamento de todos os outros campos.
+- "Esta e as próximas" não muda as ocorrências **já pagas** depois desta (por exemplo, um mês pago adiantado). É a regra da recorrência para todos os campos: ela não mexe no que já foi pago.
+- Renomear ou excluir uma tag no mesmo instante em que o app cria ocorrências novas da recorrência (ao abrir um mês ainda sem elas) pode deixar o nome antigo nessas ocorrências. Repetir a troca resolve. Fechar essa janela pediria uma trava em toda leitura de lançamentos, e a recorrência já aceita o mesmo risco nos outros campos do modelo.
 - Os relatórios ainda não somam por tag (sub-projeto 14).
+
+## 6. Revisão final
+
+A branch foi revisada numa sessão nova, sem o contexto de quem a escreveu, e pelo CodeRabbit. Nada crítico, e nenhum vazamento entre usuários. Corrigidos, cada um com teste:
+
+- **Filtro sem resultado (CodeRabbit):** filtrar só por uma tag sem lançamentos no mês mostrava "Nenhum lançamento neste mês" e "Lançar agora". Agora mostra "Nada encontrado com esses filtros".
+- **Seletor que sumia (CodeRabbit):** quando a tag escolhida saía do último lançamento (numa edição), o seletor sumia com o filtro ainda ligado, e a pessoa não conseguia limpá-lo. Agora ele fica, com a tag, até ela escolher "Todas as tags".
+- **Barra de filtros:** com o seletor de tag, ela fica em duas colunas até caber numa linha só. Antes, com o menu do computador aberto numa tela média, a busca ficava espremida.
+- **Campo de tags:** a tag inválida continua no campo para a pessoa corrigir, o aviso some quando ela edita e não se repete embaixo do erro do formulário.
+- **Renomear em Categorias:** o nome inválido mostra a regra (antes vinha "Um ou mais campos são inválidos"), e "Cancelar" volta ao nome atual.
+- **Demo:** ganhou a tag "passeios" (T10).
+
+Mantidos, com o motivo na seção 5: as ocorrências já pagas depois desta em "esta e as próximas" (o CodeRabbit sugeriu mudá-las) e a corrida entre trocar a tag e criar ocorrências (o CodeRabbit sugeriu uma trava).
