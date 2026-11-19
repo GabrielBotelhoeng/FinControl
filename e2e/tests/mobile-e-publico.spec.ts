@@ -14,7 +14,7 @@ test.describe('tela de 360 px', () => {
     const divida = await page.getByRole('article', { name: 'Crediário da loja de móveis' }).getByRole('link', { name: /Ver detalhes/ }).getAttribute('href');
 
     const paths = [
-      '/', '/lancamentos', '/contas', faturas!, '/emprestimos', emprestimo!, '/dividas', divida!, '/planejamento', '/planejamento?aba=metas',
+      '/', '/lancamentos', '/contas', faturas!, '/emprestimos', emprestimo!, '/dividas', divida!, '/dividas/plano', '/planejamento', '/planejamento?aba=metas',
       '/relatorios', '/notificacoes', '/assistente', '/categorias', '/perfil', '/privacidade', '/termos',
     ];
     for (const path of paths) {
