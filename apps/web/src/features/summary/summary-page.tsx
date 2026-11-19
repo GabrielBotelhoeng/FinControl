@@ -10,6 +10,7 @@ import { cn } from '../../lib/cn';
 import { useBudgetMonth } from '../planning/api';
 import { useReport } from '../reports/api';
 import { monthInsights, type InsightTone } from './insights';
+import { RepeatedSpendingPanel } from './repeated-spending';
 
 const TONE: Record<InsightTone, { icon: LucideIcon; className: string; label: string }> = {
   good: { icon: ThumbsUp, className: 'text-income', label: 'Ponto positivo' },
@@ -70,6 +71,7 @@ export default function SummaryPage() {
               );
             })}
           </ul>
+          <RepeatedSpendingPanel />
           <p className="text-sm text-muted">
             Quer os números completos?{' '}
             <Link to="/relatorios" className="font-medium text-primary hover:underline">

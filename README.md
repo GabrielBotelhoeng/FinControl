@@ -42,6 +42,7 @@ Gestão financeira pessoal: contas, cartões de crédito, empréstimos e financi
 - **Calendário de contas**: o mês em grade, com o que vence em cada dia (contas, receitas e faturas do cartão), os totais a pagar e a receber e o botão de pagar ali mesmo.
 - **Resumo do mês**: em poucas frases, quanto gastou contra o mês anterior, quanto sobrou, a categoria que mais subiu e a que mais caiu, a maior despesa, o orçamento e as dívidas.
 - **Importar extrato**: traz de uma vez o extrato do banco em OFX ou CSV (Nubank, Inter, planilhas), lido no próprio navegador. A categoria vem sugerida pelo que a pessoa já lançou e por palavras-chave, e os lançamentos que parecem repetidos começam desmarcados.
+- **Gastos que se repetem**: o app acha sozinho o que sai todo mês com valor parecido (assinaturas, academia, apps) e mostra o custo de cada um no ano.
 - **Lançamentos**: receitas e despesas, fixas ou variáveis, pagas ou pendentes, com vencimento e categoria.
 - **Recorrências**: o lançamento se repete (toda semana, todo mês ou todo ano) e cada mês ganha a sua ocorrência, que pode ser paga ou editada. Dá para editar “só esta” ou “esta e as próximas”, sem mexer no que já foi pago.
 - **Histórico com filtros combinados**: período, conta, categoria, tipo, situação e busca, com paginação.

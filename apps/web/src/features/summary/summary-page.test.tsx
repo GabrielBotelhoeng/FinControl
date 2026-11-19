@@ -13,9 +13,11 @@ describe('SummaryPage', () => {
     const client = fakeApi({
       'GET /reports': { totals, expenseByCategory: [], incomeByCategory: [], monthly: [], debts: [], topExpenses: [], balances: { date: '', items: [], total: 0 }, period: {} },
       'GET /budgets': { items: [] },
+      'GET /repeated': [{ description: 'Netflix', monthly: 3990, yearly: 47880, months: 3, lastDate: '2026-10-05', nextDate: '2026-11-04', recurring: false }],
     });
     renderApp(<SummaryPage />, { api: client });
     expect(await screen.findByText(/^Sobrou R\$\s*2\.000,00$/)).toBeInTheDocument();
     expect(client.get).toHaveBeenCalledWith('/reports', { from: previous, to: previous });
+    expect(await screen.findByRole('region', { name: 'Gastos que se repetem todo mês' })).toHaveTextContent(/Netflix.*39,90 por mês.*478,80 por ano/);
   });
 });

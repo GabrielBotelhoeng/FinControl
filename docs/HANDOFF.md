@@ -1,8 +1,13 @@
 # HANDOFF — FinControl
 
-_Atualizado em 2026-11-19 (importar extrato)._
+_Atualizado em 2026-11-19 (gastos que se repetem)._
 
-## Sub-projeto 9: importar extrato (2026-11-19, branch feat/importar-extrato)
+## Sub-projeto 10: gastos que se repetem (2026-11-19, branch feat/assinaturas)
+
+- **Spec:** `docs/superpowers/specs/2026-11-19-fincontrol-sp10-gastos-repetidos-design.md` (S1–S4). Sem migration.
+- **Entregue:** `detectRepeatedSpending` (shared), `GET /repeated` e o bloco no Resumo do mês. A importação passou a dizer "Confira a categoria" quando sugere "Outros".
+
+## Sub-projeto 9: importar extrato — no ar desde 2026-11-19 (PR #28)
 
 - **Spec:** `docs/superpowers/specs/2026-11-19-fincontrol-sp9-importar-extrato-design.md` (I1–I9). Sem migration.
 - **Entregue:** `parseStatement` (OFX e CSV) em `packages/shared/src/statement.ts`, `POST /imports/preview` e `/imports/commit`, e a tela `/importar` (botão em Lançamentos). As categorias são sugeridas pelo histórico e por palavras-chave, e os repetidos começam desmarcados.
