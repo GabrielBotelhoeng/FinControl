@@ -46,6 +46,16 @@ describe('buildDemoData', () => {
     for (const g of plan.goals) for (const c of g.contributions) expect(c.date <= TODAY).toBe(true);
   });
 
+  it('marca "passeios" em todo Restaurante, Cinema e Lazer, que ficam em categorias e contas diferentes (sub-projeto 13, T10)', () => {
+    const plan = buildDemoData(TODAY);
+    const outings = plan.transactions.filter((t) => ['Restaurante', 'Cinema', 'Lazer'].includes(t.description));
+    expect(outings).toHaveLength(42);
+    expect(outings.every((t) => t.tags?.join() === 'passeios')).toBe(true);
+    expect(new Set(outings.map((t) => t.categoryName))).toEqual(new Set(['Alimentação', 'Lazer']));
+    expect(new Set(outings.map((t) => t.accountKey))).toEqual(new Set(['card', 'checking']));
+    expect(plan.transactions.filter((t) => t.tags?.length)).toHaveLength(42);
+  });
+
   it('é determinístico para a mesma data', () => {
     expect(buildDemoData(TODAY)).toEqual(buildDemoData(TODAY));
   });

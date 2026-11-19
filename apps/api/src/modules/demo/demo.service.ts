@@ -101,6 +101,7 @@ export function createDemoService(deps: DemoServiceDeps) {
             installmentTotal: t.installmentTotal,
             installmentGroupId: t.installmentGroupId,
             loanId: t.loanKey ? loanIds.get(t.loanKey)! : null,
+            tags: t.tags ?? [],
           })),
         );
 

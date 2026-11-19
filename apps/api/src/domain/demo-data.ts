@@ -43,6 +43,8 @@ export type DemoTransaction = {
   installmentTotal: number | null;
   /** Parcela do empréstimo da demo (Parte B); ausente fora de empréstimo. */
   loanKey?: DemoLoanKey;
+  /** Sub-projeto 13 (T10); ausente nos lançamentos sem tag. */
+  tags?: string[];
 };
 export type DemoLoanKey = 'vehicle';
 export type DemoLoan = {
@@ -103,11 +105,17 @@ const RECURRING: ReadonlyArray<{ description: string; type: 'income' | 'expense'
 /** "Cartão principal" da demo (decisão do controlador): fecha no dia 26, vence no dia 5, pagadora = conta corrente. */
 const CARD = { name: 'Cartão principal', color: '#7c3aed', creditLimit: 800000, closingDay: 26, dueDay: 5 } as const;
 
+/**
+ * Tag da demo (sub-projeto 13, T10): junta o restaurante (Alimentação, no cartão) com o cinema e o lazer (Lazer), para
+ * o filtro de Lançamentos e a seção Tags de Categorias terem o que mostrar.
+ */
+const OUTINGS = ['passeios'];
+
 /** Compras do cartão por fatura, nas categorias padrão "Alimentação", "Compras" e "Lazer" (decisão do controlador). */
-const CARD_PURCHASES: ReadonlyArray<{ count: number; min: number; max: number; description: string; categoryName: string }> = [
-  { count: 3, min: 3000, max: 12000, description: 'Restaurante', categoryName: 'Alimentação' },
+const CARD_PURCHASES: ReadonlyArray<{ count: number; min: number; max: number; description: string; categoryName: string; tags?: string[] }> = [
+  { count: 3, min: 3000, max: 12000, description: 'Restaurante', categoryName: 'Alimentação', tags: OUTINGS },
   { count: 1, min: 9000, max: 30000, description: 'Compras online', categoryName: 'Compras' },
-  { count: 1, min: 4000, max: 15000, description: 'Cinema', categoryName: 'Lazer' },
+  { count: 1, min: 4000, max: 15000, description: 'Cinema', categoryName: 'Lazer', tags: OUTINGS },
 ];
 
 /** Compra parcelada em andamento (decisão do controlador): R$ 1.200 em 10x, iniciada alguns meses atrás. */
@@ -165,20 +173,20 @@ export function buildDemoData(today: DateOnly, seed = 42): DemoPlan {
     const lastDay = ym === currentYm ? Number(today.slice(8, 10)) : Number(endOfMonth(ym).slice(8, 10));
     const randomDay = () => dateInMonth(ym, 1 + Math.floor(rand() * lastDay));
 
-    const variable = (count: number, min: number, max: number, description: string, categoryName: string) => {
+    const variable = (count: number, min: number, max: number, description: string, categoryName: string, tags?: string[]) => {
       for (let k = 0; k < count; k++) {
         const d = randomDay();
         transactions.push({
           type: 'expense', amount: cents(min, max), description, accountKey: 'checking', destinationAccountKey: null,
           categoryName, nature: 'variable', status: 'paid', dueDate: d, paidDate: d,
-          invoiceMonth: null, installmentGroupId: null, installmentNumber: null, installmentTotal: null,
+          invoiceMonth: null, installmentGroupId: null, installmentNumber: null, installmentTotal: null, ...(tags ? { tags } : {}),
         });
       }
     };
     variable(4, 18000, 42000, 'Mercado', 'Alimentação');
     variable(6, 1500, 6000, 'Transporte por app', 'Transporte');
     variable(3, 3500, 9000, 'Delivery', 'Alimentação');
-    variable(2, 6000, 20000, 'Lazer', 'Lazer');
+    variable(2, 6000, 20000, 'Lazer', 'Lazer', OUTINGS);
     variable(1, 8000, 35000, 'Compras', 'Compras');
 
     if (i % 2 === 0) {
@@ -236,7 +244,7 @@ export function buildDemoData(today: DateOnly, seed = 42): DemoPlan {
         transactions.push({
           type: 'expense', amount, description: p.description, accountKey: 'card', destinationAccountKey: null,
           categoryName: p.categoryName, nature: 'variable', status: 'paid', dueDate: date, paidDate: date,
-          invoiceMonth, installmentGroupId: null, installmentNumber: null, installmentTotal: null,
+          invoiceMonth, installmentGroupId: null, installmentNumber: null, installmentTotal: null, ...(p.tags ? { tags: p.tags } : {}),
         });
         addToInvoice(invoiceMonth, amount);
       }
