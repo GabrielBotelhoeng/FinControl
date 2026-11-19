@@ -9,6 +9,7 @@ const report = (over: Partial<ReportDTO> = {}): ReportDTO => ({
   totals: { income: 500000, expense: 300000, net: 200000, savingsRate: 0.4, previousIncome: 500000, previousExpense: 400000, incomeChange: 0, expenseChange: -0.25 },
   expenseByCategory: [cat('Alimentação', 150000, 100000), cat('Lazer', 20000, 120000), cat('Moradia', 130000, 130000)],
   incomeByCategory: [],
+  expenseByTag: [],
   monthly: [],
   debts: [
     { month: '2026-09', cards: 0, loans: 100000, others: 0, total: 100000 },

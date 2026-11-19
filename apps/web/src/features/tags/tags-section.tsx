@@ -75,9 +75,12 @@ function TagItem({ tag }: { tag: TagDTO }) {
         </form>
       ) : (
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <span className="min-w-0 truncate font-medium">{`#${tag.name}`}</span>
+          {/* A contagem embaixo do nome: ao lado dos botões, "42 lançamentos" quebrava em duas linhas a 360 px. */}
+          <span className="grid min-w-0">
+            <span className="truncate font-medium">{`#${tag.name}`}</span>
+            <span className="text-xs text-muted">{`${tag.count} ${tag.count === 1 ? 'lançamento' : 'lançamentos'}`}</span>
+          </span>
           <span className="flex items-center gap-1">
-            <span className="mr-2 text-sm text-muted">{`${tag.count} ${tag.count === 1 ? 'lançamento' : 'lançamentos'}`}</span>
             {confirming ? (
               <>
                 <Button size="sm" className="bg-expense text-white" loading={remove.isPending} onClick={confirmDelete}>

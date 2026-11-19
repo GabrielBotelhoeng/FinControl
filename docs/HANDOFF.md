@@ -1,15 +1,20 @@
 # HANDOFF — FinControl
 
-_Atualizado em 2026-11-19 (tags)._
+_Atualizado em 2026-11-19 (tags nos relatórios)._
 
-## Sub-projeto 13: tags nos lançamentos (2026-11-19, branch feat/tags)
+## Sub-projeto 14: tags nos relatórios, no PDF, no CSV e no Excel (2026-11-19, branch feat/tags-relatorios)
+
+- **Spec:** `docs/superpowers/specs/2026-11-19-fincontrol-sp14-tags-relatorios-design.md` (H1–H8). Sem migration.
+- **Entregue:** `expenseByTag` no relatório (despesas pagas por tag, com quantidade, participação, período anterior e variação; um lançamento com duas tags conta nas duas), o painel "Gastos por tag" em Relatórios (só com tags), a seção no PDF, a coluna "Tags" no fim do CSV e depois de "Categoria" no Excel, e a aba "Por tag" na planilha. Em Categorias, a contagem de cada tag foi para baixo do nome (a 360 px, "42 lançamentos" quebrava em duas linhas).
+- **Testes:** 213 no shared, 358 na API e 247 na web, além de 17 E2E (o dos relatórios da demo confere "#passeios" e a coluna do CSV).
+
+## Sub-projeto 13: tags nos lançamentos — no ar desde 2026-11-19 (PR #34)
 
 - **Spec:** `docs/superpowers/specs/2026-11-19-fincontrol-sp13-tags-design.md` (T1–T9).
-- **Migration:** `20261119185515_tags` (coluna `tags` em `transactions` e `recurrences`, não nula, com até 10). **Antes do deploy da API, aplicar no Supabase** com o comando do sub-projeto 11.
+- **Migration:** `20261119185515_tags` (coluna `tags` em `transactions` e `recurrences`, não nula, com até 10), **aplicada em produção em 2026-11-19, antes do merge**, com o comando do sub-projeto 11 (rodado pelo usuário: o classificador bloqueia o agente). Conferido em produção pela demo a 1440 e 360 px.
 - **Entregue:** tags no lançamento (normalizadas: minúsculas, sem "#", sem repetidas), nas parcelas do cartão e no modelo da recorrência; `?tag=` na lista; `GET /tags`, `PATCH /tags/:name` (renomear ou juntar) e `DELETE /tags/:name`; o campo "Tags (opcional)" no formulário, as tags na linha do lançamento, o filtro em Lançamentos e a seção Tags em Categorias; o assistente busca por tag e recebe os nomes das tags no prompt (a política de privacidade cita as tags); na demo, a tag "passeios" em Restaurante, Cinema e Lazer (T10).
 - **Revisão final:** seção 6 da spec (sessão nova e CodeRabbit). Corrigidos o filtro só por tag sem resultado, o seletor que sumia com o filtro ligado, a barra de filtros espremida numa tela média, o campo de tags que apagava a tag inválida e a mensagem do renomear. Mantidos como limites (seção 5): as ocorrências já pagas depois desta em "esta e as próximas" e a corrida entre trocar a tag e criar ocorrências.
 - **Testes:** 213 no shared, 357 na API e 246 na web, além de 17 E2E (novo: `e2e/tests/tags.spec.ts`).
-- **Próximo:** sub-projeto 14, as tags nos relatórios, no Excel e no CSV.
 
 ## Sub-projeto 12: primeiros passos — no ar desde 2026-11-19 (PR #33)
 

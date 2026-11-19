@@ -35,6 +35,19 @@ export type ReportCategoryDTO = {
   change: number | null;
 };
 
+/**
+ * Linha de tag (sub-projeto 14, H1–H3): despesas pagas com a tag. Um lançamento com duas tags conta inteiro nas duas,
+ * então as linhas podem somar mais que o total de despesas. `share` é a fração desse total; `count`, quantos lançamentos.
+ */
+export type ReportTagDTO = {
+  name: string;
+  total: number;
+  count: number;
+  share: number;
+  previous: number;
+  change: number | null;
+};
+
 export type ReportMonthDTO = { month: string; income: number; expense: number; net: number };
 export type ReportDebtPointDTO = { month: string; cards: number; loans: number; others: number; total: number };
 export type ReportExpenseDTO = { id: string; date: string; description: string; category: string; account: string; amount: number };
@@ -55,6 +68,8 @@ export type ReportDTO = {
   };
   expenseByCategory: ReportCategoryDTO[];
   incomeByCategory: ReportCategoryDTO[];
+  /** Sub-projeto 14: do maior total para o menor; vazia quando a pessoa não usou tags no período nem no anterior. */
+  expenseByTag: ReportTagDTO[];
   monthly: ReportMonthDTO[];
   debts: ReportDebtPointDTO[];
   topExpenses: ReportExpenseDTO[];

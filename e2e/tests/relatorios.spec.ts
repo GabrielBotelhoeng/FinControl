@@ -2,7 +2,7 @@ import { readFile } from 'node:fs/promises';
 import { expect, test } from '@playwright/test';
 import { enterDemo } from './helpers';
 
-test('relatórios da demo: resumo, categorias, dívidas e os downloads em CSV, Excel e PDF', async ({ page }) => {
+test('relatórios da demo: resumo, categorias, tags, dívidas e os downloads em CSV, Excel e PDF', async ({ page }) => {
   await enterDemo(page);
   // O painel mostra o total de dívidas da demo (cartão e financiamento) e leva aos relatórios.
   const debts = page.getByRole('region', { name: 'Total de dívidas' });
@@ -13,6 +13,8 @@ test('relatórios da demo: resumo, categorias, dívidas e os downloads em CSV, E
   const summary = page.getByRole('region', { name: 'Resumo do período' });
   await expect(summary.getByRole('group', { name: 'Receitas' })).toContainText(/R\$\s[\d.]+,\d{2}/);
   await expect(page.getByRole('list', { name: 'Gastos por categoria' }).getByRole('listitem').first()).toBeVisible();
+  // Sub-projeto 14 (H4): a tag da demo junta restaurante, cinema e lazer.
+  await expect(page.getByRole('list', { name: 'Gastos por tag' }).getByRole('listitem', { name: '#passeios' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Evolução das dívidas' })).toBeVisible();
   await expect(page.getByRole('region', { name: 'Saldo das contas' })).toContainText('Total');
 
@@ -24,7 +26,7 @@ test('relatórios da demo: resumo, categorias, dívidas e os downloads em CSV, E
   const csv = await csvDownload;
   expect(csv.suggestedFilename()).toMatch(/^fincontrol-lancamentos-\d{4}-\d{2}_\d{4}-\d{2}\.csv$/);
   const text = await readFile((await csv.path())!, 'utf-8');
-  expect(text.startsWith('\uFEFFData;Descrição;Tipo;Categoria;Conta;Conta de destino;Situação;Valor\r\n')).toBe(true);
+  expect(text.startsWith('\uFEFFData;Descrição;Tipo;Categoria;Conta;Conta de destino;Situação;Valor;Tags\r\n')).toBe(true);
   expect(text.split('\r\n').length).toBeGreaterThan(20);
 
   const xlsxDownload = page.waitForEvent('download');

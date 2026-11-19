@@ -37,8 +37,8 @@ Gestão financeira pessoal: contas, cartões de crédito, empréstimos e financi
 - **Comparação com o Banco Central**: a taxa do contrato é comparada com a do próprio banco e com a mediana do mercado para o mesmo tipo de crédito, com a fonte e o período de referência. As taxas oficiais são sincronizadas toda semana.
 - **Orçamento por categoria**: um limite mensal por categoria de despesa, com o comprometido do mês (pago + a pagar) e a situação escrita (dentro, perto do limite ou estourou). Mostra a sobra planejada (receitas do mês − orçamento) e a previsão dos próximos 3 meses. O limite sugerido é a média dos últimos 3 meses.
 - **Metas**: objetivos com valor e prazo, depósitos e retiradas, percentual alcançado, situação (no ritmo, atrasada, concluída) e quanto guardar por mês até o prazo. Há um atalho para a meta de reserva de emergência, com 6 meses do gasto médio.
-- **Relatórios**: por mês, ano ou últimos 12 meses, com resumo e taxa de poupança, gastos e receitas por categoria comparados com o período anterior, evolução mensal, evolução das dívidas (cartões com parcelas futuras, saldo devedor dos empréstimos e dívidas com credores), maiores despesas e o saldo de cada conta no fim do período.
-- **Exportação**: o relatório em PDF (A4, gerado na API), uma **planilha de análise em Excel** (lançamentos em tabela com filtros, variações em fórmula, "onde o dinheiro vai" por descrição, dia da semana, pequenos gastos, fixos e variáveis, ano contra ano) e os lançamentos em CSV no formato do Excel brasileiro (`;`, vírgula decimal, acentos certos e proteção contra fórmulas).
+- **Relatórios**: por mês, ano ou últimos 12 meses, com resumo e taxa de poupança, gastos e receitas por categoria comparados com o período anterior, gastos por tag (quem usa tags), evolução mensal, evolução das dívidas (cartões com parcelas futuras, saldo devedor dos empréstimos e dívidas com credores), maiores despesas e o saldo de cada conta no fim do período.
+- **Exportação**: o relatório em PDF (A4, gerado na API), uma **planilha de análise em Excel** (lançamentos em tabela com filtros, variações em fórmula, "onde o dinheiro vai" por descrição, dia da semana, pequenos gastos, fixos e variáveis, ano contra ano) e os lançamentos em CSV no formato do Excel brasileiro (`;`, vírgula decimal, acentos certos e proteção contra fórmulas). As tags vão junto: uma coluna no CSV e na tabela de lançamentos e a aba "Por tag" na planilha.
 - **Notificações**: um sino em todas as telas com os avisos não lidos: contas vencidas e a vencer, faturas fechadas ou vencidas, categorias perto do limite ou estouradas e metas concluídas. Os mais urgentes vêm primeiro, cada aviso leva à tela que resolve o assunto e some sozinho quando ele se resolve. No Perfil, a pessoa escolhe o que receber e com quantos dias de antecedência, e pode ligar os **avisos no celular e no navegador** (Web Push): todo dia às 8h, uma mensagem com o que é novo.
 - **Calendário de contas**: o mês em grade, com o que vence em cada dia (contas, receitas e faturas do cartão), os totais a pagar e a receber e o botão de pagar ali mesmo.
 - **Resumo do mês**: em poucas frases, quanto gastou contra o mês anterior, quanto sobrou, a categoria que mais subiu e a que mais caiu, a maior despesa, o orçamento e as dívidas.
@@ -101,8 +101,8 @@ As decisões, com as alternativas descartadas e os motivos, estão nas specs do 
 | Camada | Quantidade | Como roda |
 |---|---|---|
 | `packages/shared` | 213 | Unitários (Vitest) |
-| `apps/api` | 357 | Integração contra **Postgres real**: rotas HTTP, regras de saldo, recorrência, cartão e fatura, empréstimos, relatórios, CSV e PDF, sincronização com o Banco Central e isolamento entre usuários |
-| `apps/web` | 246 | Componentes e fluxos (Testing Library), com o provedor de identidade simulado |
+| `apps/api` | 358 | Integração contra **Postgres real**: rotas HTTP, regras de saldo, recorrência, cartão e fatura, empréstimos, relatórios, CSV e PDF, sincronização com o Banco Central e isolamento entre usuários |
+| `apps/web` | 247 | Componentes e fluxos (Testing Library), com o provedor de identidade simulado |
 | `e2e` | 17 | Chromium contra a pilha inteira |
 
 O E2E roda a **web buildada como em produção**, a **API real** e o **Postgres real**. A única peça simulada é o provedor de identidade: um servidor Auth mínimo ([`e2e/fake-auth.ts`](e2e/fake-auth.ts)) que fala o mesmo protocolo do Supabase e assina JWTs ES256 de verdade. Assim, a API valida os tokens pelo mesmo caminho de produção (JWKS, issuer e audience), sem segredos no CI e sem sujar o projeto real. Os cenários seguem os critérios de aceite da spec:
@@ -113,7 +113,7 @@ O E2E roda a **web buildada como em produção**, a **API real** e o **Postgres 
 - compra no cartão indo para a fatura, e o pagamento tirando da corrente e devolvendo o limite;
 - limite por categoria avisando "Perto do limite", e meta acompanhando os depósitos;
 - cadastro de empréstimo com a taxa real na prévia, as parcelas em Lançamentos e a exclusão apagando as pendentes;
-- relatórios da demo, com o download do CSV e do PDF;
+- relatórios da demo, com a tag "passeios" em "Gastos por tag" e o download do CSV (com a coluna Tags), do Excel e do PDF;
 - dívida com credor: cadastro com juros, acordo com parcelas em Lançamentos e cancelamento;
 - patrimônio: um bem com a data da compra e um valor novo, com o mesmo número no painel;
 - tags: o lançamento marcado mostra a tag, o filtro mostra só ele e Categorias conta os lançamentos da tag;

@@ -80,27 +80,30 @@ export async function renderReportXlsx(d: XlsxData, generatedAt: Date): Promise<
   const rate = resumo.addRow(['Taxa de poupança', formula(`IF(B${first}=0,"",(B${first}-B${first + 1})/B${first})`, totals.savingsRate), '', '']);
   rate.getCell(2).numFmt = PERCENT;
   resumo.addRow([]);
-  resumo.addRow(['Abas: Lançamentos (tabela com filtros), Por categoria, Mensal, Onde o dinheiro vai, Dia da semana, Pequenos gastos, Fixos e variáveis, Dívidas e Saldos.']).font = { color: { argb: 'FF5A6072' } };
+  const tagSheet = report.expenseByTag.length > 0 ? 'Por tag, ' : '';
+  resumo.addRow([`Abas: Lançamentos (tabela com filtros), Por categoria, ${tagSheet}Mensal, Onde o dinheiro vai, Dia da semana, Pequenos gastos, Fixos e variáveis, Dívidas e Saldos.`]).font = { color: { argb: 'FF5A6072' } };
 
   // ---------- Lançamentos (Tabela do Excel, E3) ----------
   const lanc = wb.addWorksheet('Lançamentos', { views: [{ state: 'frozen', ySplit: 1 }] });
-  const widths = [12, 10, 10, 34, 14, 22, 10, 18, 18, 10, 14];
+  const widths = [12, 10, 10, 34, 14, 22, 20, 10, 18, 18, 10, 14];
   lanc.columns = widths.map((width) => ({ width }));
   lanc.addTable({
     name: 'Lancamentos',
     ref: 'A1',
     headerRow: true,
     style: { theme: 'TableStyleMedium2', showRowStripes: true },
-    columns: ['Data', 'Mês', 'Dia da semana', 'Descrição', 'Tipo', 'Categoria', 'Natureza', 'Conta', 'Conta de destino', 'Situação', 'Valor'].map((name) => ({ name, filterButton: true })),
+    // Sub-projeto 14 (H7): as tags ao lado da categoria, para o filtro de texto ("contém bebida") da Tabela.
+    columns: ['Data', 'Mês', 'Dia da semana', 'Descrição', 'Tipo', 'Categoria', 'Tags', 'Natureza', 'Conta', 'Conta de destino', 'Situação', 'Valor'].map((name) => ({ name, filterButton: true })),
     rows: d.rows.length
       ? d.rows.map((r) => [
-          asDate(r.date), r.date.slice(0, 7), weekday(r.date), safeText(r.description), TYPE[r.type], safeText(r.category ?? ''), r.nature ? NATURE[r.nature] : '',
+          asDate(r.date), r.date.slice(0, 7), weekday(r.date), safeText(r.description), TYPE[r.type], safeText(r.category ?? ''), safeText(r.tags.join(', ')),
+          r.nature ? NATURE[r.nature] : '',
           safeText(r.account), safeText(r.destination ?? ''), STATUS[r.status], reais(r.type === 'expense' ? -r.amount : r.amount),
         ])
-      : [['', '', '', 'Nenhum lançamento no período', '', '', '', '', '', '', 0]],
+      : [['', '', '', 'Nenhum lançamento no período', '', '', '', '', '', '', '', 0]],
   });
   lanc.getColumn(1).numFmt = DATE;
-  lanc.getColumn(11).numFmt = MONEY;
+  lanc.getColumn(12).numFmt = MONEY;
 
   // ---------- Por categoria (variação em fórmula + antes e agora, E4 e E6) ----------
   const cat = sheet(wb, 'Por categoria', [
@@ -124,6 +127,21 @@ export async function renderReportXlsx(d: XlsxData, generatedAt: Date): Promise<
   const catEnd = cat.rowCount;
   const catTotal = cat.addRow(['Total', sumFrom4('B', catEnd, reais(totals.expense)), sumFrom4('C', catEnd, reais(totals.previousExpense)), '', '', '', '', '']);
   catTotal.font = { bold: true };
+
+  // ---------- Por tag (sub-projeto 14, H8): só quando há tags; sem linha de total, porque as tags se sobrepõem (H2) ----------
+  if (report.expenseByTag.length > 0) {
+    const tags = sheet(wb, 'Por tag', [
+      { header: 'Tag', width: 24 }, { header: 'Vezes', width: 8 }, { header: 'Total no período', width: 17, fmt: MONEY }, { header: 'Período anterior', width: 17, fmt: MONEY },
+      { header: 'Variação', width: 11, fmt: PERCENT }, { header: 'Média por mês', width: 15, fmt: MONEY }, { header: 'Participação nas despesas', width: 24, fmt: PERCENT },
+    ], 'Despesas pagas com a tag. Um lançamento com duas tags conta inteiro nas duas, por isso as tags podem somar mais que o total de despesas.');
+    for (const t of report.expenseByTag) {
+      const n = tags.rowCount + 1;
+      tags.addRow([
+        `#${t.name}`, t.count, reais(t.total), reais(t.previous), formula(`IF(D${n}=0,"",(C${n}-D${n})/D${n})`, t.change),
+        formula(`C${n}/${period.months}`, reais(t.total) / period.months), t.share,
+      ]);
+    }
+  }
 
   // ---------- Mensal (E4) ----------
   const men = sheet(wb, 'Mensal', [{ header: 'Mês', width: 12 }, { header: 'Receitas', width: 16, fmt: MONEY }, { header: 'Despesas', width: 16, fmt: MONEY }, { header: 'Saldo do mês', width: 16, fmt: MONEY }, { header: 'Taxa de poupança', width: 17, fmt: PERCENT }]);

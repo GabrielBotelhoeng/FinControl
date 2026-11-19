@@ -1,4 +1,4 @@
-import { monthOf, todayInSaoPaulo, type ReportCategoryDTO, type ReportDTO, type YearMonth } from '@fincontrol/shared';
+import { monthOf, todayInSaoPaulo, type ReportCategoryDTO, type ReportDTO, type ReportTagDTO, type YearMonth } from '@fincontrol/shared';
 import { ArrowDownRight, ArrowUpRight, ChevronLeft, ChevronRight, FileDown, FileSpreadsheet, FileText, Sparkles } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { Link } from 'react-router';
@@ -112,6 +112,35 @@ function CategoryList({ title, rows, kind }: { title: string; rows: ReportCatego
           })}
         </ul>
       )}
+    </Panel>
+  );
+}
+
+/** Sub-projeto 14 (H4): só aparece com tags. Um lançamento com duas tags conta inteiro nas duas (H2). */
+function TagList({ rows }: { rows: ReportTagDTO[] }) {
+  return (
+    <Panel className="grid content-start gap-4 p-5 sm:p-6">
+      <div>
+        <h2 className="font-display text-lg font-semibold tracking-tight">Gastos por tag</h2>
+        <p className="text-xs text-muted">Participação nas despesas e variação contra o período anterior. Um lançamento com duas tags conta inteiro nas duas.</p>
+      </div>
+      <ul aria-label="Gastos por tag" className="grid gap-x-8 gap-y-3 lg:grid-cols-2">
+        {rows.map((t) => (
+          <li key={t.name} aria-label={`#${t.name}`} className="grid min-w-0 gap-1.5">
+            <div className="flex items-center justify-between gap-3 text-sm">
+              <span className="truncate">{`#${t.name}`}</span>
+              <span className="tabular shrink-0 font-semibold">{formatBRL(t.total)}</span>
+            </div>
+            <div aria-hidden className="h-1.5 overflow-hidden rounded-full bg-surface-2">
+              <div className="h-full rounded-full bg-expense" style={{ width: `${t.share * 100}%` }} />
+            </div>
+            <div className="flex items-center justify-between gap-3 text-xs text-muted">
+              <span className="min-w-0">{`${percent.format(t.share)} das despesas · ${t.count} ${t.count === 1 ? 'lançamento' : 'lançamentos'} · antes ${formatBRL(t.previous)}`}</span>
+              <Change change={t.change} kind="expense" total={t.total} />
+            </div>
+          </li>
+        ))}
+      </ul>
     </Panel>
   );
 }
@@ -274,6 +303,8 @@ export default function ReportsPage() {
                 <CategoryList title="Gastos por categoria" rows={r.expenseByCategory} kind="expense" />
                 <CategoryList title="Receitas por categoria" rows={r.incomeByCategory} kind="income" />
               </div>
+              {/* Durante o deploy, a API antiga ainda não manda o campo. */}
+              {(r.expenseByTag ?? []).length > 0 && <TagList rows={r.expenseByTag} />}
             </>
           )}
 

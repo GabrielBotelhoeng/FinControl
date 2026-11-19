@@ -1,5 +1,5 @@
 import {
-  monthOf, todayInSaoPaulo, type AccountType, type DateOnly, type ReportBalanceDTO, type ReportExpenseDTO, type TransactionNature, type TransactionStatus, type TransactionType,
+  compareTags, monthOf, todayInSaoPaulo, type AccountType, type DateOnly, type ReportBalanceDTO, type ReportExpenseDTO, type TransactionNature, type TransactionStatus, type TransactionType,
 } from '@fincontrol/shared';
 import type { Prisma } from '../../generated/prisma/client';
 import { fromDateOnly, toDateOnly } from '../../infra/date-mapping';
@@ -23,6 +23,8 @@ export type CsvRow = {
   account: string;
   destination: string | null;
   amount: number;
+  /** Sub-projeto 14 (H6, H7): em ordem alfabética. */
+  tags: string[];
 };
 
 export function createReportsRepository(db: Db) {
@@ -89,6 +91,17 @@ export function createReportsRepository(db: Db) {
       return new Map(groups.filter((g) => g.categoryId).map((g) => [g.categoryId!, Number(g._sum.amount ?? 0n)]));
     },
 
+    /** Total e quantidade das despesas pagas no período de cada tag (sub-projeto 14, H1); o lançamento conta em todas as suas tags (H2). */
+    async totalsByTag(userId: string, from: DateOnly, to: DateOnly): Promise<Map<string, { total: number; count: number }>> {
+      const rows = await db.$queryRaw<{ name: string; total: bigint; count: number }[]>`
+        SELECT tag AS "name", SUM("amount")::bigint AS "total", COUNT(*)::int AS "count"
+        FROM "transactions", unnest("tags") AS tag
+        WHERE "user_id" = ${userId}::uuid AND "status" = 'paid' AND "type" = 'expense'
+          AND "paid_date" BETWEEN ${from}::date AND ${to}::date
+        GROUP BY tag`;
+      return new Map(rows.map((r) => [r.name, { total: Number(r.total), count: r.count }]));
+    },
+
     async categories(userId: string, ids: string[]): Promise<Map<string, CategoryRef>> {
       if (ids.length === 0) return new Map();
       const rows = await db.category.findMany({ where: { userId, id: { in: ids } }, select: { id: true, name: true, icon: true, color: true } });
@@ -143,7 +156,7 @@ export function createReportsRepository(db: Db) {
       const rows = await db.transaction.findMany({
         where: { userId, OR: [{ status: 'paid', paidDate: range }, { status: 'pending', dueDate: range }] },
         select: {
-          type: true, status: true, nature: true, amount: true, description: true, dueDate: true, paidDate: true,
+          type: true, status: true, nature: true, amount: true, description: true, dueDate: true, paidDate: true, tags: true,
           category: { select: { name: true } }, account: { select: { name: true } }, destinationAccount: { select: { name: true } },
         },
       });
@@ -158,6 +171,8 @@ export function createReportsRepository(db: Db) {
           account: r.account.name,
           destination: r.destinationAccount?.name ?? null,
           amount: Number(r.amount),
+          // A renomeação das tags grava sem ordem (sub-projeto 13).
+          tags: [...r.tags].sort(compareTags),
         }))
         .sort((a, b) => a.date.localeCompare(b.date) || a.description.localeCompare(b.description, 'pt-BR'));
     },
