@@ -5,6 +5,8 @@ _Atualizado em 2026-11-19 (tags nos relatórios)._
 ## Sub-projeto 14: tags nos relatórios, no PDF, no CSV e no Excel (2026-11-19, branch feat/tags-relatorios)
 
 - **Spec:** `docs/superpowers/specs/2026-11-19-fincontrol-sp14-tags-relatorios-design.md` (H1–H8). Sem migration.
+- **Entregue:** `expenseByTag` no relatório (despesas pagas por tag, com quantidade, participação, período anterior e variação; um lançamento com duas tags conta nas duas), o painel "Gastos por tag" em Relatórios (só com tags), a seção no PDF, a coluna "Tags" no fim do CSV e depois de "Categoria" no Excel, e a aba "Por tag" na planilha. Em Categorias, a contagem de cada tag foi para baixo do nome (a 360 px, "42 lançamentos" quebrava em duas linhas).
+- **Testes:** 213 no shared, 358 na API e 247 na web, além de 17 E2E (o dos relatórios da demo confere "#passeios" e a coluna do CSV).
 
 ## Sub-projeto 13: tags nos lançamentos — no ar desde 2026-11-19 (PR #34)
 
