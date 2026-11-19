@@ -2,6 +2,7 @@ import { startOfMonth, type AccountType, type CategorySpendDTO, type DateOnly, t
 import type { Prisma } from '../../generated/prisma/client';
 import { fromDateOnly } from '../../infra/date-mapping';
 import type { Db } from '../../infra/prisma';
+import { foldIntoParents, subcategoryParents } from '../categories/rollup';
 
 type Totals = { income: number; expense: number };
 type TypeGroup = { type: TransactionType; _sum: { amount: bigint | null } };
@@ -64,20 +65,18 @@ export function createDashboardRepository(db: Db) {
       return balance + Number(incoming._sum.amount ?? 0n);
     },
 
+    /** Despesas pagas por categoria; as subcategorias somam na categoria principal (sub-projeto 15, U5). */
     async expenseByCategory(userId: string, from: DateOnly, to: DateOnly): Promise<CategorySpendDTO[]> {
       const groups = await db.transaction.groupBy({
         by: ['categoryId'],
         where: { ...paidWhere(userId, from, to), type: 'expense' },
         _sum: { amount: true },
       });
-      const ids = groups.map((g) => g.categoryId).filter((id): id is string => id !== null);
-      const categories = await db.category.findMany({ where: { userId, id: { in: ids } } });
-      const byId = new Map(categories.map((c) => [c.id, c]));
-      return groups
-        .flatMap((g) => {
-          const c = g.categoryId ? byId.get(g.categoryId) : undefined;
-          return c ? [{ categoryId: c.id, name: c.name, icon: c.icon, color: c.color, total: Number(g._sum.amount ?? 0n) }] : [];
-        })
+      const byLeaf = new Map(groups.flatMap((g) => (g.categoryId ? [[g.categoryId, Number(g._sum.amount ?? 0n)] as const] : [])));
+      const totals = foldIntoParents(byLeaf, await subcategoryParents(db, userId), (x, y) => x + y);
+      const categories = await db.category.findMany({ where: { userId, id: { in: [...totals.keys()] } } });
+      return categories
+        .map((c) => ({ categoryId: c.id, name: c.name, icon: c.icon, color: c.color, total: totals.get(c.id)! }))
         .sort((x, y) => y.total - x.total);
     },
 

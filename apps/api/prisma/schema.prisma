@@ -150,14 +150,22 @@ model Category {
   type         CategoryType
   icon         String
   color        String
+  /**
+   * Categoria de uma subcategoria (sub-projeto 15, U1): nulo nas principais. Sem cascata: a exclusão leva a categoria
+   * e as subcategorias num comando só, depois de mover os lançamentos (U9).
+   */
+  parentId     String?       @map("parent_id") @db.Uuid
   createdAt    DateTime      @default(now()) @map("created_at") @db.Timestamptz
   updatedAt    DateTime      @updatedAt @map("updated_at") @db.Timestamptz
   user         Profile       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parent       Category?     @relation("Subcategories", fields: [parentId], references: [id], onDelete: NoAction)
+  children     Category[]    @relation("Subcategories")
   transactions Transaction[]
   recurrences  Recurrence[]
   budgets      Budget[]
 
   @@unique([userId, type, name])
+  @@index([parentId])
   @@map("categories")
 }
 

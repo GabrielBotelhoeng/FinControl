@@ -56,6 +56,15 @@ describe('buildDemoData', () => {
     expect(plan.transactions.filter((t) => t.tags?.length)).toHaveLength(42);
   });
 
+  it('U11 (sub-projeto 15): Alimentação ganha Mercado, Restaurante e Delivery, com os lançamentos de mesmo nome', () => {
+    const plan = buildDemoData(TODAY);
+    expect(plan.subcategories).toEqual([{ categoryName: 'Alimentação', names: ['Mercado', 'Restaurante', 'Delivery'] }]);
+    const food = plan.transactions.filter((t) => t.categoryName === 'Alimentação');
+    expect(food.length).toBeGreaterThan(0);
+    for (const t of food) expect(t.subcategoryName).toBe(t.description);
+    expect(plan.transactions.filter((t) => t.subcategoryName)).toHaveLength(food.length);
+  });
+
   it('é determinístico para a mesma data', () => {
     expect(buildDemoData(TODAY)).toEqual(buildDemoData(TODAY));
   });

@@ -69,6 +69,14 @@ export function createDemoService(deps: DemoServiceDeps) {
           return found.id;
         };
 
+        // Sub-projeto 15 (U11): as subcategorias da demo, antes dos lançamentos que vão para elas.
+        const subcategoryIds = new Map<string, string>();
+        for (const s of plan.subcategories) {
+          const parent = categories.find((c) => c.name === s.categoryName && c.type === 'expense' && c.parentId === null);
+          if (!parent) throw new Error(`Categoria padrão ausente: ${s.categoryName}`);
+          for (const [name, id] of await tx.repo.createSubcategories(userId, parent, s.names)) subcategoryIds.set(name, id);
+        }
+
         for (const r of plan.recurrences) {
           await tx.recurrencesRepo.create(userId, {
             frequency: 'monthly', startDate: r.startDate, endDate: null, type: r.type, amount: r.amount, description: r.description,
@@ -89,7 +97,7 @@ export function createDemoService(deps: DemoServiceDeps) {
             description: t.description,
             accountId: accountId(t.accountKey),
             destinationAccountId: t.destinationAccountKey ? accountId(t.destinationAccountKey) : null,
-            categoryId: t.categoryName && t.type !== 'transfer' ? categoryId(t.categoryName, t.type) : null,
+            categoryId: t.subcategoryName ? subcategoryIds.get(t.subcategoryName)! : t.categoryName && t.type !== 'transfer' ? categoryId(t.categoryName, t.type) : null,
             nature: t.nature,
             status: t.status,
             dueDate: t.dueDate,

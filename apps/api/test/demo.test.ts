@@ -92,6 +92,13 @@ describe('conta demo', () => {
     expect(netWorth.total).toBe(netWorth.accounts.total + 5350000 - netWorth.debts.total);
     expect(summary.body.netWorth).toBe(netWorth.total);
 
+    // Sub-projeto 15 (U11): Alimentação com Mercado, Restaurante e Delivery, e o detalhe delas no relatório.
+    const expenseCategories = (await request(app).get('/api/v1/categories?type=expense').set(visitor.auth)).body as { id: string; name: string; parentId: string | null }[];
+    const foodId = expenseCategories.find((c) => c.name === 'Alimentação')!.id;
+    expect(expenseCategories.filter((c) => c.parentId === foodId).map((c) => c.name).sort()).toEqual(['Delivery', 'Mercado', 'Restaurante']);
+    const foodRow = report.expenseByCategory.find((c: { name: string }) => c.name === 'Alimentação');
+    expect(foodRow.subcategories.map((s: { name: string }) => s.name).sort()).toEqual(['Delivery', 'Mercado', 'Restaurante']);
+
     // Sub-projeto 13 (T10): "passeios" junta Restaurante (Alimentação, no cartão) com Cinema e Lazer (Lazer).
     expect((await request(app).get('/api/v1/tags').set(visitor.auth)).body).toEqual([{ name: 'passeios', count: 42 }]);
 

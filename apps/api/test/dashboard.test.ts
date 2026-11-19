@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { buildTestApp } from './helpers/app';
 import { newUser, type TestUser } from './helpers/auth';
 import { resetDb, testDb } from './helpers/db';
-import { categoryId, createAccount, createTransaction } from './helpers/factories';
+import { categoryId, createAccount, createSubcategory, createTransaction } from './helpers/factories';
 
 const { app } = buildTestApp();
 
@@ -113,6 +113,18 @@ describe('dashboard', () => {
     await scenario(user);
     const res = await request(app).get('/api/v1/dashboard/by-category?month=2026-11').set(user.auth);
     expect(res.body).toEqual([expect.objectContaining({ name: 'Alimentação', total: 20000 })]);
+  });
+
+  it('U5 (sub-projeto 15): o gráfico junta as subcategorias na categoria, com o nome e a cor dela', async () => {
+    const user = await newUser();
+    const { a } = await scenario(user);
+    const food = await categoryId(app, user, 'Alimentação', 'expense');
+    const restaurant = await createSubcategory(app, user, food, 'Restaurante');
+    await createTransaction(app, user, {
+      type: 'expense', amount: 7000, description: 'Pizza', accountId: a.id, categoryId: restaurant, nature: 'variable', dueDate: '2026-11-06', status: 'paid', paidDate: '2026-11-06',
+    });
+    const res = await request(app).get('/api/v1/dashboard/by-category?month=2026-11').set(user.auth);
+    expect(res.body).toEqual([expect.objectContaining({ categoryId: food, name: 'Alimentação', total: 27000 })]);
   });
 
   it('o resumo materializa recorrências sem precisar listar antes', async () => {

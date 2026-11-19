@@ -1,5 +1,5 @@
 import {
-  createCategorySchema, deleteCategoryQuerySchema, idSchema, listCategoriesQuerySchema, updateCategorySchema,
+  createCategorySchema, createSubcategorySchema, deleteCategoryQuerySchema, idSchema, listCategoriesQuerySchema, updateCategorySchema,
 } from '@fincontrol/shared';
 import { Router } from 'express';
 import { userIdOf } from '../../http/auth';
@@ -14,6 +14,9 @@ export function categoriesRouter(service: CategoriesService): Router {
   });
   r.post('/', async (req, res) => {
     res.status(201).json(await service.create(userIdOf(res), parse(createCategorySchema, req.body)));
+  });
+  r.post('/:id/subcategories', async (req, res) => {
+    res.status(201).json(await service.createSubcategory(userIdOf(res), parse(idSchema, req.params.id), parse(createSubcategorySchema, req.body)));
   });
   r.patch('/:id', async (req, res) => {
     res.json(await service.update(userIdOf(res), parse(idSchema, req.params.id), parse(updateCategorySchema, req.body)));

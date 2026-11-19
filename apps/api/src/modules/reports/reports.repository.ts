@@ -1,9 +1,10 @@
 import {
-  compareTags, monthOf, todayInSaoPaulo, type AccountType, type DateOnly, type ReportBalanceDTO, type ReportExpenseDTO, type TransactionNature, type TransactionStatus, type TransactionType,
+  categoryPath, compareTags, monthOf, todayInSaoPaulo, type AccountType, type DateOnly, type ReportBalanceDTO, type ReportExpenseDTO, type TransactionNature, type TransactionStatus, type TransactionType,
 } from '@fincontrol/shared';
 import type { Prisma } from '../../generated/prisma/client';
 import { fromDateOnly, toDateOnly } from '../../infra/date-mapping';
 import type { Db, DbClient } from '../../infra/prisma';
+import { subcategoryParents } from '../categories/rollup';
 
 export type CategoryRef = { id: string; name: string; icon: string; color: string };
 export type MonthTotals = Map<string, { income: number; expense: number }>;
@@ -19,7 +20,10 @@ export type CsvRow = {
   type: TransactionType;
   status: TransactionStatus;
   nature: TransactionNature | null;
+  /** A categoria principal (sub-projeto 15, U8). */
   category: string | null;
+  /** A subcategoria, quando o lançamento está numa (U8). */
+  subcategory: string | null;
   account: string;
   destination: string | null;
   amount: number;
@@ -102,6 +106,11 @@ export function createReportsRepository(db: Db) {
       return new Map(rows.map((r) => [r.name, { total: Number(r.total), count: r.count }]));
     },
 
+    /** De cada subcategoria para a categoria principal (sub-projeto 15, U5). */
+    subcategoryParents(userId: string): Promise<Map<string, string>> {
+      return subcategoryParents(db, userId);
+    },
+
     async categories(userId: string, ids: string[]): Promise<Map<string, CategoryRef>> {
       if (ids.length === 0) return new Map();
       const rows = await db.category.findMany({ where: { userId, id: { in: ids } }, select: { id: true, name: true, icon: true, color: true } });
@@ -132,11 +141,16 @@ export function createReportsRepository(db: Db) {
         where: { ...paidIn(userId, from, to), type: 'expense' },
         orderBy: [{ amount: 'desc' }, { paidDate: 'desc' }, { id: 'asc' }],
         take: limit,
-        select: { id: true, paidDate: true, description: true, amount: true, category: { select: { name: true } }, account: { select: { name: true } } },
+        select: {
+          id: true, paidDate: true, description: true, amount: true, account: { select: { name: true } },
+          category: { select: { name: true, parent: { select: { name: true } } } },
+        },
       });
+      // Sub-projeto 15 (U7): "Alimentação › Restaurante" quando a despesa está numa subcategoria.
+      const label = (c: { name: string; parent: { name: string } | null } | null) => (c ? categoryPath(c.name, c.parent?.name) : 'Sem categoria');
       return rows.map((r) => ({
         id: r.id, date: toDateOnly(r.paidDate!), description: r.description,
-        category: r.category?.name ?? 'Sem categoria', account: r.account.name, amount: Number(r.amount),
+        category: label(r.category), account: r.account.name, amount: Number(r.amount),
       }));
     },
 
@@ -157,7 +171,7 @@ export function createReportsRepository(db: Db) {
         where: { userId, OR: [{ status: 'paid', paidDate: range }, { status: 'pending', dueDate: range }] },
         select: {
           type: true, status: true, nature: true, amount: true, description: true, dueDate: true, paidDate: true, tags: true,
-          category: { select: { name: true } }, account: { select: { name: true } }, destinationAccount: { select: { name: true } },
+          category: { select: { name: true, parent: { select: { name: true } } } }, account: { select: { name: true } }, destinationAccount: { select: { name: true } },
         },
       });
       return rows
@@ -167,7 +181,8 @@ export function createReportsRepository(db: Db) {
           type: r.type,
           status: r.status,
           nature: r.nature,
-          category: r.category?.name ?? null,
+          category: r.category ? (r.category.parent?.name ?? r.category.name) : null,
+          subcategory: r.category?.parent ? r.category.name : null,
           account: r.account.name,
           destination: r.destinationAccount?.name ?? null,
           amount: Number(r.amount),

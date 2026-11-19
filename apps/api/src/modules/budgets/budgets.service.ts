@@ -28,6 +28,8 @@ export function createBudgetsService(deps: BudgetsServiceDeps) {
     const category = await deps.categoriesRepo.findById(userId, categoryId);
     if (!category) throw new NotFoundError('Categoria');
     if (category.type !== 'expense') throw new UnprocessableError('Limite só vale para categorias de despesa.');
+    // Sub-projeto 15 (U6): o gasto das subcategorias já entra no limite da categoria.
+    if (category.parentId) throw new UnprocessableError('O limite vale para a categoria principal; o gasto das subcategorias entra nele.');
     return category;
   }
 
@@ -50,7 +52,8 @@ export function createBudgetsService(deps: BudgetsServiceDeps) {
       const limits = new Map(budgets.map((b) => [b.categoryId, b.limit]));
       const items: BudgetMonthDTO['items'] = [];
       const categoriesWithoutBudget: BudgetMonthDTO['categoriesWithoutBudget'] = [];
-      for (const c of categories) {
+      // U6: só as categorias principais têm limite.
+      for (const c of categories.filter((x) => x.parentId === null)) {
         const suggested = suggestedLimit(history.get(c.id) ?? []);
         const limit = limits.get(c.id);
         const base = { categoryId: c.id, name: c.name, icon: c.icon, color: c.color, suggested };

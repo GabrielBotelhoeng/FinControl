@@ -12,3 +12,4 @@ export * from './statement';
 export * from './subscriptions';
 export * from './asset';
 export * from './tags';
+export * from './categories';

@@ -133,7 +133,8 @@ export function createTransactionsRepository(db: DbClient) {
       if (f.from) and.push({ dueDate: { gte: fromDateOnly(f.from) } });
       if (f.to) and.push({ dueDate: { lte: fromDateOnly(f.to) } });
       if (f.accountId) and.push({ OR: [{ accountId: f.accountId }, { destinationAccountId: f.accountId }] });
-      if (f.categoryId) and.push({ categoryId: f.categoryId });
+      // Sub-projeto 15 (U10): a categoria inclui as subcategorias dela.
+      if (f.categoryId) and.push({ OR: [{ categoryId: f.categoryId }, { category: { parentId: f.categoryId } }] });
       if (f.type) and.push({ type: f.type });
       if (f.status) and.push({ status: f.status });
       if (f.q) and.push({ description: { contains: escapeLike(f.q), mode: 'insensitive' } });

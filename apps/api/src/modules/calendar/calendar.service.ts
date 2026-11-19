@@ -1,5 +1,5 @@
 import {
-  addMonthsToYm, endOfMonth, monthOf, startOfMonth, todayInSaoPaulo,
+  addMonthsToYm, categoryPath, endOfMonth, monthOf, startOfMonth, todayInSaoPaulo,
   type CalendarDTO, type CalendarItemDTO, type DateOnly, type YearMonth,
 } from '@fincontrol/shared';
 import { UnprocessableError } from '../../http/errors';
@@ -45,7 +45,10 @@ export function createCalendarService(deps: CalendarServiceDeps) {
           userId, type: { in: ['income', 'expense'] }, accountId: { notIn: cardIds },
           dueDate: { gte: fromDateOnly(from), lte: fromDateOnly(to) },
         },
-        select: { id: true, description: true, type: true, amount: true, status: true, dueDate: true, category: { select: { name: true } } },
+        select: {
+          id: true, description: true, type: true, amount: true, status: true, dueDate: true,
+          category: { select: { name: true, parent: { select: { name: true } } } },
+        },
         orderBy: [{ dueDate: 'asc' }, { createdAt: 'asc' }],
       });
 
@@ -59,7 +62,8 @@ export function createCalendarService(deps: CalendarServiceDeps) {
         const type = r.type as 'income' | 'expense';
         push(date, {
           kind: 'transaction', id: r.id, description: r.description, type, amount, status: r.status,
-          overdue: r.status === 'pending' && date < today, category: r.category?.name ?? null,
+          // Sub-projeto 15 (U4): "Alimentação › Mercado" quando o lançamento está numa subcategoria.
+          overdue: r.status === 'pending' && date < today, category: r.category ? categoryPath(r.category.name, r.category.parent?.name) : null,
         });
         if (type === 'expense') totals[r.status === 'paid' ? 'paid' : 'toPay'] += amount;
         else totals[r.status === 'paid' ? 'received' : 'toReceive'] += amount;

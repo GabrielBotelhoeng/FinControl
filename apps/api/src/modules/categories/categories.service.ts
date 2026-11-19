@@ -1,4 +1,4 @@
-import type { CategoryDTO, CategoryType, CreateCategoryInput, UpdateCategoryInput } from '@fincontrol/shared';
+import type { CategoryDTO, CategoryType, CreateCategoryInput, CreateSubcategoryInput, UpdateCategoryInput } from '@fincontrol/shared';
 import { ConflictError, NotFoundError, UnprocessableError } from '../../http/errors';
 import type { CategoriesRepository, CategoryRow } from './categories.repository';
 
@@ -23,16 +23,29 @@ export function createCategoriesService(repo: CategoriesRepository) {
       return repo.create(userId, input);
     },
 
+    /** Sub-projeto 15 (U1–U3): um nível só, com o tipo, o ícone e a cor da categoria. */
+    async createSubcategory(userId: string, parentId: string, input: CreateSubcategoryInput): Promise<CategoryDTO> {
+      const parent = await getOwned(userId, parentId);
+      if (parent.parentId) throw new UnprocessableError('Uma subcategoria não pode ter subcategorias.');
+      await assertNameFree(userId, parent.type, input.name);
+      return repo.createSubcategory(userId, parent, input.name);
+    },
+
     async update(userId: string, id: string, input: UpdateCategoryInput): Promise<CategoryDTO> {
       const current = await getOwned(userId, id);
+      if (current.parentId && (input.icon !== undefined || input.color !== undefined)) {
+        throw new UnprocessableError('O ícone e a cor da subcategoria vêm da categoria.');
+      }
       if (input.name !== undefined) await assertNameFree(userId, current.type, input.name, id);
       return repo.update(userId, id, input);
     },
 
+    /** U9: a categoria leva as subcategorias; os lançamentos de todas vão para o destino, que não pode ser uma delas. */
     async remove(userId: string, id: string, reassignTo?: string): Promise<void> {
       const current = await getOwned(userId, id);
-      if (!(await repo.isInUse(userId, id))) {
-        await repo.delete(userId, id);
+      const removed = [id, ...(current.parentId ? [] : await repo.childIds(userId, id))];
+      if (!(await repo.isInUse(userId, removed))) {
+        await repo.deleteWithChildren(userId, id);
         return;
       }
       if (!reassignTo) {
@@ -42,7 +55,8 @@ export function createCategoriesService(repo: CategoriesRepository) {
       if (target.id === current.id || target.type !== current.type) {
         throw new UnprocessableError('A categoria de destino deve ser outra categoria do mesmo tipo.');
       }
-      await repo.reassignAndDelete(userId, current.id, target.id);
+      if (removed.includes(target.id)) throw new UnprocessableError('O destino não pode ser uma subcategoria da categoria excluída.');
+      await repo.reassignAndDelete(userId, current.id, target);
     },
 
     async assertMatches(userId: string, categoryId: string, type: CategoryType): Promise<void> {

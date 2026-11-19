@@ -8,7 +8,7 @@ import { buildTestApp } from './helpers/app';
 import { newUser, type TestUser } from './helpers/auth';
 import { createDebtsReader } from '../src/modules/reports/debts';
 import { resetDb, testDb } from './helpers/db';
-import { categoryId, createAccount, createTransaction } from './helpers/factories';
+import { categoryId, createAccount, createSubcategory, createTransaction } from './helpers/factories';
 
 const { app } = buildTestApp();
 
@@ -105,6 +105,30 @@ describe('relatórios', () => {
     expect(r.expenseByTag[2]!.share).toBe(0);
     // Só as despesas da própria pessoa.
     expect((await report(await newUser(), '2026-11', '2026-11')).expenseByTag).toEqual([]);
+  });
+
+  it('U5 e U7 (sub-projeto 15): as subcategorias somam na categoria, com o detalhe; o lançado direto é "Sem subcategoria"', async () => {
+    const user = await newUser();
+    const { checking, food } = await scenario(user);
+    const restaurant = await createSubcategory(app, user, food, 'Restaurante');
+    await createSubcategory(app, user, food, 'Feira');
+    const paid = (amount: number, date: string, description: string) =>
+      createTransaction(app, user, { type: 'expense', amount, description, accountId: checking.id, categoryId: restaurant, nature: 'variable', dueDate: date, status: 'paid', paidDate: date });
+    await paid(10000, '2026-10-15', 'Pizza outubro');
+    await paid(150000, '2026-11-10', 'Jantar de aniversário');
+    const r = await report(user, '2026-11', '2026-11');
+    expect(r.totals.expense).toBe(450000);
+    const foodRow = r.expenseByCategory.find((c) => c.name === 'Alimentação')!;
+    expect(foodRow).toMatchObject({ categoryId: food, total: 350000, previous: 60000 });
+    expect(foodRow.share).toBeCloseTo(350000 / 450000);
+    // A subcategoria sem valor ("Feira") fica de fora; o lançado direto na categoria vem por último.
+    expect(foodRow.subcategories).toEqual([
+      { categoryId: restaurant, name: 'Restaurante', total: 150000, previous: 10000, change: 14 },
+      { categoryId: null, name: 'Sem subcategoria', total: 200000, previous: 50000, change: 3 },
+    ]);
+    expect(r.expenseByCategory.find((c) => c.name === 'Lazer')!.subcategories).toEqual([]);
+    // Nas maiores despesas, a categoria vem com a subcategoria.
+    expect(r.topExpenses.find((e) => e.description === 'Jantar de aniversário')).toMatchObject({ category: 'Alimentação › Restaurante' });
   });
 
   it('séries de no mínimo 6 meses (R4), maiores despesas e saldos no fim do período sem cartões', async () => {
@@ -215,21 +239,27 @@ describe('relatórios', () => {
       type: 'expense', amount: 1050, description: '=SOMA(A1); "teste"', accountId: checking.id, categoryId: food, nature: 'variable',
       dueDate: '2026-10-30', status: 'paid', paidDate: '2026-11-02', tags: ['Bebida', 'bar'],
     });
+    const market = await createSubcategory(app, user, food, 'Mercado');
+    await createTransaction(app, user, {
+      type: 'expense', amount: 4500, description: 'Compras da semana', accountId: checking.id, categoryId: market, nature: 'variable',
+      dueDate: '2026-11-04', status: 'paid', paidDate: '2026-11-04',
+    });
     const res = await request(app).get('/api/v1/reports/export.csv?from=2026-11&to=2026-11').set(user.auth);
     expect(res.status).toBe(200);
     expect(res.headers['content-type']).toBe('text/csv; charset=utf-8');
     expect(res.headers['content-disposition']).toBe('attachment; filename="fincontrol-lancamentos-2026-11.csv"');
     expect(res.text.startsWith('\uFEFF')).toBe(true);
     const lines = res.text.slice(1).trimEnd().split('\r\n');
-    // Sub-projeto 14 (H6): "Tags" no fim, para as colunas antigas não mudarem de lugar.
-    expect(lines[0]).toBe('Data;Descrição;Tipo;Categoria;Conta;Conta de destino;Situação;Valor;Tags');
+    // Sub-projetos 14 (H6) e 15 (U8): "Tags" e "Subcategoria" no fim, para as colunas antigas não mudarem de lugar.
+    expect(lines[0]).toBe('Data;Descrição;Tipo;Categoria;Conta;Conta de destino;Situação;Valor;Tags;Subcategoria');
     expect(lines.slice(1)).toEqual([
-      '01/11/2026;Salário novembro;Receita;Salário;Corrente;;Paga;5000,00;',
-      `02/11/2026;"'=SOMA(A1); ""teste""";Despesa;Alimentação;Corrente;;Paga;-10,50;bar, bebida`,
-      '03/11/2026;Mercado novembro;Despesa;Alimentação;Corrente;;Paga;-2000,00;',
-      '08/11/2026;Show;Despesa;Lazer;Corrente;;Paga;-1000,00;',
-      '09/11/2026;Guardar;Transferência;;Corrente;Poupança;Paga;300,00;',
-      '20/11/2026;Conta pendente;Despesa;Alimentação;Corrente;;Pendente;-999,00;',
+      '01/11/2026;Salário novembro;Receita;Salário;Corrente;;Paga;5000,00;;',
+      `02/11/2026;"'=SOMA(A1); ""teste""";Despesa;Alimentação;Corrente;;Paga;-10,50;bar, bebida;`,
+      '03/11/2026;Mercado novembro;Despesa;Alimentação;Corrente;;Paga;-2000,00;;',
+      '04/11/2026;Compras da semana;Despesa;Alimentação;Corrente;;Paga;-45,00;;Mercado',
+      '08/11/2026;Show;Despesa;Lazer;Corrente;;Paga;-1000,00;;',
+      '09/11/2026;Guardar;Transferência;;Corrente;Poupança;Paga;300,00;;',
+      '20/11/2026;Conta pendente;Despesa;Alimentação;Corrente;;Pendente;-999,00;;',
     ]);
   });
 
@@ -250,6 +280,11 @@ describe('relatórios', () => {
       type: 'expense', amount: 4200, description: 'Pizza 🍕 com amigos', accountId: checking.id, categoryId: food, nature: 'variable',
       dueDate: '2026-11-07', status: 'paid', paidDate: '2026-11-07', tags: ['amigos'],
     });
+    const restaurant = await createSubcategory(app, user, food, 'Restaurante');
+    await createTransaction(app, user, {
+      type: 'expense', amount: 9000, description: 'Jantar', accountId: checking.id, categoryId: restaurant, nature: 'variable',
+      dueDate: '2026-11-09', status: 'paid', paidDate: '2026-11-09',
+    });
     const res = await request(app).get('/api/v1/reports/export.pdf?from=2026-11&to=2026-11').set(user.auth).buffer(true).parse(binary);
     expect(res.status).toBe(200);
     expect(res.headers['content-type']).toBe('application/pdf');
@@ -260,7 +295,7 @@ describe('relatórios', () => {
     expect(doc.getPageCount()).toBeGreaterThanOrEqual(1);
     expect(doc.getTitle()).toBe('Relatório financeiro — novembro de 2026');
     const text = pdfText(bytes);
-    for (const piece of ['Relatório financeiro', 'Resumo', 'Gastos por categoria', 'Alimentação', 'Gastos por tag', '#amigos', 'Evolução das dívidas', 'Maiores despesas', 'Pizza  com amigos', 'Saldo das contas em 30/11/2026', 'Página 1 de']) {
+    for (const piece of ['Relatório financeiro', 'Resumo', 'Gastos por categoria', 'Alimentação', '› Restaurante', '› Sem subcategoria', 'Gastos por tag', '#amigos', 'Evolução das dívidas', 'Maiores despesas', 'Pizza  com amigos', 'Saldo das contas em 30/11/2026', 'Página 1 de']) {
       expect(text, piece).toContain(piece);
     }
     expect(text).toContain('R$\u00a05.000,00');
@@ -282,8 +317,9 @@ describe('relatórios', () => {
     const user = await newUser();
     const { checking, food } = await scenario(user);
     const leisure = await categoryId(app, user, 'Lazer', 'expense');
+    const bar = await createSubcategory(app, user, leisure, 'Bar');
     const beer = (description: string, amount: number, date: string) =>
-      createTransaction(app, user, { type: 'expense', amount, description, accountId: checking.id, categoryId: leisure, nature: 'variable', dueDate: date, status: 'paid', paidDate: date, tags: ['bebida'] });
+      createTransaction(app, user, { type: 'expense', amount, description, accountId: checking.id, categoryId: bar, nature: 'variable', dueDate: date, status: 'paid', paidDate: date, tags: ['bebida'] });
     await beer('Cerveja', 2000, '2026-11-01');
     await beer('Cerveja', 3000, '2026-11-07');
     await beer('CERVEJA', 2500, '2026-11-08');
@@ -303,10 +339,12 @@ describe('relatórios', () => {
 
     const lanc = wb.getWorksheet('Lançamentos')!;
     expect(lanc.getTable('Lancamentos')).toBeDefined();
-    expect(lanc.getRow(1).values).toEqual([undefined, 'Data', 'Mês', 'Dia da semana', 'Descrição', 'Tipo', 'Categoria', 'Tags', 'Natureza', 'Conta', 'Conta de destino', 'Situação', 'Valor']);
+    expect(lanc.getRow(1).values).toEqual([
+      undefined, 'Data', 'Mês', 'Dia da semana', 'Descrição', 'Tipo', 'Categoria', 'Subcategoria', 'Tags', 'Natureza', 'Conta', 'Conta de destino', 'Situação', 'Valor',
+    ]);
     const firstBeer = lanc.getRows(2, lanc.rowCount - 1)!.find((r) => r.getCell(4).value === 'Cerveja')!;
-    // O Valor passou para a 12ª coluna.
-    expect([firstBeer.getCell(7).value, firstBeer.getCell(12).value]).toEqual(['bebida', -20]);
+    // A categoria é a principal, e o Valor passou para a 13ª coluna.
+    expect([6, 7, 8, 13].map((c) => firstBeer.getCell(c).value)).toEqual(['Lazer', 'Bar', 'bebida', -20]);
 
     // Sub-projeto 14 (H8): a tag com as vezes, o total, a variação e a média em fórmula.
     const tags = wb.getWorksheet('Por tag')!;
@@ -374,7 +412,7 @@ function pdfText(pdf: Buffer): string {
   return pieces.join('\n');
 }
 
-/** Latin-1 cobre os acentos; os extras do WinAnsi usados aqui são o travessão e as reticências. */
+/** Latin-1 cobre os acentos; os extras do WinAnsi usados aqui são o travessão, as reticências, o marcador e o › das subcategorias. */
 function winAnsi(bytes: Buffer): string {
-  return [...bytes].map((b) => (b === 0x97 ? '—' : b === 0x96 ? '–' : b === 0x85 ? '…' : b === 0x95 ? '•' : String.fromCharCode(b))).join('');
+  return [...bytes].map((b) => (b === 0x97 ? '—' : b === 0x96 ? '–' : b === 0x85 ? '…' : b === 0x95 ? '•' : b === 0x9b ? '›' : String.fromCharCode(b))).join('');
 }
