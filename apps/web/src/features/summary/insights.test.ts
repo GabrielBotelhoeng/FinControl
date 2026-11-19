@@ -28,7 +28,7 @@ describe('monthInsights (M2)', () => {
     expect(items.map((i) => i.id)).toEqual(['expense', 'net', 'up', 'down', 'top', 'budget', 'debts']);
     const byId = Object.fromEntries(items.map((i) => [i.id, i]));
     expect(byId.expense).toMatchObject({ tone: 'good', detail: expect.stringMatching(/25% a menos que em setembro de 2026/) });
-    expect(byId.net!.detail).toBe('Você guardou 40% do que entrou. A meta saudável é 20%.');
+    expect(byId.net).toMatchObject({ tone: 'good', detail: 'Você guardou 40% do que entrou. A meta saudável é 20%.' });
     expect(byId.up!.title).toMatch(/^Alimentação subiu R\$\s*500,00$/);
     expect(byId.down!.title).toMatch(/^Lazer caiu R\$\s*1\.000,00$/);
     expect(byId.budget).toMatchObject({ tone: 'bad', title: '1 categoria estourou o limite', detail: 'C1' });
@@ -42,6 +42,11 @@ describe('monthInsights (M2)', () => {
     }), null);
     expect(items.map((i) => i.id)).toEqual(['expense', 'net']);
     expect(items[1]).toMatchObject({ tone: 'bad', title: expect.stringMatching(/^Faltou R\$\s*500,00$/) });
+  });
+
+  it('sobrou pouco (abaixo de 20%): sem polegar para cima', () => {
+    const t = { income: 500000, expense: 495000, net: 5000, savingsRate: 0.01, previousIncome: 0, previousExpense: 0, incomeChange: null, expenseChange: null };
+    expect(monthInsights('2026-10', report({ totals: t }), null).find((i) => i.id === 'net')!.tone).toBe('neutral');
   });
 
   it('mês vazio: nenhuma frase', () => {

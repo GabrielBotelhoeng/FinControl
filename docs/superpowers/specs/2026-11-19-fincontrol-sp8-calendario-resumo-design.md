@@ -20,3 +20,20 @@
 | M1 | **Abre no mês passado**, que já fechou, com o seletor até o mês atual. É uma tela sem endpoint novo: usa `/reports` de um mês e `/budgets`. | O resumo de um mês pela metade engana. |
 | M2 | **Frases (`monthInsights`):** quanto gastou contra o mês anterior, quanto sobrou e a taxa de poupança (meta de 20%), a categoria que mais subiu e a que mais caiu, a maior despesa, o orçamento (estouradas ou todas dentro) e se as dívidas subiram ou caíram. Só entra o que tem dado. | São as perguntas que a pessoa faz ao fechar o mês. |
 | M3 | **Ícone com rótulo** (ponto positivo, de atenção ou informação) e cor; no fim, os links para o relatório e para o assistente. Fica no menu do computador e no Perfil. | Cor nunca sozinha. |
+
+## Revisão final (revisor novo)
+
+Nada grave. Ajustes:
+
+- **Calendário:**
+  - vai até 12 meses à frente, porque a leitura materializa recorrências (422 depois disso);
+  - cartão sem dia de fechamento ou de vencimento não derruba a tela;
+  - as faturas são buscadas em paralelo, só no próprio mês;
+  - dia só com receita a receber tem ponto e nome próprios;
+  - a grade de dias virou `group` (antes era `grid` sem linhas);
+  - os botões de dia ficaram mais largos a 360 px;
+  - um aviso explica que as faturas que ainda não abriram não entram.
+- **Resumo:**
+  - vai só até o mês passado, porque o mês pela metade engana;
+  - "Sobrou" só tem tom positivo a partir da meta de 20%;
+  - a tela espera o orçamento e avisa se ele falhar.

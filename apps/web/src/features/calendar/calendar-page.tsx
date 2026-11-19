@@ -1,5 +1,5 @@
 import {
-  daysInMonth, monthOf, todayInSaoPaulo, type CalendarDTO, type CalendarItemDTO, type YearMonth,
+  addMonthsToYm, daysInMonth, monthOf, todayInSaoPaulo, type CalendarDTO, type CalendarItemDTO, type YearMonth,
 } from '@fincontrol/shared';
 import { useQuery } from '@tanstack/react-query';
 import { CalendarDays, CheckCircle2, CircleAlert, CreditCard } from 'lucide-react';
@@ -23,17 +23,18 @@ export function useCalendar(month: YearMonth) {
   return useQuery({ queryKey: ['calendar', month], queryFn: () => api.get<CalendarDTO>('/calendar', { month }) });
 }
 
-/** Situação do dia para o ponto colorido (K4): vencida > a pagar > tudo pago. */
-function dayTone(items: CalendarItemDTO[]): 'overdue' | 'pending' | 'done' | null {
+/** Situação do dia para o ponto colorido (K4): vencida > a pagar > a receber > tudo em dia. */
+function dayTone(items: CalendarItemDTO[]): 'overdue' | 'pending' | 'receive' | 'done' | null {
   if (items.length === 0) return null;
   const outgoing = items.filter((i) => i.kind === 'invoice' || i.type === 'expense');
   if (outgoing.some((i) => (i.kind === 'invoice' ? i.status === 'overdue' && i.remaining > 0 : i.overdue))) return 'overdue';
   if (outgoing.some((i) => (i.kind === 'invoice' ? i.remaining > 0 : i.status === 'pending'))) return 'pending';
+  if (items.some((i) => i.kind === 'transaction' && i.type === 'income' && i.status === 'pending')) return 'receive';
   return 'done';
 }
 
-const TONE = { overdue: 'bg-expense', pending: 'bg-primary', done: 'bg-income' } as const;
-const TONE_LABEL = { overdue: 'conta vencida', pending: 'contas a pagar', done: 'tudo pago' } as const;
+const TONE = { overdue: 'bg-expense', pending: 'bg-primary', receive: 'bg-muted', done: 'bg-income' } as const;
+const TONE_LABEL = { overdue: 'conta vencida', pending: 'contas a pagar', receive: 'a receber', done: 'tudo em dia' } as const;
 
 function ItemRow({ item }: { item: CalendarItemDTO }) {
   const pay = usePayToggle();
@@ -113,6 +114,7 @@ export default function CalendarPage() {
         description="O que vence em cada dia do mês: contas, receitas e faturas do cartão."
         actions={
           <MonthPicker
+            max={addMonthsToYm(monthOf(today), 12)}
             value={month}
             onChange={(v) => {
               setMonth(v);
@@ -144,7 +146,7 @@ export default function CalendarPage() {
               ))}
             </Panel>
 
-            <Panel className="p-3 sm:p-5">
+            <Panel className="p-2 sm:p-5">
               <div className="grid grid-cols-7 gap-1 text-center text-xs text-muted" aria-hidden>
                 {WEEKDAYS.map((w) => (
                   <span key={w} className="py-1">
@@ -152,7 +154,7 @@ export default function CalendarPage() {
                   </span>
                 ))}
               </div>
-              <div role="grid" aria-label="Dias do mês" className="grid grid-cols-7 gap-1">
+              <div role="group" aria-label="Dias do mês" className="grid grid-cols-7 gap-0.5 sm:gap-1">
                 {Array.from({ length: firstWeekday }, (_, i) => (
                   <span key={`vazio-${i}`} aria-hidden />
                 ))}
@@ -182,7 +184,8 @@ export default function CalendarPage() {
               <div className="mt-4 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted" aria-hidden>
                 <span className="inline-flex items-center gap-1.5"><span className="h-1.5 w-1.5 rounded-full bg-expense" />Vencida</span>
                 <span className="inline-flex items-center gap-1.5"><span className="h-1.5 w-1.5 rounded-full bg-primary" />A pagar</span>
-                <span className="inline-flex items-center gap-1.5"><span className="h-1.5 w-1.5 rounded-full bg-income" />Tudo pago</span>
+                <span className="inline-flex items-center gap-1.5"><span className="h-1.5 w-1.5 rounded-full bg-muted" />A receber</span>
+                <span className="inline-flex items-center gap-1.5"><span className="h-1.5 w-1.5 rounded-full bg-income" />Tudo em dia</span>
               </div>
             </Panel>
           </div>
@@ -207,6 +210,7 @@ export default function CalendarPage() {
                 Há contas vencidas neste mês.
               </p>
             )}
+            <p className="pt-2 text-xs text-muted">Faturas de cartão que ainda não abriram (parcelas futuras) aparecem quando a fatura abrir.</p>
             {data.days.length > 0 && data.totals.toPay === 0 && (
               <p className="inline-flex items-center gap-2 pt-2 text-sm font-medium text-income">
                 <CheckCircle2 aria-hidden className="h-4 w-4" strokeWidth={2} />

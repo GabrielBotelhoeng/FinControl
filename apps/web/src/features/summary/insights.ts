@@ -34,7 +34,8 @@ export function monthInsights(month: YearMonth, report: ReportDTO, budget: Budge
     out.push(
       t.net >= 0
         ? {
-            id: 'net', tone: 'good', title: `Sobrou ${formatBRL(t.net)}`,
+            // Positivo só a partir da meta de 20%; abaixo dela, sobrar é bom mas não é motivo de comemorar (revisão final).
+            id: 'net', tone: t.savingsRate !== null && t.savingsRate >= 0.2 ? 'good' : 'neutral', title: `Sobrou ${formatBRL(t.net)}`,
             detail: t.savingsRate !== null ? `Você guardou ${pct(t.savingsRate)} do que entrou. A meta saudável é 20%.` : null,
           }
         : { id: 'net', tone: 'bad', title: `Faltou ${formatBRL(-t.net)}`, detail: 'Você gastou mais do que recebeu no mês.' },

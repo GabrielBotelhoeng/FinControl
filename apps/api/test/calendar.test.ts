@@ -46,6 +46,8 @@ describe('calendário de contas', () => {
     await createTransaction(app, user, { type: 'expense', amount: 100, description: 'X', accountId: checking.id, categoryId: food, nature: 'fixed', dueDate: '2026-11-12' });
     expect((await request(app).get('/api/v1/calendar').set(user.auth)).body.month).toBe('2026-11');
     expect((await request(app).get('/api/v1/calendar?month=2026-13').set(user.auth)).status).toBe(400);
+    expect((await request(app).get('/api/v1/calendar?month=2027-11').set(user.auth)).status).toBe(200);
+    expect((await request(app).get('/api/v1/calendar?month=2027-12').set(user.auth)).status).toBe(422);
     const other = await newUser();
     expect((await request(app).get('/api/v1/calendar').set(other.auth)).body.days).toEqual([]);
   });

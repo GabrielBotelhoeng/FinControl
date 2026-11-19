@@ -34,7 +34,7 @@ describe('CalendarPage', () => {
     const totals = await screen.findByRole('group', { name: 'Totais do mês' });
     expect(totals).toHaveTextContent(/A pagar\s*R\$\s*450,00/);
     expect(totals).toHaveTextContent(/Recebido\s*R\$\s*3\.000,00/);
-    const grid = screen.getByRole('grid', { name: 'Dias do mês' });
+    const grid = screen.getByRole('group', { name: 'Dias do mês' });
     expect(within(grid).getByRole('button', { name: new RegExp(`^03/.*1 item, conta vencida`) })).toBeInTheDocument();
     expect(within(grid).getByRole('button', { name: new RegExp(`^05/.*2 itens, contas a pagar`) })).toBeInTheDocument();
     expect(screen.getByText('Há contas vencidas neste mês.')).toBeInTheDocument();
@@ -43,7 +43,7 @@ describe('CalendarPage', () => {
   it('tocar num dia lista o que vence, com "Pagar" e o link da fatura', async () => {
     const client = fakeApi({ 'GET /calendar': calendar, 'POST /transactions/t1/pay': {} });
     renderApp(<CalendarPage />, { api: client });
-    const grid = await screen.findByRole('grid', { name: 'Dias do mês' });
+    const grid = await screen.findByRole('group', { name: 'Dias do mês' });
     await userEvent.click(within(grid).getByRole('button', { name: /^05\// }));
     const list = screen.getByRole('region', { name: /^Contas de 05\// });
     expect(list).toHaveTextContent('Salário');

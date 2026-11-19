@@ -2,6 +2,7 @@ import {
   addMonthsToYm, endOfMonth, monthOf, startOfMonth, todayInSaoPaulo,
   type CalendarDTO, type CalendarItemDTO, type DateOnly, type YearMonth,
 } from '@fincontrol/shared';
+import { UnprocessableError } from '../../http/errors';
 import { fromDateOnly, toDateOnly } from '../../infra/date-mapping';
 import type { Db } from '../../infra/prisma';
 import type { AccountsRepository } from '../accounts/accounts.repository';
@@ -16,20 +17,27 @@ export type CalendarServiceDeps = {
   clock: () => Date;
 };
 
+export const CALENDAR_MAX_MONTHS_AHEAD = 12;
+
 /** Calendário de contas (sub-projeto 8, K1–K3): o que vence em cada dia do mês. */
 export function createCalendarService(deps: CalendarServiceDeps) {
   return {
     async month(userId: string, month?: YearMonth): Promise<CalendarDTO> {
       const today = todayInSaoPaulo(deps.clock());
       const m = month ?? monthOf(today);
+      // A leitura materializa recorrências: sem limite, navegar anos à frente gravaria lançamentos até lá (revisão final).
+      if (m > addMonthsToYm(monthOf(today), CALENDAR_MAX_MONTHS_AHEAD)) {
+        throw new UnprocessableError(`O calendário vai até ${CALENDAR_MAX_MONTHS_AHEAD} meses à frente.`);
+      }
       const from = startOfMonth(m);
       const to = endOfMonth(m);
       // As recorrências do mês viram lançamentos antes da leitura, como em Lançamentos.
       await deps.recurrences.materialize(userId, to);
 
       const accounts = await deps.accountsRepo.list(userId, true);
-      const cards = accounts.filter((a) => a.type === 'credit_card');
-      const cardIds = cards.map((c) => c.id);
+      const cardIds = accounts.filter((a) => a.type === 'credit_card').map((c) => c.id);
+      // Cartão sem dia de fechamento ou de vencimento não tem fatura: não derruba o calendário inteiro (revisão final).
+      const cards = accounts.filter((a) => a.type === 'credit_card' && a.closingDay != null && a.dueDay != null);
 
       // K1: receitas e despesas pelo vencimento, fora de cartão (a compra no cartão aparece na fatura). Transferências ficam de fora.
       const rows = await deps.db.transaction.findMany({
@@ -57,9 +65,9 @@ export function createCalendarService(deps: CalendarServiceDeps) {
         else totals[r.status === 'paid' ? 'received' : 'toReceive'] += amount;
       }
 
-      // K2: faturas que vencem no mês. O vencimento cai no mês da fatura ou no seguinte, então basta olhar os dois.
-      for (const card of cards) {
-        const invoices = await deps.cards.listInvoices(userId, card.id, addMonthsToYm(m, -1), m);
+      // K2: faturas que vencem no mês. O vencimento sempre cai no próprio mês da fatura (`invoiceDates`).
+      const perCard = await Promise.all(cards.map(async (card) => ({ card, invoices: await deps.cards.listInvoices(userId, card.id, m, m) })));
+      for (const { card, invoices } of perCard) {
         for (const inv of invoices) {
           if (inv.dueDate < from || inv.dueDate > to || inv.amount <= 0) continue;
           const remaining = Math.max(inv.amount - inv.paid, 0);

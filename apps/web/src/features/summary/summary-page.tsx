@@ -23,7 +23,9 @@ export default function SummaryPage() {
   const [month, setMonth] = useState<YearMonth>(addMonthsToYm(current, -1));
   const report = useReport(month, month);
   const budget = useBudgetMonth(month);
-  const insights = report.data ? monthInsights(month, report.data, budget.data ?? null) : null;
+  // Espera o orçamento (ou a falha dele) para a tela não pular quando a frase do orçamento chega depois.
+  const insights = report.data && !budget.isPending ? monthInsights(month, report.data, budget.data ?? null) : null;
+  const previous = addMonthsToYm(current, -1);
 
   return (
     <>
@@ -31,10 +33,13 @@ export default function SummaryPage() {
         light="Resumo do"
         bold="mês"
         description="O que mudou no mês em poucas frases: gastos, sobra, categorias, orçamento e dívidas."
-        actions={<MonthPicker value={month} onChange={setMonth} max={current} />}
+        actions={<MonthPicker value={month} onChange={setMonth} max={previous} />}
       />
 
-      {report.isPending && <ListSkeleton />}
+      {(report.isPending || budget.isPending) && <ListSkeleton />}
+      {budget.isError && !report.isError && (
+        <p className="mb-4 text-sm text-muted">O orçamento não carregou: a frase dele ficou de fora.</p>
+      )}
       {report.isError && <ErrorState message={report.error.message} onRetry={() => report.refetch()} />}
       {insights && insights.length === 0 && (
         <EmptyState
