@@ -16,4 +16,9 @@ describe('detectRepeatedSpending (S1, S2)', () => {
     expect(r[1]).toMatchObject({ monthly: 4157, yearly: 49884, months: 3, lastDate: '2026-10-05', nextDate: '2026-11-04', recurring: false });
     expect(r[0]!.recurring).toBe(true);
   });
+
+  it('quantidade par de pagamentos: a mediana é a média dos dois do meio', () => {
+    const r = detectRepeatedSpending([8500, 8500, 11500, 11500].map((a, i) => pay('Plano', a, `2026-0${6 + i}-10`)));
+    expect(r).toHaveLength(1);
+  });
 });

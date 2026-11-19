@@ -71,7 +71,6 @@ export default function SummaryPage() {
               );
             })}
           </ul>
-          <RepeatedSpendingPanel />
           <p className="text-sm text-muted">
             Quer os números completos?{' '}
             <Link to="/relatorios" className="font-medium text-primary hover:underline">
@@ -83,6 +82,11 @@ export default function SummaryPage() {
             </Link>
             .
           </p>
+        </div>
+      )}
+      {insights && (
+        <div className="mt-6">
+          <RepeatedSpendingPanel />
         </div>
       )}
     </>

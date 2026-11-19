@@ -32,7 +32,7 @@ export function RepeatedSpendingPanel() {
             <span className="min-w-0">
               <span className="block break-words text-sm font-medium">{r.description}</span>
               <span className="text-xs text-muted">
-                {`${r.months} meses seguidos · último em ${formatDate(r.lastDate)}${r.recurring ? ' · já é recorrência' : ''}`}
+                {`Pago em ${r.months} meses · último em ${formatDate(r.lastDate)}${r.recurring ? ' · já é recorrência' : ''}`}
               </span>
             </span>
             <span className="text-right">

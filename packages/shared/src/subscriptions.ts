@@ -32,7 +32,9 @@ export function detectRepeatedSpending(items: SpendingInput[]): RepeatedSpending
     const months = new Set(sorted.map((i) => monthOf(i.date)));
     if (months.size < 3 || months.size !== sorted.length) continue;
     const amounts = sorted.map((i) => i.amount).sort((a, b) => a - b);
-    const median = amounts[Math.floor(amounts.length / 2)]!;
+    const mid = Math.floor(amounts.length / 2);
+    // Quantidade par: a média dos dois do meio (CodeRabbit).
+    const median = amounts.length % 2 === 0 ? (amounts[mid - 1]! + amounts[mid]!) / 2 : amounts[mid]!;
     if (amounts.some((a) => Math.abs(a - median) > median * 0.15)) continue;
     const recent = sorted.slice(-3);
     const monthly = Math.round(recent.reduce((s, i) => s + i.amount, 0) / recent.length);
