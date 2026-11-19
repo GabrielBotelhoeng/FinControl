@@ -1,5 +1,6 @@
 import type { Router } from 'express';
 import { accountsRouter } from '../modules/accounts/accounts.routes';
+import { assetsRouter } from '../modules/assets/assets.routes';
 import { assistantRouter } from '../modules/assistant/assistant.routes';
 import { banksRouter } from '../modules/bank-rates/bank-rates.routes';
 import { budgetsRouter, planningRouter } from '../modules/budgets/budgets.routes';
@@ -13,6 +14,7 @@ import { goalsRouter } from '../modules/goals/goals.routes';
 import { importsRouter } from '../modules/imports/imports.routes';
 import { repeatedRouter } from '../modules/repeated/repeated.routes';
 import { loansRouter } from '../modules/loans/loans.routes';
+import { netWorthRouter } from '../modules/net-worth/net-worth.routes';
 import { reportsRouter } from '../modules/reports/reports.routes';
 import { notificationsRouter } from '../modules/notifications/notifications.routes';
 import { pushRouter } from '../modules/push/push.routes';
@@ -30,6 +32,8 @@ export function registerRoutes(api: Router, c: Container, opts: { rateLimitEnabl
   api.use('/banks', banksRouter(c.bankRates));
   api.use('/loans', loansRouter(c.loans));
   api.use('/debts', debtsRouter(c.debts));
+  api.use('/assets', assetsRouter(c.assets));
+  api.use('/net-worth', netWorthRouter(c.netWorth));
   api.use('/calendar', calendarRouter(c.calendar));
   api.use('/repeated', repeatedRouter(c.repeated));
   api.use('/imports', importsRouter(c.imports, opts));

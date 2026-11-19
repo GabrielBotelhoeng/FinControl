@@ -1,10 +1,11 @@
 import {
-  addMonthsToYm, endOfMonth, maxDate, monthOf, startOfMonth, todayInSaoPaulo,
+  accountTypeSchema, addMonthsToYm, assetValueAt, endOfMonth, maxDate, monthOf, startOfMonth, todayInSaoPaulo,
   type AccountType, type CategorySpendDTO, type DashboardSummaryDTO, type EvolutionPointDTO, type UpcomingItemDTO, type YearMonth,
 } from '@fincontrol/shared';
 import { computeForecast, percentChange } from '../../domain/balance';
 import { debtCommitment, reserveCoverage, savingsRate } from '../../domain/health';
 import type { AccountsRepository } from '../accounts/accounts.repository';
+import type { AssetsRepository } from '../assets/assets.repository';
 import type { BudgetsService } from '../budgets/budgets.service';
 import type { CardsService } from '../cards/cards.service';
 import type { LoansRepository } from '../loans/loans.repository';
@@ -19,6 +20,8 @@ const UPCOMING_LIMIT = 10;
 /** Contas que entram na reserva: liquidez imediata. Investimentos ficam de fora (liquidez não garantida). */
 const LIQUID_TYPES: AccountType[] = ['checking', 'savings', 'wallet'];
 const RESERVE_WINDOW_MONTHS = 3;
+/** Patrimônio líquido (sub-projeto 11, B1): todas as contas menos os cartões, que entram só como dívida. */
+const NET_WORTH_TYPES: AccountType[] = accountTypeSchema.options.filter((type) => type !== 'credit_card');
 
 export type DashboardServiceDeps = {
   repo: DashboardRepository;
@@ -29,6 +32,7 @@ export type DashboardServiceDeps = {
   loansRepo: Pick<LoansRepository, 'installmentsDueIn'>;
   budgets: Pick<BudgetsService, 'summaryFor'>;
   debts: DebtsReader;
+  assets: Pick<AssetsRepository, 'list'>;
   clock: () => Date;
 };
 
@@ -50,7 +54,7 @@ export function createDashboardService(deps: DashboardServiceDeps) {
       const reserveWindow = Array.from({ length: RESERVE_WINDOW_MONTHS }, (_, i) => addMonthsToYm(current, -(i + 1)));
       // A dívida de cartão (dashboard.cards.ts) entra no mesmo Promise.all: roda em paralelo e, se falhar,
       // a rejeição é tratada junto com as demais (nunca fica uma promise solta sem handler).
-      const [now, before, totalBalance, pending, pendingCount, overdueCount, upcomingTx, liquidBalance, recent, debt, loanPayments, budget, debtSources] = await Promise.all([
+      const [now, before, totalBalance, pending, pendingCount, overdueCount, upcomingTx, liquidBalance, recent, debt, loanPayments, budget, debtSources, netWorthBalance, assets] = await Promise.all([
         repo.paidTotalsByType(userId, startOfMonth(m), monthEnd),
         repo.paidTotalsByType(userId, startOfMonth(previous), endOfMonth(previous)),
         repo.balanceAt(userId),
@@ -68,10 +72,13 @@ export function createDashboardService(deps: DashboardServiceDeps) {
         deps.loansRepo.installmentsDueIn(userId, current),
         deps.budgets.summaryFor(userId, m),
         deps.debts.load(userId),
+        repo.balanceAt(userId, t, NET_WORTH_TYPES),
+        deps.assets.list(userId),
       ]);
       // Comprometimento (C13): dívida do cartão + parcelas de empréstimo com vencimento no mês corrente.
       const debtPayments = debt.debtPayments + loanPayments;
       const reserve = reserveCoverage(liquidBalance, recent.map((r) => r.expense));
+      const debts = debtsAt(debtSources, t);
 
       // "A pagar" (decisão R16): lançamentos pendentes e faturas fechadas/vencidas mesclados por vencimento,
       // respeitando o mesmo limite de sempre. As faturas entram independente do mês consultado (`m`).
@@ -92,7 +99,9 @@ export function createDashboardService(deps: DashboardServiceDeps) {
         overdueCount: overdueCount + debt.overdueCount,
         upcoming,
         budget,
-        debts: debtsAt(debtSources, t),
+        debts,
+        // B9: o mesmo número de hoje da página do patrimônio.
+        netWorth: netWorthBalance + assets.reduce((sum, a) => sum + assetValueAt(a.valuations, t), 0) - debts.total,
         health: {
           savingsRate: savingsRate(now.income, now.expense),
           reserveMonths: reserve.months,

@@ -26,6 +26,35 @@ export type CsvRow = {
 };
 
 export function createReportsRepository(db: Db) {
+  /**
+   * Saldo no fim de cada dia de `dates` (na mesma ordem) das contas não arquivadas, sem cartões (R7): uma leitura só,
+   * e cada data sai em memória (a série do patrimônio, B8 do sub-projeto 11, tem 12 datas).
+   */
+  async function balancesAt(userId: string, dates: DateOnly[]): Promise<ReportBalanceDTO[][]> {
+    const accounts = await db.account.findMany({
+      where: { userId, archivedAt: null, type: { not: 'credit_card' } },
+      orderBy: [{ name: 'asc' }, { id: 'asc' }],
+      select: { id: true, name: true, type: true, initialBalance: true },
+    });
+    if (accounts.length === 0 || dates.length === 0) return dates.map(() => []);
+    const ids = accounts.map((a) => a.id);
+    const last = dates.reduce((a, b) => (a > b ? a : b));
+    const until = { userId, status: 'paid' as const, paidDate: { lte: fromDateOnly(last) } };
+    const [own, incoming] = await Promise.all([
+      db.transaction.groupBy({ by: ['accountId', 'type', 'paidDate'], where: { ...until, accountId: { in: ids } }, _sum: { amount: true } }),
+      db.transaction.groupBy({ by: ['destinationAccountId', 'paidDate'], where: { ...until, type: 'transfer', destinationAccountId: { in: ids } }, _sum: { amount: true } }),
+    ]);
+    const moves = [
+      ...own.flatMap((g) => (g.paidDate ? [{ accountId: g.accountId, date: toDateOnly(g.paidDate), delta: (g.type === 'income' ? 1 : -1) * Number(g._sum.amount ?? 0n) }] : [])),
+      ...incoming.flatMap((g) => (g.destinationAccountId && g.paidDate ? [{ accountId: g.destinationAccountId, date: toDateOnly(g.paidDate), delta: Number(g._sum.amount ?? 0n) }] : [])),
+    ];
+    return dates.map((at) => {
+      const balance = new Map(accounts.map((a) => [a.id, Number(a.initialBalance)]));
+      for (const m of moves) if (m.date <= at) balance.set(m.accountId, balance.get(m.accountId)! + m.delta);
+      return accounts.map((a) => ({ accountId: a.id, name: a.name, type: a.type as AccountType, balance: balance.get(a.id)! }));
+    });
+  }
+
   return {
     /** Total por categoria das receitas ou despesas pagas no período. */
     async totalsByCategory(userId: string, type: 'income' | 'expense', from: DateOnly, to: DateOnly): Promise<Map<string, number>> {
@@ -73,28 +102,10 @@ export function createReportsRepository(db: Db) {
 
     /** Saldo no fim do dia `at` das contas não arquivadas, sem cartões (R7). */
     async balances(userId: string, at: DateOnly): Promise<ReportBalanceDTO[]> {
-      const accounts = await db.account.findMany({
-        where: { userId, archivedAt: null, type: { not: 'credit_card' } },
-        orderBy: [{ name: 'asc' }, { id: 'asc' }],
-        select: { id: true, name: true, type: true, initialBalance: true },
-      });
-      if (accounts.length === 0) return [];
-      const ids = accounts.map((a) => a.id);
-      const until = { userId, status: 'paid' as const, paidDate: { lte: fromDateOnly(at) } };
-      const [own, incoming] = await Promise.all([
-        db.transaction.groupBy({ by: ['accountId', 'type'], where: { ...until, accountId: { in: ids } }, _sum: { amount: true } }),
-        db.transaction.groupBy({ by: ['destinationAccountId'], where: { ...until, type: 'transfer', destinationAccountId: { in: ids } }, _sum: { amount: true } }),
-      ]);
-      const balance = new Map(accounts.map((a) => [a.id, Number(a.initialBalance)]));
-      for (const g of own) {
-        const value = Number(g._sum.amount ?? 0n);
-        balance.set(g.accountId, balance.get(g.accountId)! + (g.type === 'income' ? value : -value));
-      }
-      for (const g of incoming) {
-        if (g.destinationAccountId) balance.set(g.destinationAccountId, balance.get(g.destinationAccountId)! + Number(g._sum.amount ?? 0n));
-      }
-      return accounts.map((a) => ({ accountId: a.id, name: a.name, type: a.type as AccountType, balance: balance.get(a.id)! }));
+      return (await balancesAt(userId, [at]))[0]!;
     },
+
+    balancesAt,
 
     /**
      * Lançamentos do período para o CSV (R9), por data de competência: a de pagamento, ou o vencimento quando
