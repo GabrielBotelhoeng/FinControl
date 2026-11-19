@@ -15,6 +15,7 @@ import { OnboardingCard } from './onboarding-card';
 import { useAccounts } from '../accounts/api';
 import { useAssistantConfig } from '../assistant/api';
 import { useCategories } from '../categories/api';
+import { categoryOf } from '../categories/tree';
 import { TransactionForm } from '../transactions/transaction-form';
 import { TransactionRow } from '../transactions/transaction-row';
 import { useByCategory, useEvolution, useSummary } from './api';
@@ -167,7 +168,7 @@ export default function DashboardPage() {
                     tx={item}
                     account={accountById.get(item.accountId)}
                     destination={item.destinationAccountId ? accountById.get(item.destinationAccountId) : undefined}
-                    category={item.categoryId ? categoryById.get(item.categoryId) : undefined}
+                    {...categoryOf(categoryById, item.categoryId)}
                     onEdit={() => setEditing(item)}
                   />
                 ),

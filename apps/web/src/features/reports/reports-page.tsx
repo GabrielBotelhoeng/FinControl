@@ -107,6 +107,20 @@ function CategoryList({ title, rows, kind }: { title: string; rows: ReportCatego
                   <span>{`${percent.format(r.share)} do total · antes ${formatBRL(r.previous)}`}</span>
                   <Change change={r.change} kind={kind} total={r.total} />
                 </div>
+                {/* Sub-projeto 15 (U7): o detalhe por subcategoria. Durante o deploy, a API antiga ainda não manda o campo. */}
+                {(r.subcategories ?? []).length > 0 && (
+                  <ul aria-label={`Subcategorias de ${r.name}`} className="mt-0.5 grid gap-1 border-l border-border pl-3 text-xs">
+                    {r.subcategories.map((s) => (
+                      <li key={s.categoryId ?? 'direto'} aria-label={s.name} className="flex items-center justify-between gap-3">
+                        <span className="min-w-0 truncate text-muted">{s.name}</span>
+                        <span className="flex shrink-0 items-center gap-2">
+                          <span className="tabular">{formatBRL(s.total)}</span>
+                          <Change change={s.change} kind={kind} total={s.total} />
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </li>
             );
           })}

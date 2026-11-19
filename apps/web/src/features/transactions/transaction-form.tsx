@@ -11,6 +11,7 @@ import { Segmented } from '../../components/ui/segmented';
 import { ApiError } from '../../lib/api-client';
 import { useAccounts } from '../accounts/api';
 import { useCategories } from '../categories/api';
+import { categoryOptions } from '../categories/tree';
 import { useTags } from '../tags/api';
 import { useCreateTransaction, useDeleteTransaction, useUpdateTransaction, type TransactionFields } from './api';
 import { CardPurchaseFields } from './card-purchase-fields';
@@ -64,7 +65,8 @@ export function TransactionForm({ open, onOpenChange, transaction, defaultType =
   const accountList = (accounts.data ?? [])
     .filter((a) => a.archivedAt === null || a.id === transaction?.accountId)
     .filter((a) => !editing || editingCardPurchase || transaction?.type === 'transfer' || a.type !== 'credit_card');
-  const categoryList = (categories.data ?? []).filter((c) => c.type === type);
+  // Sub-projeto 15 (U4): cada categoria seguida das subcategorias dela; a primeira principal é o padrão.
+  const categoryList = type === 'transfer' ? [] : categoryOptions(categories.data ?? [], type);
   const firstAccount = accountList[0]?.id ?? '';
   const effectiveAccount = accountId || firstAccount;
   const effectiveCategory = type === 'transfer' ? null : categoryId || categoryList[0]?.id || null;
@@ -204,7 +206,7 @@ export function TransactionForm({ open, onOpenChange, transaction, defaultType =
                 <Select value={effectiveCategory ?? ''} onChange={(e) => setCategoryId(e.target.value)}>
                   {categoryList.map((c) => (
                     <option key={c.id} value={c.id}>
-                      {c.name}
+                      {c.label}
                     </option>
                   ))}
                 </Select>

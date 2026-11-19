@@ -12,6 +12,7 @@ import { EmptyState, ErrorState, ListSkeleton } from '../../components/ui/states
 import { cn } from '../../lib/cn';
 import { useAccounts } from '../accounts/api';
 import { useCategories } from '../categories/api';
+import { categoryOf } from '../categories/tree';
 import { useTags } from '../tags/api';
 import { useTransactions } from './api';
 import { groupByDay } from './group-by-day';
@@ -168,7 +169,7 @@ export default function TransactionsPage() {
                       tx={tx}
                       account={accountById.get(tx.accountId)}
                       destination={tx.destinationAccountId ? accountById.get(tx.destinationAccountId) : undefined}
-                      category={tx.categoryId ? categoryById.get(tx.categoryId) : undefined}
+                      {...categoryOf(categoryById, tx.categoryId)}
                       onEdit={() => setEditing(tx)}
                     />
                   ))}

@@ -8,6 +8,7 @@ import { ApiError } from '../../lib/api-client';
 import { formatBRL } from '../../lib/format';
 import { useBudgetMonth } from '../planning/api';
 import { useDeleteCategory } from './api';
+import { categoryOptions } from './tree';
 
 type Props = { category: CategoryDTO; siblings: CategoryDTO[]; onClose: () => void };
 
@@ -33,9 +34,15 @@ function BudgetMergeNote({ from, to }: { from: CategoryDTO; to: CategoryDTO | un
 /** Exclui direto; se a API responder 409 (em uso), pede a categoria que recebe os lançamentos. */
 export function DeleteCategoryDialog({ category, siblings, onClose }: Props) {
   const remove = useDeleteCategory();
-  const options = siblings.filter((c) => c.id !== category.id);
+  // Sub-projeto 15 (U9): a categoria leva as subcategorias, que não podem ser o destino; o da subcategoria é a principal.
+  const children = siblings.filter((c) => c.parentId === category.id);
+  const removed = new Set([category.id, ...children.map((c) => c.id)]);
+  const options = categoryOptions(siblings, category.type).filter((o) => !removed.has(o.id));
   const [inUse, setInUse] = useState(false);
-  const [target, setTarget] = useState(options[0]?.id ?? '');
+  const [target, setTarget] = useState(category.parentId ?? options[0]?.id ?? '');
+  const targetCategory = siblings.find((c) => c.id === target);
+  // O limite vai para a categoria principal do destino (R13 a).
+  const targetRoot = targetCategory?.parentId ? siblings.find((c) => c.id === targetCategory.parentId) : targetCategory;
 
   async function run(reassignTo?: string) {
     try {
@@ -50,18 +57,23 @@ export function DeleteCategoryDialog({ category, siblings, onClose }: Props) {
 
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()} title={`Excluir “${category.name}”`} description={inUse ? 'Esta categoria tem lançamentos. Escolha para onde eles vão antes de excluir.' : 'Esta ação não pode ser desfeita.'}>
+      {children.length > 0 && (
+        <p role="note" className="mb-4 text-sm text-muted">
+          {`As subcategorias ${children.map((c) => `“${c.name}”`).join(', ')} também serão excluídas.`}
+        </p>
+      )}
       {inUse ? (
         <div className="grid gap-5">
           <Field label="Mover os lançamentos para">
             <Select value={target} onChange={(e) => setTarget(e.target.value)}>
               {options.map((c) => (
                 <option key={c.id} value={c.id}>
-                  {c.name}
+                  {c.label}
                 </option>
               ))}
             </Select>
           </Field>
-          {category.type === 'expense' && <BudgetMergeNote from={category} to={options.find((c) => c.id === target)} />}
+          {category.type === 'expense' && <BudgetMergeNote from={category} to={targetRoot} />}
           <div className="flex justify-end gap-2">
             <Button variant="ghost" onClick={onClose}>
               Cancelar
