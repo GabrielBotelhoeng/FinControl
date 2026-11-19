@@ -4,7 +4,7 @@ import {
 import { useQuery } from '@tanstack/react-query';
 import { CalendarDays, CheckCircle2, CircleAlert, CreditCard } from 'lucide-react';
 import { useState } from 'react';
-import { Link } from 'react-router';
+import { Link, useSearchParams } from 'react-router';
 import { toast } from 'sonner';
 import { Button } from '../../components/ui/button';
 import { MonthPicker } from '../../components/ui/month-picker';
@@ -47,7 +47,7 @@ function ItemRow({ item }: { item: CalendarItemDTO }) {
           <span className="min-w-0">
             <span className="block truncate text-sm font-medium">{`Fatura ${item.cardName}`}</span>
             <span className={cn('text-xs', item.status === 'overdue' && !paid ? 'text-expense' : 'text-muted')}>
-              {paid ? 'Paga' : item.status === 'overdue' ? 'Vencida' : item.status === 'open' ? 'Aberta' : 'Fechada'}
+              {paid ? 'Paga' : item.future ? 'Prevista (parcelas já lançadas)' : item.status === 'overdue' ? 'Vencida' : item.status === 'open' ? 'Aberta' : 'Fechada'}
             </span>
           </span>
         </span>
@@ -93,7 +93,10 @@ function ItemRow({ item }: { item: CalendarItemDTO }) {
 
 export default function CalendarPage() {
   const today = todayInSaoPaulo();
-  const [month, setMonth] = useState<YearMonth>(monthOf(today));
+  // `?mes=AAAA-MM` abre no mês do painel (CodeRabbit); inválido ou ausente, o mês atual.
+  const [params] = useSearchParams();
+  const asked = params.get('mes');
+  const [month, setMonth] = useState<YearMonth>(asked && /^\d{4}-(0[1-9]|1[0-2])$/.test(asked) ? asked : monthOf(today));
   const [picked, setPicked] = useState<string | null>(null);
   const calendar = useCalendar(month);
   const data = calendar.data;
@@ -210,7 +213,6 @@ export default function CalendarPage() {
                 Há contas vencidas neste mês.
               </p>
             )}
-            <p className="pt-2 text-xs text-muted">Faturas de cartão que ainda não abriram (parcelas futuras) aparecem quando a fatura abrir.</p>
             {data.days.length > 0 && data.totals.toPay === 0 && (
               <p className="inline-flex items-center gap-2 pt-2 text-sm font-medium text-income">
                 <CheckCircle2 aria-hidden className="h-4 w-4" strokeWidth={2} />

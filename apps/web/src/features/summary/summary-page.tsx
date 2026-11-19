@@ -38,7 +38,9 @@ export default function SummaryPage() {
 
       {(report.isPending || budget.isPending) && <ListSkeleton />}
       {budget.isError && !report.isError && (
-        <p className="mb-4 text-sm text-muted">O orçamento não carregou: a frase dele ficou de fora.</p>
+        <div className="mb-4">
+          <ErrorState message={`O orçamento não carregou, e a frase dele ficou de fora. ${budget.error.message}`} onRetry={() => budget.refetch()} />
+        </div>
       )}
       {report.isError && <ErrorState message={report.error.message} onRetry={() => report.refetch()} />}
       {insights && insights.length === 0 && (

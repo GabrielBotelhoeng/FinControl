@@ -132,7 +132,7 @@ export default function DashboardPage() {
                   {summary.data.overdueCount > 0 && ` · ${summary.data.overdueCount} vencido${summary.data.overdueCount === 1 ? '' : 's'}`}
                 </span>
               )}
-              <Link to="/calendario" className="text-xs font-medium text-primary hover:underline">
+              <Link to={`/calendario?mes=${month}`} className="text-xs font-medium text-primary hover:underline">
                 Calendário
               </Link>
             </span>

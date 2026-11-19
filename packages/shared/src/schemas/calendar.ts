@@ -24,6 +24,8 @@ export type CalendarInvoiceDTO = {
   remaining: number;
   amount: number;
   status: 'open' | 'closed' | 'paid' | 'overdue';
+  /** Fatura de um mês depois da aberta: só parcelas já lançadas, ainda pode crescer. */
+  future: boolean;
 };
 
 export type CalendarItemDTO = CalendarTransactionDTO | CalendarInvoiceDTO;

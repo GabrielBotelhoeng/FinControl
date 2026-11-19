@@ -12,7 +12,7 @@ import type { RecurrencesService } from '../recurrences/recurrences.service';
 export type CalendarServiceDeps = {
   db: Db;
   accountsRepo: AccountsRepository;
-  cards: Pick<CardsService, 'listInvoices'>;
+  cards: Pick<CardsService, 'invoiceOfMonth'>;
   recurrences: Pick<RecurrencesService, 'materialize'>;
   clock: () => Date;
 };
@@ -65,13 +65,16 @@ export function createCalendarService(deps: CalendarServiceDeps) {
         else totals[r.status === 'paid' ? 'received' : 'toReceive'] += amount;
       }
 
-      // K2: faturas que vencem no mês. O vencimento sempre cai no próprio mês da fatura (`invoiceDates`).
-      const perCard = await Promise.all(cards.map(async (card) => ({ card, invoices: await deps.cards.listInvoices(userId, card.id, m, m) })));
+      // K2: a fatura de cada cartão que vence no mês (o vencimento sempre cai no próprio mês da fatura, `invoiceDates`),
+      // inclusive as futuras, com as parcelas já lançadas (CodeRabbit).
+      const perCard = await Promise.all(cards.map(async (card) => ({ card, invoices: [await deps.cards.invoiceOfMonth(userId, card.id, m)] })));
       for (const { card, invoices } of perCard) {
         for (const inv of invoices) {
           if (inv.dueDate < from || inv.dueDate > to || inv.amount <= 0) continue;
           const remaining = Math.max(inv.amount - inv.paid, 0);
-          push(inv.dueDate, { kind: 'invoice', cardId: card.id, cardName: card.name, month: inv.month, remaining, amount: inv.amount, status: inv.status });
+          push(inv.dueDate, {
+            kind: 'invoice', cardId: card.id, cardName: card.name, month: inv.month, remaining, amount: inv.amount, status: inv.status, future: inv.future,
+          });
           totals.toPay += remaining;
           totals.paid += Math.min(inv.paid, inv.amount);
         }

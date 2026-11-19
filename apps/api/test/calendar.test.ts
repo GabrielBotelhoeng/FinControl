@@ -39,6 +39,18 @@ describe('calendário de contas', () => {
     expect(res.body.totals).toEqual({ toPay: 12000 + 5000 + 40000, paid: 0, toReceive: 0, received: 300000 });
   });
 
+  it('mostra a fatura futura com as parcelas já lançadas (CodeRabbit)', async () => {
+    const user = await newUser();
+    const checking = await createAccount(app, user, { name: 'Corrente' });
+    const card = await createAccount(app, user, { name: 'Cartão', type: 'credit_card', creditLimit: 500000, closingDay: 5, dueDay: 15, paymentAccountId: checking.id });
+    const food = await categoryId(app, user, 'Alimentação', 'expense');
+    await createTransaction(app, user, { type: 'expense', amount: 30000, description: 'Geladeira', accountId: card.id, categoryId: food, nature: 'variable', dueDate: '2026-10-20', installments: 3 });
+    const res = await request(app).get('/api/v1/calendar?month=2027-01').set(user.auth);
+    const invoices = res.body.days.flatMap((d: { items: { kind: string }[] }) => d.items).filter((i: { kind: string }) => i.kind === 'invoice');
+    expect(invoices).toEqual([expect.objectContaining({ cardName: 'Cartão', amount: 10000, remaining: 10000, future: true })]);
+    expect(res.body.days[0].date).toBe('2027-01-15');
+  });
+
   it('sem mês, usa o atual; mês inválido dá 400; outro usuário não vê nada', async () => {
     const user = await newUser();
     const checking = await createAccount(app, user, { name: 'Corrente' });

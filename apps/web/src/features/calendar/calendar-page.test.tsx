@@ -21,7 +21,7 @@ const calendar = {
       date: day(5),
       items: [
         { kind: 'transaction', id: 't2', description: 'Salário', type: 'income', amount: 300000, status: 'paid', overdue: false, category: 'Salário' },
-        { kind: 'invoice', cardId: 'c1', cardName: 'Cartão principal', month, remaining: 40000, amount: 40000, status: 'closed' },
+        { kind: 'invoice', cardId: 'c1', cardName: 'Cartão principal', month, remaining: 40000, amount: 40000, status: 'closed', future: false },
       ],
     },
   ],
