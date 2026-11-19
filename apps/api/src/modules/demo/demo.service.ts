@@ -107,6 +107,7 @@ export function createDemoService(deps: DemoServiceDeps) {
         for (const d of plan.debts) await tx.repo.createDebt(userId, d, accountId);
         for (const b of plan.budgets) await tx.repo.createBudget(userId, categoryId(b.categoryName, 'expense'), b.limit);
         for (const g of plan.goals) await tx.repo.createGoal(userId, g);
+        for (const a of plan.assets) await tx.repo.createAsset(userId, a);
 
         await tx.recurrences.materialize(userId, endOfMonth(monthOf(today)));
         await tx.repo.markRecurringPaidBefore(userId, today, plan.overdueDescription);

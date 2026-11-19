@@ -115,7 +115,7 @@ export function buildContainer(deps: AppDeps) {
   const assistant = createAssistantService({
     ai: deps.aiClient ?? (ANTHROPIC_API_KEY ? createAnthropicClient({ apiKey: ANTHROPIC_API_KEY, model: AI_MODEL, logger: deps.logger }) : null),
     allowedEmails: AI_ALLOWED_EMAILS, usage: createAssistantRepository(deps.db),
-    tools: createAssistantTools({ reports, transactions, categoriesRepo, budgets, goals, accounts, dashboard, debts, clock: deps.clock }),
+    tools: createAssistantTools({ reports, transactions, categoriesRepo, budgets, goals, accounts, dashboard, debts, assets, clock: deps.clock }),
     profileRepo: createProfileRepository(deps.db), categoriesRepo, logger: deps.logger, clock: deps.clock,
   });
   const demo = createDemoService({

@@ -164,6 +164,21 @@ describe('Assistente com IA', () => {
     expect(desconhecida).toMatchObject({ is_error: true, content: 'Ferramenta desconhecida: apagar_tudo' });
   });
 
+  it('B12 (sub-projeto 11): saldos_e_dividas traz o patrimônio líquido e só os bens com valor', async () => {
+    const user = await newUser();
+    await consent(user);
+    await createAccount(app, user, { name: 'Nubank', initialBalance: 150000 });
+    const asset = (body: Record<string, unknown>) => request(app).post('/api/v1/assets').set(user.auth).send(body);
+    await asset({ name: 'Carro', kind: 'vehicle', value: 4000000 });
+    const sold = (await asset({ name: 'Moto', kind: 'vehicle', value: 900000 })).body;
+    await request(app).post(`/api/v1/assets/${sold.id}/valuations`).set(user.auth).send({ amount: 0, date: '2026-11-11' });
+    ai.script.push(toolUse({ name: 'saldos_e_dividas' }), text('Pronto.'));
+    expect((await ask(user)).status).toBe(200);
+    const saldos = JSON.parse(toolResults(ai.calls[1]!)[0]!.content);
+    expect(saldos).toMatchObject({ patrimonio_liquido: 41500, bens: [{ bem: 'Carro', tipo: 'Veículo', valor: 40000 }] });
+    expect(saldos.bens).toHaveLength(1);
+  });
+
   it('A8: depois de 4 rodadas de ferramenta, a última chamada proíbe ferramentas', async () => {
     const user = await newUser();
     await consent(user);

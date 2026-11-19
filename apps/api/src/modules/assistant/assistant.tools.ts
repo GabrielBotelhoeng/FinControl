@@ -1,10 +1,11 @@
 import {
-  addMonthsToYm, dateOnlySchema, DEBT_KIND_LABELS, DEBT_STATUS_LABELS, endOfMonth, monthOf, startOfMonth, todayInSaoPaulo, yearMonthSchema,
+  addMonthsToYm, ASSET_KIND_LABELS, dateOnlySchema, DEBT_KIND_LABELS, DEBT_STATUS_LABELS, endOfMonth, monthOf, startOfMonth, todayInSaoPaulo, yearMonthSchema,
   type GoalStatus, type ListTransactionsQuery, type TransactionDTO, type TransactionStatus, type TransactionType,
 } from '@fincontrol/shared';
 import { z } from 'zod';
 import type { AiTool } from '../../infra/ai-client';
 import type { AccountsService } from '../accounts/accounts.service';
+import type { AssetsService } from '../assets/assets.service';
 import type { BudgetsService } from '../budgets/budgets.service';
 import type { CategoriesRepository } from '../categories/categories.repository';
 import type { DashboardService } from '../dashboard/dashboard.service';
@@ -24,6 +25,7 @@ export type AssistantToolsDeps = {
   accounts: Pick<AccountsService, 'list'>;
   dashboard: Pick<DashboardService, 'summary'>;
   debts: Pick<DebtsService, 'list'>;
+  assets: Pick<AssetsService, 'list'>;
   clock: () => Date;
 };
 
@@ -92,7 +94,7 @@ export const TOOL_DEFINITIONS: AiTool[] = [
   {
     name: 'saldos_e_dividas',
     description:
-      'Saldo atual de cada conta, saldo total, previsão para o fim do mês, dívidas (cartão, empréstimo e com credores, cada uma com saldo, juros e multas e situação) e contas vencidas ou a pagar.',
+      'Saldo atual de cada conta, saldo total, previsão para o fim do mês, dívidas (cartão, empréstimo e com credores, cada uma com saldo, juros e multas e situação), contas vencidas ou a pagar, bens (imóvel, veículo, investimento fora das contas) e o patrimônio líquido (contas sem cartão + bens − dívidas).',
     input_schema: { type: 'object', properties: {} },
   },
 ];
@@ -204,8 +206,8 @@ export function createAssistantTools(deps: AssistantToolsDeps) {
   }
 
   async function saldosEDividas(userId: string) {
-    const [accounts, summary, debts] = await Promise.all([
-      deps.accounts.list(userId, false), deps.dashboard.summary(userId), deps.debts.list(userId),
+    const [accounts, summary, debts, assets] = await Promise.all([
+      deps.accounts.list(userId, false), deps.dashboard.summary(userId), deps.debts.list(userId), deps.assets.list(userId),
     ]);
     const typeLabel: Record<string, string> = { checking: 'conta corrente', savings: 'poupança', wallet: 'carteira', investment: 'investimento', credit_card: 'cartão de crédito' };
     return {
@@ -229,6 +231,9 @@ export function createAssistantTools(deps: AssistantToolsDeps) {
         })),
       contas_vencidas: summary.overdueCount,
       contas_a_pagar_no_mes: summary.pendingCount,
+      // B12 do sub-projeto 11: os vendidos (valor 0) ficam de fora, como as dívidas quitadas.
+      patrimonio_liquido: reais(summary.netWorth),
+      bens: assets.filter((a) => a.value > 0).map((a) => ({ bem: a.name, tipo: ASSET_KIND_LABELS[a.kind], valor: reais(a.value) })),
     };
   }
 

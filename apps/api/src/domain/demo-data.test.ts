@@ -21,6 +21,14 @@ describe('buildDemoData', () => {
     expect(installments.find((t) => t.status === 'pending')!.dueDate).toBe('2026-12-01');
   });
 
+  it('inclui o carro do financiamento e a previdência privada, com valores até hoje (sub-projeto 11, B13)', () => {
+    const plan = buildDemoData(TODAY);
+    expect(plan.assets.map((a) => [a.name, a.kind, a.valuations.map((v) => [v.date, v.amount])])).toEqual([
+      ['Carro', 'vehicle', [['2025-11-20', 4500000], ['2026-05-10', 4250000], ['2026-11-11', 4000000]]],
+      ['Previdência privada', 'investment', [['2025-11-05', 1000000], ['2026-05-05', 1180000], ['2026-11-11', 1350000]]],
+    ]);
+  });
+
   it('inclui 4 limites (Alimentação perto, Lazer estourado, Compras e Moradia dentro) e 3 metas (sub-projetos 3 e 5)', () => {
     const plan = buildDemoData(TODAY);
     const spent = (name: string) =>
