@@ -57,7 +57,7 @@ function timelineEntry(item: DebtTimelineItemDTO): { icon: LucideIcon; title: st
 
 function Timeline({ items }: { items: DebtTimelineItemDTO[] }) {
   return (
-    <Panel role="region" aria-label="Histórico" className="grid gap-4 p-5">
+    <Panel role="region" aria-label="Histórico" className="grid content-start gap-4 p-5">
       <h2 className="font-display text-lg font-semibold tracking-tight">Histórico</h2>
       <ol className="grid gap-4">
         {items.map((item) => {
@@ -82,7 +82,7 @@ function Timeline({ items }: { items: DebtTimelineItemDTO[] }) {
 
 function AgreementPanel({ agreement }: { agreement: NonNullable<DebtDetailDTO['agreement']> }) {
   return (
-    <Panel role="region" aria-label="Acordo" className="grid gap-4 p-5">
+    <Panel role="region" aria-label="Acordo" className="grid content-start gap-4 p-5">
       <div className="grid gap-1">
         <h2 className="font-display text-lg font-semibold tracking-tight">Acordo</h2>
         <p className="text-sm text-muted">
