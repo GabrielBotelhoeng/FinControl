@@ -6,7 +6,7 @@ _Atualizado em 2026-11-19 (primeiros passos)._
 
 - **Spec:** `docs/superpowers/specs/2026-11-19-fincontrol-sp12-primeiros-passos-design.md` (G1–G6). Sem migration.
 - **Entregue:** `GET /onboarding` (cada passo feito quando existe um registro dele) e o quadro "Primeiros passos" no topo do painel, só para contas reais: cadastrar uma conta, fazer o primeiro lançamento (ou importar o extrato), definir um limite e criar uma meta, com a barra de progresso. Some sozinho com tudo feito, e "Ocultar" fica lembrado no navegador. Contas passou a aceitar `?novo=1`.
-- **Testes:** 209 no shared, 346 na API e 240 na web, além de 16 E2E (novo: `e2e/tests/primeiro-acesso.spec.ts`, a 360 px).
+- **Testes:** 209 no shared, 346 na API e 241 na web, além de 16 E2E (novo: `e2e/tests/primeiro-acesso.spec.ts`, a 360 px).
 
 ## Sub-projeto 11: patrimônio líquido — no ar desde 2026-11-19 (PR #32)
 

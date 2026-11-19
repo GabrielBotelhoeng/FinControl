@@ -59,6 +59,16 @@ describe('OnboardingCard (sub-projeto 12)', () => {
     expect(screen.queryByRole('region', { name: 'Primeiros passos' })).not.toBeInTheDocument();
   });
 
+  it('CodeRabbit: se a nova busca falha, o quadro some mesmo com os dados anteriores guardados (G6)', async () => {
+    let fail = false;
+    const client = fakeApi({ 'GET /onboarding': () => (fail ? new ApiError(500, 'Erro', 'Falhou.') : steps()) });
+    const { queryClient } = renderApp(<OnboardingCard />, { api: client });
+    await card();
+    fail = true;
+    await queryClient.refetchQueries({ queryKey: ['onboarding'] });
+    await waitFor(() => expect(screen.queryByRole('region', { name: 'Primeiros passos' })).not.toBeInTheDocument());
+  });
+
   it('erro ao buscar os passos: o quadro não aparece (G6)', async () => {
     const client = fakeApi({ 'GET /onboarding': () => new ApiError(500, 'Erro', 'Falhou.') });
     renderApp(<OnboardingCard />, { api: client });

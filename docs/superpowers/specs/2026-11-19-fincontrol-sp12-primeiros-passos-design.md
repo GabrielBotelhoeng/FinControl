@@ -11,7 +11,7 @@
 | G3 | **O quadro some sozinho** quando os quatro passos estão feitos. Antes disso, "Ocultar" o esconde, e a escolha fica no navegador (por pessoa). | Coluna no perfil | É só uma conveniência, e uma coluna pediria migration. Em outro aparelho, o quadro volta até ser ocultado lá ou até os passos acabarem. |
 | G4 | **Cada passo leva direto ao formulário:** Contas com "Nova conta" aberto (`/contas?novo=1`, o mesmo padrão do atalho de Lançamentos), Lançamentos com o formulário aberto (`/lancamentos?novo=1`) ou a importação de extrato, Planejamento (orçamento) e a aba Metas. | Só texto explicando | Um toque até o formulário. |
 | G5 | **Passo feito** aparece riscado de leve, com o ícone de concluído e o texto "Feito" para leitor de tela. A barra é um `progressbar` com o valor. | Só o ícone | A situação não depende só da cor nem do ícone. |
-| G6 | **Erro ao buscar os passos:** o quadro não aparece. | Mensagem de erro no painel | Os passos são uma ajuda; o painel continua funcionando sem eles. |
+| G6 | **Erro ao buscar os passos:** o quadro não aparece, mesmo com os dados de uma busca anterior guardados (CodeRabbit). | Mensagem de erro no painel | Os passos são uma ajuda; o painel continua funcionando sem eles. |
 
 ## API
 

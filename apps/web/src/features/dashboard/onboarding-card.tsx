@@ -59,8 +59,8 @@ export function OnboardingCard() {
   const enabled = user !== null && !user.isAnonymous && !hidden;
   const onboarding = useQuery({ queryKey: ['onboarding'], queryFn: () => api.get<OnboardingDTO>('/onboarding'), enabled });
 
-  // G6: sem os passos (carregando ou com erro), o painel segue sem o quadro.
-  if (!enabled || !onboarding.data) return null;
+  // G6: sem os passos (carregando ou com erro, mesmo com dados anteriores guardados), o painel segue sem o quadro.
+  if (!enabled || !onboarding.data || onboarding.isError) return null;
   const data = onboarding.data;
   const done = STEPS.filter((s) => data[s.key]).length;
   if (done === STEPS.length) return null;
