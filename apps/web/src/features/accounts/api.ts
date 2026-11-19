@@ -24,9 +24,10 @@ export function useAccounts(includeArchived = false) {
 // 'loans': o progresso do empréstimo muda quando uma parcela é paga em Lançamentos (Parte B).
 // 'budgets', 'planning', 'goals' (sub-projeto 3): o comprometido e a previsão mudam com cada lançamento.
 // 'assets', 'net-worth' (sub-projeto 11): o patrimônio muda com o saldo das contas e com as dívidas.
+// 'onboarding' (sub-projeto 12): o passo vira "feito" assim que a pessoa cria a conta, o lançamento, o limite ou a meta.
 const FINANCE_KEYS = [
   'accounts', 'transactions', 'dashboard', 'categories', 'cards', 'loans', 'debts', 'calendar', 'repeated', 'budgets', 'planning', 'goals', 'reports',
-  'notifications', 'assets', 'net-worth',
+  'notifications', 'assets', 'net-worth', 'onboarding',
 ];
 
 /**

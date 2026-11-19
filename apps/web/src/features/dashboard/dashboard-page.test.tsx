@@ -27,6 +27,7 @@ const routes = (over: Record<string, unknown> = {}) => ({
   'GET /accounts': [],
   'GET /categories': [],
   'GET /assistant/config': { enabled: false, allowed: false, consented: false },
+  'GET /onboarding': { account: true, transaction: true, budget: true, goal: true },
   ...over,
 });
 

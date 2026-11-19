@@ -19,6 +19,11 @@ const cardAccount = (over: Record<string, unknown> = {}) => account({
 });
 
 describe('AccountsPage', () => {
+  it('?novo=1 (primeiros passos do painel) já abre "Nova conta" (sub-projeto 12, G4)', async () => {
+    renderApp(<AccountsPage />, { api: fakeApi({ 'GET /accounts': [] }), route: '/contas?novo=1', path: '/contas' });
+    expect(await screen.findByRole('dialog', { name: 'Nova conta' })).toBeInTheDocument();
+  });
+
   it('lista as contas com o saldo formatado', async () => {
     renderApp(<AccountsPage />, { api: fakeApi({ 'GET /accounts': [account(), account({ id: 'a2', name: 'Carteira', type: 'wallet', balance: -500 })] }) });
     const item = await screen.findByRole('article', { name: 'Nubank' });
