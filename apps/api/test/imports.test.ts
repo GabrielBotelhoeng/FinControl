@@ -104,3 +104,16 @@ describe('importação de extrato', () => {
     expect(res.body.rows).toHaveLength(1000);
   });
 });
+
+describe('palavras-chave (CodeRabbit)', () => {
+  beforeEach(resetDb);
+  it('"99 " é palavra inteira e "amazon prime" ganha de "amazon"', async () => {
+    const { user, checking } = await scenario();
+    const res = await request(app).post('/api/v1/imports/preview').set(user.auth).send({
+      accountId: checking.id,
+      rows: [{ date: '2026-11-03', description: 'COMPRA CARTAO 99,90', amount: -9990 }, { date: '2026-11-03', description: 'AMAZON PRIME BR', amount: -1490 }],
+    });
+    expect(res.body.rows[0].suggestion).toBe('fallback');
+    expect(res.body.rows[1].categoryId).toBe(await categoryId(app, user, 'Assinaturas', 'expense'));
+  });
+});

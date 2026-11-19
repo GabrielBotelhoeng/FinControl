@@ -88,8 +88,19 @@ export function createImportsService(deps: ImportsServiceDeps) {
           const norm = normalizeDescription(r.description);
           const fromHistory = learned.get(`${type}|${norm}`);
           const padded = ` ${keywordText(r.description)} `;
-          // A palavra-chave precisa começar uma palavra: "oi" (operadora) não casa com "coisa".
-          const rule = KEYWORDS.find((k) => k.type === type && k.words.some((w) => padded.includes(` ${w.trim()}`)));
+          // A palavra-chave começa uma palavra ("oi" não casa com "coisa"); com espaço no fim, é a palavra inteira
+          // ("99 " não casa com "99,90"). Vence a mais longa: "amazon prime" (Assinaturas) ganha de "amazon" (Compras).
+          let rule: (typeof KEYWORDS)[number] | undefined;
+          let best = 0;
+          for (const k of KEYWORDS) {
+            if (k.type !== type) continue;
+            for (const w of k.words) {
+              if (padded.includes(` ${w}`) && w.length > best) {
+                rule = k;
+                best = w.length;
+              }
+            }
+          }
           const fromKeyword = rule ? byName.get(`${type}|${rule.category}`) : undefined;
           const key = `${r.date}|${Math.abs(r.amount)}|${type}`;
           const dupCount = seen.get(key) ?? 0;

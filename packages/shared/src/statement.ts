@@ -221,7 +221,9 @@ function parseCsv(text: string): StatementResult {
 export function parseStatement(text: string): StatementResult {
   const clean = text.replace(/^\uFEFF/, '');
   const isOfx = /OFXHEADER|<OFX>/i.test(clean.slice(0, 2000));
-  const result = isOfx ? parseOfx(clean) : parseCsv(clean);
+  // Fim de linha só com CR (exportações antigas) vira LF: a leitura das linhas e dos registros concorda.
+  const normalized = clean.replace(/\r\n?/g, '\n');
+  const result = isOfx ? parseOfx(normalized) : parseCsv(normalized);
   if (result.rows.length === 0) throw new StatementError('Nenhum lançamento encontrado no arquivo.');
   if (result.rows.length > MAX_STATEMENT_ROWS) {
     throw new StatementError(`O arquivo tem ${result.rows.length} lançamentos. Importe no máximo ${MAX_STATEMENT_ROWS} de cada vez.`);
@@ -236,5 +238,6 @@ export function normalizeDescription(s: string): string {
 
 /** Para palavras-chave: sem acentos e pontuação, mas com os números ("99APP" continua "99app"). */
 export function keywordText(s: string): string {
-  return fold(s).replace(/[*#/\\.,;:_-]+/g, ' ').replace(/\s+/g, ' ').trim();
+  // "99,90" continua um número só ("9990"): não pode casar com a palavra-chave "99 " (CodeRabbit).
+  return fold(s).replace(/(\d)[.,](?=\d)/g, '$1').replace(/[*#/\\.,;:_-]+/g, ' ').replace(/\s+/g, ' ').trim();
 }

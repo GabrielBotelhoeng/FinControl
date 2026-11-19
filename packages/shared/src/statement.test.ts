@@ -93,3 +93,10 @@ describe('normalizeDescription e keywordText', () => {
     expect(keywordText('99APP *Corrida')).toBe('99app corrida');
   });
 });
+
+describe('fim de linha só com CR', () => {
+  it('lê o CSV normalmente', () => {
+    const CR = String.fromCharCode(13);
+    expect(parseStatement(['Data;Valor;Descrição', '05/11/2026;-10,00;Loja'].join(CR)).rows).toEqual([{ date: '2026-11-05', description: 'Loja', amount: -1000 }]);
+  });
+});
