@@ -25,9 +25,9 @@ describe('ImportPage', () => {
       'GET /categories': categories,
       'POST /imports/preview': (_path: string, body: { rows: { description: string }[] }) => ({
         rows: [
-          { date: '2026-11-05', description: body.rows[0]!.description, amount: 4590, type: 'expense', categoryId: 'food', suggestion: 'keyword', duplicate: false },
-          { date: '2026-11-05', description: 'Repetida', amount: 1200, type: 'expense', categoryId: 'other', suggestion: 'fallback', duplicate: true },
-          { date: '2026-11-10', description: 'Salário', amount: 300000, type: 'income', categoryId: 'salary', suggestion: 'history', duplicate: false },
+          { date: '2026-11-05', description: body.rows[0]!.description, amount: 4590, type: 'expense', categoryId: 'food', suggestion: 'keyword', duplicate: false, transferLike: false },
+          { date: '2026-11-05', description: 'Repetida', amount: 1200, type: 'expense', categoryId: 'other', suggestion: 'fallback', duplicate: true, transferLike: false },
+          { date: '2026-11-10', description: 'Salário', amount: 300000, type: 'income', categoryId: 'salary', suggestion: 'history', duplicate: false, transferLike: false },
         ],
       }),
       'POST /imports/commit': { created: 2 },

@@ -32,6 +32,8 @@ export type ImportPreviewRowDTO = {
   suggestion: 'history' | 'keyword' | 'fallback';
   /** I7: já existe na conta um lançamento no mesmo dia, com o mesmo valor e o mesmo tipo. */
   duplicate: boolean;
+  /** Parece pagamento de fatura ou transferência entre contas próprias: começa desmarcada (revisão final). */
+  transferLike: boolean;
 };
 
 export type ImportPreviewDTO = { rows: ImportPreviewRowDTO[] };

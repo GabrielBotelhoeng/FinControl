@@ -2,8 +2,8 @@ import {
   parseStatement, StatementError,
   type CategoryDTO, type ImportCommitDTO, type ImportPreviewDTO, type ImportPreviewRowDTO,
 } from '@fincontrol/shared';
-import { CopyCheck, FileUp, Sparkles } from 'lucide-react';
-import { useState } from 'react';
+import { ArrowLeftRight, CopyCheck, FileUp, Sparkles } from 'lucide-react';
+import { memo, useCallback, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { toast } from 'sonner';
 import { Button } from '../../components/ui/button';
@@ -19,11 +19,13 @@ import { useCategories } from '../categories/api';
 
 type Row = ImportPreviewRowDTO & { include: boolean };
 
+const BOM = new RegExp(`^${String.fromCharCode(0xfeff)}`);
+
 /** I1: UTF-8 primeiro; se não for válido, Windows-1252, a codificação dos OFX de muitos bancos brasileiros. */
 export async function readStatementFile(file: File): Promise<string> {
   const buffer = await file.arrayBuffer();
   try {
-    return new TextDecoder('utf-8', { fatal: true }).decode(buffer).replace(/^﻿/, '');
+    return new TextDecoder('utf-8', { fatal: true }).decode(buffer).replace(BOM, '');
   } catch {
     return new TextDecoder('windows-1252').decode(buffer);
   }
@@ -35,7 +37,10 @@ const SUGGESTION_LABEL: Record<ImportPreviewRowDTO['suggestion'], string> = {
   fallback: 'Escolha a categoria',
 };
 
-function RowItem({ row, categories, onChange }: { row: Row; categories: CategoryDTO[]; onChange: (patch: Partial<Row>) => void }) {
+type RowItemProps = { row: Row; index: number; categories: CategoryDTO[]; onChange: (index: number, patch: Partial<Row>) => void };
+
+/** `memo` com callback estável: marcar uma linha não redesenha as outras 999 (revisão final). */
+const RowItem = memo(function RowItem({ row, index, categories, onChange }: RowItemProps) {
   const options = categories.filter((c) => c.type === row.type);
   const income = row.type === 'income';
   return (
@@ -44,7 +49,7 @@ function RowItem({ row, categories, onChange }: { row: Row; categories: Category
         type="checkbox"
         className="h-5 w-5 accent-[var(--primary)]"
         checked={row.include}
-        onChange={(e) => onChange({ include: e.target.checked })}
+        onChange={(e) => onChange(index, { include: e.target.checked })}
         aria-label={`Importar ${row.description} de ${formatDate(row.date)}`}
       />
       <div className="min-w-0">
@@ -52,6 +57,12 @@ function RowItem({ row, categories, onChange }: { row: Row; categories: Category
         <p className="text-xs text-muted">
           {formatDate(row.date)}
           {row.duplicate && <span className="ml-2 inline-flex items-center gap-1 font-medium text-warning"><CopyCheck aria-hidden className="h-3.5 w-3.5" />Parece repetido</span>}
+          {!row.duplicate && row.transferLike && (
+            <span className="ml-2 inline-flex items-center gap-1 font-medium text-warning">
+              <ArrowLeftRight aria-hidden className="h-3.5 w-3.5" />
+              Parece fatura ou transferência entre suas contas
+            </span>
+          )}
         </p>
       </div>
       <span className={cn('tabular text-sm font-semibold sm:text-right', income && 'text-income')}>{`${income ? '+' : '−'}${formatBRL(row.amount)}`}</span>
@@ -59,7 +70,7 @@ function RowItem({ row, categories, onChange }: { row: Row; categories: Category
         <Select
           aria-label={`Categoria de ${row.description}`}
           value={row.categoryId ?? ''}
-          onChange={(e) => onChange({ categoryId: e.target.value, suggestion: 'history' })}
+          onChange={(e) => onChange(index, { categoryId: e.target.value, suggestion: 'history' })}
           className="h-10"
         >
           {!row.categoryId && <option value="">Escolha…</option>}
@@ -73,7 +84,7 @@ function RowItem({ row, categories, onChange }: { row: Row; categories: Category
       </div>
     </li>
   );
-}
+});
 
 /** Importar extrato (sub-projeto 9): escolher a conta e o arquivo, revisar e confirmar. */
 export default function ImportPage() {
@@ -83,12 +94,19 @@ export default function ImportPage() {
   const categories = useCategories();
   const [accountId, setAccountId] = useState('');
   const [rows, setRows] = useState<Row[] | null>(null);
+  // A prévia guarda a conta para a qual foi feita: os repetidos valem para ela, e o commit vai para ela.
+  const [previewAccount, setPreviewAccount] = useState('');
+  const request = useRef(0);
   const [fileName, setFileName] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const commit = useFinanceMutation((body: { accountId: string; rows: { date: string; description: string; amount: number; categoryId: string }[] }) =>
     api.post<ImportCommitDTO>('/imports/commit', body),
   );
+
+  const changeRow = useCallback((index: number, patch: Partial<Row>) => {
+    setRows((cur) => cur && cur.map((x, j) => (j === index ? { ...x, ...patch } : x)));
+  }, []);
 
   const targets = (accounts.data ?? []).filter((a) => a.archivedAt === null && a.type !== 'credit_card');
   const account = accountId || targets[0]?.id || '';
@@ -102,10 +120,14 @@ export default function ImportPage() {
     setFileName(file.name);
     if (!account) return setError('Cadastre uma conta (corrente, poupança ou carteira) antes de importar.');
     setLoading(true);
+    const ticket = ++request.current;
+    const target = account;
     try {
       const parsed = parseStatement(await readStatementFile(file));
-      const preview = await api.post<ImportPreviewDTO>('/imports/preview', { accountId: account, rows: parsed.rows });
-      setRows(preview.rows.map((r) => ({ ...r, include: !r.duplicate })));
+      const preview = await api.post<ImportPreviewDTO>('/imports/preview', { accountId: target, rows: parsed.rows });
+      if (ticket !== request.current) return; // outra leitura começou depois: esta resposta é velha
+      setPreviewAccount(target);
+      setRows(preview.rows.map((r) => ({ ...r, include: !r.duplicate && !r.transferLike })));
       if (parsed.skipped > 0) toast.info(`${parsed.skipped} ${parsed.skipped === 1 ? 'linha sem data ou valor ficou' : 'linhas sem data ou valor ficaram'} de fora.`);
     } catch (err) {
       setError(err instanceof StatementError || err instanceof Error ? err.message : 'Não foi possível ler o arquivo.');
@@ -118,7 +140,7 @@ export default function ImportPage() {
     if (!rows || missing > 0 || chosen.length === 0) return;
     try {
       const res = await commit.mutateAsync({
-        accountId: account,
+        accountId: previewAccount,
         rows: chosen.map((r) => ({ date: r.date, description: r.description, amount: r.type === 'expense' ? -r.amount : r.amount, categoryId: r.categoryId! })),
       });
       toast.success(`${res.created} ${res.created === 1 ? 'lançamento importado' : 'lançamentos importados'}.`);
@@ -147,8 +169,10 @@ export default function ImportPage() {
                 onChange={(e) => {
                   setAccountId(e.target.value);
                   setRows(null);
+                  setFileName('');
+                  request.current += 1;
                 }}
-                disabled={!accounts.data}
+                disabled={!accounts.data || loading}
               >
                 {targets.map((a) => (
                   <option key={a.id} value={a.id}>
@@ -162,7 +186,11 @@ export default function ImportPage() {
                 type="file"
                 accept=".ofx,.csv,.txt,text/csv,application/x-ofx"
                 className={cn(controlClass, 'py-2 file:mr-3 file:rounded-full file:border-0 file:bg-surface file:px-3 file:py-1 file:text-sm')}
-                onChange={(e) => void onFile(e.target.files?.[0])}
+                onChange={(e) => {
+                  void onFile(e.target.files?.[0]);
+                  // Limpa o campo: escolher o mesmo arquivo de novo (outra conta) dispara a leitura outra vez.
+                  e.target.value = '';
+                }}
                 disabled={!accounts.data || loading}
               />
             </Field>
@@ -176,7 +204,12 @@ export default function ImportPage() {
               {error}
             </p>
           )}
-          {loading && <p className="text-sm text-muted">Lendo o arquivo…</p>}
+          {loading && (
+            <p role="status" className="text-sm text-muted">
+              Lendo o arquivo…
+            </p>
+          )}
+          {categories.isError && <ErrorState message={categories.error.message} onRetry={() => categories.refetch()} />}
         </Panel>
 
         {rows && (
@@ -184,17 +217,13 @@ export default function ImportPage() {
             <div className="flex flex-wrap items-center justify-between gap-3">
               <h2 className="font-display text-lg font-semibold tracking-tight">{`${rows.length} ${rows.length === 1 ? 'lançamento' : 'lançamentos'} no arquivo`}</h2>
               <span className="text-sm text-muted">
-                {rows.some((r) => r.duplicate) && `${rows.filter((r) => r.duplicate).length} parecem repetidos e ficaram desmarcados.`}
+                {rows.some((r) => r.duplicate || r.transferLike) &&
+                  `${rows.filter((r) => r.duplicate || r.transferLike).length} parecem repetidos ou transferências e ficaram desmarcados.`}
               </span>
             </div>
             <ul className="divide-y divide-border">
               {rows.map((r, i) => (
-                <RowItem
-                  key={`${r.date}-${i}`}
-                  row={r}
-                  categories={categories.data ?? []}
-                  onChange={(patch) => setRows((cur) => cur!.map((x, j) => (j === i ? { ...x, ...patch } : x)))}
-                />
+                <RowItem key={`${r.date}-${i}`} row={r} index={i} categories={categories.data ?? []} onChange={changeRow} />
               ))}
             </ul>
             <div className="flex flex-wrap items-center justify-end gap-3 pt-3">

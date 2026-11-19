@@ -48,6 +48,20 @@ describe('importação de extrato', () => {
     expect(res.body.rows[5]).toMatchObject({ type: 'income', categoryId: await cat('Salário', 'income') });
   });
 
+  it('pagamento de fatura feito no app (transferência) marca a linha do extrato como repetida e parecida com transferência', async () => {
+    const { user, checking, food } = await scenario();
+    const card = await createAccount(app, user, { name: 'Cartão', type: 'credit_card', creditLimit: 500000, closingDay: 5, dueDay: 15, paymentAccountId: checking.id });
+    await createTransaction(app, user, { type: 'expense', amount: 150000, description: 'TV', accountId: card.id, categoryId: food, nature: 'variable', dueDate: '2026-10-01' });
+    const invoices = (await request(app).get(`/api/v1/cards/${card.id}/invoices`).set(user.auth)).body as { month: string; amount: number }[];
+    const due = invoices.find((i) => i.amount > 0)!;
+    await request(app).post(`/api/v1/cards/${card.id}/invoices/${due.month}/payments`).set(user.auth).send({ amount: 150000, accountId: checking.id, paidDate: '2026-11-10' });
+    const res = await request(app).post('/api/v1/imports/preview').set(user.auth).send({
+      accountId: checking.id, rows: [{ date: '2026-11-10', description: 'PAGAMENTO DE FATURA', amount: -150000 }, { date: '2026-11-11', description: '99APP CORRIDA', amount: -2000 }],
+    });
+    expect(res.body.rows[0]).toMatchObject({ duplicate: true, transferLike: true });
+    expect(res.body.rows[1]).toMatchObject({ transferLike: false, categoryId: await categoryId(app, user, 'Transporte', 'expense') });
+  });
+
   it('confirmar cria os lançamentos pagos na data do extrato e o saldo da conta muda (I6)', async () => {
     const { user, checking, food, salary } = await scenario();
     const res = await request(app).post('/api/v1/imports/commit').set(user.auth).send({

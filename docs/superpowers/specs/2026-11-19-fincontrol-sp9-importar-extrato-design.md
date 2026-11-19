@@ -15,3 +15,26 @@
 | I7 | **Repetido:** já existe na conta um lançamento no mesmo dia (pagamento, ou vencimento se pendente), com o mesmo valor e o mesmo tipo. É contado: duas linhas iguais no arquivo e uma no banco marcam só uma. As repetidas começam desmarcadas. | Evita lançar duas vezes o que a pessoa já tinha registrado à mão. |
 | I8 | **Só contas comuns** (corrente, poupança, carteira), ativas. Cartão de crédito fica de fora (422). | A compra no cartão tem fatura e parcelas, que o extrato não traz. |
 | I9 | **Tela `/importar`**, aberta pelo botão "Importar extrato" em Lançamentos. Mostra a conta, o arquivo, a lista com caixa de marcar, data, descrição, valor, categoria editável e a origem da sugestão, e o botão "Importar N lançamentos". | Um passo só, revisável. |
+
+## Revisão final (revisor novo e CodeRabbit)
+
+- **Pagamento de fatura e transferência:** a checagem de repetidos agora inclui as transferências, vistas pela conta do extrato (saída ou entrada). Linhas com cara de fatura, transferência, TED, aplicação ou resgate começam desmarcadas, com o aviso "Parece fatura ou transferência entre suas contas".
+- **Fatura de cartão:** a do Nubank (`date,title,amount`) e o OFX de cartão (`<CCSTMTRS>`) são recusados com uma explicação, porque numa conta inverteriam os sinais.
+- **Formatos:**
+  - sinal no fim ("10,00-"), sufixo D/C, menos Unicode;
+  - coluna "Tipo" (D/C) e colunas de crédito e débito separadas;
+  - data com hora;
+  - ano com 2 dígitos ("99" é 1999);
+  - OFX com o ponto sempre decimal;
+  - cabeçalho procurado nas 20 primeiras linhas;
+  - aspas com quebra de linha;
+  - separador contado fora das aspas.
+- **Palavras-chave:** mantêm os números ("99app"), e "Mercado Livre" é Compras.
+- **Tela:**
+  - a conta fica travada durante a leitura;
+  - a prévia guarda a conta para a qual foi feita;
+  - uma resposta velha é ignorada;
+  - o mesmo arquivo pode ser lido de novo;
+  - as linhas usam `memo` (1.000 itens);
+  - aparecem o erro das categorias e o "lendo" anunciado.
+- **Limite:** 30 pedidos de importação por hora por pessoa.
