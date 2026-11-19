@@ -24,6 +24,8 @@ export type DashboardSummaryDTO = {
   budget: BudgetSummaryDTO | null;
   /** Total de dívidas hoje (spec sub-projeto 4, R8). */
   debts: DebtsDTO;
+  /** Patrimônio líquido hoje (spec sub-projeto 11, B1 e B9): contas sem cartões + bens − dívidas. */
+  netWorth: number;
 };
 
 /** Item de lançamento em "A pagar" (decisão R16): o `TransactionDTO` de sempre, mais o discriminante. */

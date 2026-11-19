@@ -13,3 +13,4 @@ export * from './assistant';
 export * from './debts';
 export * from './calendar';
 export * from './imports';
+export * from './assets';

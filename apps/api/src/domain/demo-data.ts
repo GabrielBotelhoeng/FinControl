@@ -1,6 +1,6 @@
 import {
   addDays, addMonthsToYm, dateInMonth, endOfMonth, installmentDate, minDate as earliest, invoiceDates, invoiceFor, minDate, monthOf, splitInstallments,
-  type AccountType, type DateOnly, type DebtKind, type LoanKind, type TransactionNature, type TransactionStatus, type TransactionType, type YearMonth,
+  type AccountType, type AssetKind, type DateOnly, type DebtKind, type LoanKind, type TransactionNature, type TransactionStatus, type TransactionType, type YearMonth,
 } from '@fincontrol/shared';
 
 export type DemoAccountKey = 'checking' | 'savings' | 'wallet' | 'card';
@@ -73,6 +73,8 @@ export type DemoDebt = {
     schedule: { number: number; dueDate: DateOnly; paid: boolean }[];
   } | null;
 };
+/** Bem da demo (sub-projeto 11, B13), com o histórico de valores em ordem. */
+export type DemoAsset = { name: string; kind: AssetKind; valuations: { date: DateOnly; amount: number }[] };
 export type DemoGoal = { name: string; targetAmount: number; targetDate: DateOnly; createdAt: DateOnly; contributions: { amount: number; date: DateOnly }[] };
 export type DemoPlan = {
   accounts: DemoAccount[];
@@ -83,6 +85,7 @@ export type DemoPlan = {
   /** Sub-projeto 3: limites calculados a partir do próprio plano, para valer em qualquer data. */
   budgets: DemoBudget[];
   goals: DemoGoal[];
+  assets: DemoAsset[];
   /** Descrição da recorrência cuja ocorrência vencida mais recente fica sem pagar. */
   overdueDescription: string;
 };
@@ -346,5 +349,26 @@ export function buildDemoData(today: DateOnly, seed = 42): DemoPlan {
     },
   ];
 
-  return { accounts, recurrences, transactions, loans, debts, budgets, goals, overdueDescription: 'Internet' };
+  // Bens (B13): o carro comprado no mês antes da 1ª parcela do financiamento, e a previdência crescendo.
+  const sixMonthsAgo = addMonthsToYm(currentYm, -6);
+  const assets: DemoAsset[] = [
+    {
+      name: 'Carro', kind: 'vehicle',
+      valuations: [
+        { date: dateInMonth(addMonthsToYm(loanStartYm, -1), 20), amount: 4500000 },
+        { date: dateInMonth(sixMonthsAgo, 10), amount: 4250000 },
+        { date: today, amount: 4000000 },
+      ],
+    },
+    {
+      name: 'Previdência privada', kind: 'investment',
+      valuations: [
+        { date: dateInMonth(addMonthsToYm(currentYm, -12), 5), amount: 1000000 },
+        { date: dateInMonth(sixMonthsAgo, 5), amount: 1180000 },
+        { date: today, amount: 1350000 },
+      ],
+    },
+  ];
+
+  return { accounts, recurrences, transactions, loans, debts, budgets, goals, assets, overdueDescription: 'Internet' };
 }

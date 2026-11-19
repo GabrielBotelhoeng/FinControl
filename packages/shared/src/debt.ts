@@ -10,8 +10,10 @@ export type DebtLedger = { anchors: DebtLedgerEntry[]; payments: DebtLedgerEntry
 export type DebtSummary = { original: number; interest: number; discounts: number; paid: number; balance: number; fraction: number };
 export type DebtStatus = 'open' | 'agreement' | 'late' | 'paid_off';
 
-const byMoment = (a: DebtLedgerEntry, b: DebtLedgerEntry) =>
+/** Ordem por data e, no mesmo dia, pelo momento do registro (dívidas e bens). */
+export const compareByMoment = (a: { date: DateOnly; recordedAt: string }, b: { date: DateOnly; recordedAt: string }) =>
   a.date === b.date ? (a.recordedAt < b.recordedAt ? -1 : a.recordedAt > b.recordedAt ? 1 : 0) : a.date < b.date ? -1 : 1;
+const byMoment = compareByMoment;
 
 /** Percorre âncoras e pagamentos em ordem até `date` (inclusive) — uma regra só para o saldo e o resumo. */
 export function debtSummary(ledger: DebtLedger, date: DateOnly): DebtSummary {

@@ -5,6 +5,8 @@ import { createAssistantService } from '../modules/assistant/assistant.service';
 import { createAssistantTools } from '../modules/assistant/assistant.tools';
 import { createAccountsRepository } from '../modules/accounts/accounts.repository';
 import { createAccountsService } from '../modules/accounts/accounts.service';
+import { createAssetsRepository } from '../modules/assets/assets.repository';
+import { createAssetsService } from '../modules/assets/assets.service';
 import { createBankRatesRepository } from '../modules/bank-rates/bank-rates.repository';
 import { createBankRatesService } from '../modules/bank-rates/bank-rates.service';
 import { createBudgetsRepository } from '../modules/budgets/budgets.repository';
@@ -34,6 +36,7 @@ import { createPushRepository } from '../modules/push/push.repository';
 import { createPushService } from '../modules/push/push.service';
 import { createNotificationsRepository } from '../modules/notifications/notifications.repository';
 import { createNotificationsService } from '../modules/notifications/notifications.service';
+import { createNetWorthService } from '../modules/net-worth/net-worth.service';
 import { createDebtsReader } from '../modules/reports/debts';
 import { createReportsRepository } from '../modules/reports/reports.repository';
 import { createReportsService } from '../modules/reports/reports.service';
@@ -89,9 +92,11 @@ export function buildContainer(deps: AppDeps) {
   const repeated = createRepeatedService({ db: deps.db, clock: deps.clock });
   const debtsReader = createDebtsReader(deps.db);
   const debts = createDebtsService({ repo: debtsRepo, accountsRepo, categoriesRepo, clock: deps.clock });
+  const assetsRepo = createAssetsRepository(deps.db);
+  const assets = createAssetsService({ repo: assetsRepo, clock: deps.clock });
   const dashboardRepo = createDashboardRepository(deps.db);
   const dashboard = createDashboardService({
-    repo: dashboardRepo, transactions: transactionsRepo, recurrences, accountsRepo, cards, loansRepo, budgets, debts: debtsReader, clock: deps.clock,
+    repo: dashboardRepo, transactions: transactionsRepo, recurrences, accountsRepo, cards, loansRepo, budgets, debts: debtsReader, assets: assetsRepo, clock: deps.clock,
   });
   const notifications = createNotificationsService({
     repo: createNotificationsRepository(deps.db), profileRepo: createProfileRepository(deps.db), recurrences,
@@ -103,12 +108,14 @@ export function buildContainer(deps: AppDeps) {
     repo: createPushRepository(deps.db), notifications, logger: deps.logger, clock: deps.clock,
     sender: vapid ? (deps.pushSender ?? createWebPushSender(vapid, deps.logger)) : null, publicKey: vapid?.publicKey ?? null,
   });
-  const reports = createReportsService({ repo: createReportsRepository(deps.db), debts: debtsReader, recurrences, clock: deps.clock });
+  const reportsRepo = createReportsRepository(deps.db);
+  const reports = createReportsService({ repo: reportsRepo, debts: debtsReader, recurrences, clock: deps.clock });
+  const netWorth = createNetWorthService({ reportsRepo, assetsRepo, debts: debtsReader, clock: deps.clock });
   const { ANTHROPIC_API_KEY, AI_MODEL, AI_ALLOWED_EMAILS } = deps.config;
   const assistant = createAssistantService({
     ai: deps.aiClient ?? (ANTHROPIC_API_KEY ? createAnthropicClient({ apiKey: ANTHROPIC_API_KEY, model: AI_MODEL, logger: deps.logger }) : null),
     allowedEmails: AI_ALLOWED_EMAILS, usage: createAssistantRepository(deps.db),
-    tools: createAssistantTools({ reports, transactions, categoriesRepo, budgets, goals, accounts, dashboard, debts, clock: deps.clock }),
+    tools: createAssistantTools({ reports, transactions, categoriesRepo, budgets, goals, accounts, dashboard, debts, assets, clock: deps.clock }),
     profileRepo: createProfileRepository(deps.db), categoriesRepo, logger: deps.logger, clock: deps.clock,
   });
   const demo = createDemoService({
@@ -133,7 +140,8 @@ export function buildContainer(deps: AppDeps) {
   return {
     provisioner, profile, accountsRepo, accounts, categoriesRepo, categories,
     transactionsRepo, validateRefs, recurrencesRepo, recurrences, transactions, dashboard, demo,
-    cardsRepo, cards, bankRates, loansRepo, loans, budgets, goalsRepo, goals, debtsReader, debts, calendar, imports, repeated, reports, notifications, push, assistant,
+    cardsRepo, cards, bankRates, loansRepo, loans, budgets, goalsRepo, goals, debtsReader, debts, assetsRepo, assets, netWorth, calendar, imports, repeated, reports,
+    notifications, push, assistant,
   };
 }
 

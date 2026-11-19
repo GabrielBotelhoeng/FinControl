@@ -1,5 +1,5 @@
 import type { DateOnly, LoanKind } from '@fincontrol/shared';
-import type { DemoAccountKey, DemoDebt } from '../../domain/demo-data';
+import type { DemoAccountKey, DemoAsset, DemoDebt } from '../../domain/demo-data';
 import type { Prisma } from '../../generated/prisma/client';
 import { DEBT_CATEGORY } from '../debts/debts.service';
 import { fromDateOnly } from '../../infra/date-mapping';
@@ -114,6 +114,15 @@ export function createDemoRepository(db: DbClient) {
       });
       await db.goalContribution.createMany({
         data: g.contributions.map((c) => ({ goalId: goal.id, userId, amount: BigInt(c.amount), date: fromDateOnly(c.date) })),
+      });
+    },
+
+    /** Bem da demo (sub-projeto 11, B13) com o histórico, gravado na ordem do plano. */
+    async createAsset(userId: string, a: DemoAsset): Promise<void> {
+      const asset = await db.asset.create({ data: { userId, name: a.name, kind: a.kind }, select: { id: true } });
+      const now = Date.now();
+      await db.assetValuation.createMany({
+        data: a.valuations.map((v, i) => ({ assetId: asset.id, userId, date: fromDateOnly(v.date), amount: BigInt(v.amount), recordedAt: new Date(now + i) })),
       });
     },
 

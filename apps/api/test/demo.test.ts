@@ -86,6 +86,12 @@ describe('conta demo', () => {
       cards: summary.body.debts.cards, loans: loan.outstanding, others: 171390, total: summary.body.debts.cards + loan.outstanding + 171390,
     });
 
+    // Sub-projeto 11 (B13): o carro do financiamento e a previdência; o patrimônio fecha com o painel.
+    const netWorth = (await request(app).get('/api/v1/net-worth').set(visitor.auth)).body;
+    expect(netWorth.assets.items.map((a: { name: string; value: number }) => [a.name, a.value])).toEqual([['Carro', 4000000], ['Previdência privada', 1350000]]);
+    expect(netWorth.total).toBe(netWorth.accounts.total + 5350000 - netWorth.debts.total);
+    expect(summary.body.netWorth).toBe(netWorth.total);
+
     // Sub-projeto 5 (N11): a central mostra todos os tipos de aviso, com a vencida no topo.
     const notes = (await request(app).get('/api/v1/notifications').set(visitor.auth)).body;
     const kinds = new Set(notes.items.map((n: { kind: string }) => n.kind));

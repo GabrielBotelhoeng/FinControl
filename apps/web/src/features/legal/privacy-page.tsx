@@ -35,8 +35,8 @@ export default function PrivacyPage() {
             públicos. Não acessamos Gmail, Drive, contatos nem nada além disso.
           </li>
           <li>
-            <strong>Dados financeiros que você cadastra:</strong> contas, categorias, lançamentos e recorrências (valores, datas e
-            descrições).
+            <strong>Dados financeiros que você cadastra:</strong> contas, cartões, categorias, lançamentos, recorrências, orçamento,
+            metas, empréstimos, dívidas e bens, como imóvel e carro (valores, datas e descrições).
           </li>
           <li>
             <strong>Preferências:</strong> o tema escolhido (claro, escuro ou do sistema).
@@ -101,7 +101,7 @@ export default function PrivacyPage() {
           <li>
             <strong>Anthropic:</strong> apenas se você aceitar usar o assistente com IA. Cada pergunta envia à Anthropic, nos Estados
             Unidos, o seu primeiro nome, a lista das suas categorias, a pergunta, as mensagens da conversa e os dados financeiros que o
-            assistente consultar para responder (lançamentos, saldos, orçamento e metas). Pelos termos da API, a Anthropic não usa esses
+            assistente consultar para responder (lançamentos, saldos, orçamento, metas, dívidas e bens). Pelos termos da API, a Anthropic não usa esses
             dados para treinar modelos e os guarda por até 30 dias, para segurança. O assistente
             só consulta: não cria, não altera e não apaga nada. Você retira o consentimento na tela do assistente, em “Retirar
             consentimento”.

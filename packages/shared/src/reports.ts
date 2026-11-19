@@ -41,12 +41,22 @@ export type CardDebtInput = {
   credits: { amount: number; date: DateOnly }[];
 };
 
+/** Quanto se deve ao cartão no fim do dia `date`; negativo = crédito (pago a mais ou estorno depois do pagamento). */
+function cardOwedAt(card: CardDebtInput, date: DateOnly): number {
+  let owed = -card.initialBalance;
+  for (const c of card.charges) if (c.startDate <= date) owed += c.amount;
+  for (const c of card.credits) if (c.date <= date) owed -= c.amount;
+  return owed;
+}
+
 /** R5: dívida do cartão no fim do dia `date`, com as parcelas futuras de compras já feitas. Mínimo 0. */
 export function cardDebtAt(card: CardDebtInput, date: DateOnly): number {
-  let debt = -card.initialBalance;
-  for (const c of card.charges) if (c.startDate <= date) debt += c.amount;
-  for (const c of card.credits) if (c.date <= date) debt -= c.amount;
-  return Math.max(debt, 0);
+  return Math.max(cardOwedAt(card, date), 0);
+}
+
+/** B1 do sub-projeto 11: o crédito que `cardDebtAt` corta no zero. É dinheiro da pessoa e entra no patrimônio. */
+export function cardCreditAt(card: CardDebtInput, date: DateOnly): number {
+  return Math.max(-cardOwedAt(card, date), 0);
 }
 
 export type LoanDebtInput = {

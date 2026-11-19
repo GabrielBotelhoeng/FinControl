@@ -96,6 +96,16 @@ export default function DashboardPage() {
             <p className="mt-3 text-sm text-muted">
               Previsão para o fim do mês: <span className="tabular font-semibold text-text">{formatBRL(summary.data.forecastEndOfMonth)}</span>
             </p>
+            {/* B9 do sub-projeto 11; durante o deploy, a API antiga ainda não manda o número. */}
+            {typeof summary.data.netWorth === 'number' && (
+              <p className="mt-1 text-sm text-muted">
+                Patrimônio líquido: <span className="tabular font-semibold text-text">{formatBRL(summary.data.netWorth)}</span>
+                {' · '}
+                <Link to="/patrimonio" className="font-medium text-primary hover:underline">
+                  Ver patrimônio
+                </Link>
+              </p>
+            )}
           </div>
           <div className="grid grid-cols-2 gap-6 border-t border-border pt-6 sm:max-w-xl">
             <Comparison label={`Receitas em ${formatMonthLabel(summary.data.month).split(' ')[0]}`} kind="income" data={summary.data.income} />

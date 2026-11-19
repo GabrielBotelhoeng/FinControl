@@ -67,6 +67,17 @@ enum DebtEventKind {
   note
 }
 
+/**
+ * Tipo do bem (sub-projeto 11, B4): só o ícone e o rótulo.
+ */
+enum AssetKind {
+  property
+  vehicle
+  investment
+  receivable
+  other
+}
+
 enum Frequency {
   weekly
   monthly
@@ -99,6 +110,7 @@ model Profile {
   pushSubscriptions PushSubscription[]
   aiUsage           AiUsage[]
   debts             Debt[]
+  assets            Asset[]
 
   @@index([isDemo, createdAt])
   @@map("profiles")
@@ -427,4 +439,38 @@ model DebtEvent {
 
   @@index([debtId])
   @@map("debt_events")
+}
+
+/**
+ * Bem que não é conta: imóvel, veículo, investimento, dinheiro a receber (sub-projeto 11, B2). O valor nunca fica
+ * aqui: sai sempre do histórico em `asset_valuations` (B3).
+ */
+model Asset {
+  id         String           @id @default(uuid()) @db.Uuid
+  userId     String           @map("user_id") @db.Uuid
+  name       String
+  kind       AssetKind
+  createdAt  DateTime         @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt  DateTime         @updatedAt @map("updated_at") @db.Timestamptz
+  user       Profile          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  valuations AssetValuation[]
+
+  @@index([userId])
+  @@map("assets")
+}
+
+/**
+ * Valor de um bem numa data (B3 e B6). No mesmo dia, vale o último gravado (`recordedAt`).
+ */
+model AssetValuation {
+  id         String   @id @default(uuid()) @db.Uuid
+  assetId    String   @map("asset_id") @db.Uuid
+  userId     String   @map("user_id") @db.Uuid
+  date       DateTime @db.Date
+  amount     BigInt
+  recordedAt DateTime @default(now()) @map("recorded_at") @db.Timestamptz
+  asset      Asset    @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@index([assetId])
+  @@map("asset_valuations")
 }

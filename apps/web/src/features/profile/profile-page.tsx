@@ -94,6 +94,15 @@ export default function ProfilePage() {
           </Panel>
           <Panel className="flex flex-wrap items-center justify-between gap-4 p-6">
             <div>
+              <h2 className="font-semibold">Patrimônio</h2>
+              <p className="text-sm text-muted">Seus bens (imóvel, carro, investimentos) e quanto você tem menos o que deve, mês a mês.</p>
+            </div>
+            <Link to="/patrimonio" className="text-sm font-medium text-primary hover:underline">
+              Ver patrimônio
+            </Link>
+          </Panel>
+          <Panel className="flex flex-wrap items-center justify-between gap-4 p-6">
+            <div>
               <h2 className="font-semibold">Calendário e resumo do mês</h2>
               <p className="text-sm text-muted">O que vence em cada dia e o que mudou no mês em poucas frases.</p>
             </div>

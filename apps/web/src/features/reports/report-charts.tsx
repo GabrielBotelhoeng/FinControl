@@ -1,38 +1,7 @@
 import type { ReportDebtPointDTO, ReportMonthDTO } from '@fincontrol/shared';
 import { Bar, BarChart, CartesianGrid, ComposedChart, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { axisTick, ChartLegend as Legend, ChartTip as Tip, compact, HATCH } from '../../components/ui/chart';
 import { formatBRL, formatMonthShort } from '../../lib/format';
-
-// Abaixo de R$ 1 mil, em reais; acima, "1,5 mil" (arredondar sempre para mil repetia "0 mil" e "1 mil" no eixo).
-const compact = (cents: number) =>
-  Math.abs(cents) < 100000 ? `R$ ${Math.round(cents / 100)}` : `${(cents / 100000).toLocaleString('pt-BR', { maximumFractionDigits: 1 })} mil`;
-const axisTick = { fill: 'var(--text-muted)', fontSize: 12 };
-
-function Legend({ items }: { items: { label: string; swatch: string }[] }) {
-  return (
-    <div className="mb-4 flex flex-wrap gap-4 text-xs text-muted" aria-hidden>
-      {items.map((i) => (
-        <span key={i.label} className="inline-flex items-center gap-2">
-          <span className={i.swatch} /> {i.label}
-        </span>
-      ))}
-    </div>
-  );
-}
-
-function Tip({ active, payload, rows }: { active?: boolean; payload?: Array<{ payload: Record<string, number | string> }>; rows: [string, string][] }) {
-  const p = payload?.[0]?.payload;
-  if (!active || !p) return null;
-  return (
-    <div className="rounded-[var(--radius-control)] border border-border bg-surface px-3.5 py-2.5 text-xs shadow-panel">
-      <p className="mb-1.5 font-semibold">{formatMonthShort(String(p.month))}</p>
-      {rows.map(([key, label]) => (
-        <p key={key} className="tabular">{`${label}: ${formatBRL(Number(p[key]))}`}</p>
-      ))}
-    </div>
-  );
-}
-
-const HATCH = '[background-image:repeating-linear-gradient(45deg,transparent_0_2px,rgba(0,0,0,.35)_2px_3px)]';
 
 /** Receitas e despesas (despesa com hachura, para não depender só da cor) e o saldo de cada mês em linha. */
 export function MonthlyChart({ data }: { data: ReportMonthDTO[] }) {

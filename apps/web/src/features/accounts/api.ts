@@ -23,7 +23,11 @@ export function useAccounts(includeArchived = false) {
 // 'cards': faturas (Tarefa 11) — limite, totais e lançamentos de uma fatura também dependem de saldo/lançamentos.
 // 'loans': o progresso do empréstimo muda quando uma parcela é paga em Lançamentos (Parte B).
 // 'budgets', 'planning', 'goals' (sub-projeto 3): o comprometido e a previsão mudam com cada lançamento.
-const FINANCE_KEYS = ['accounts', 'transactions', 'dashboard', 'categories', 'cards', 'loans', 'debts', 'calendar', 'repeated', 'budgets', 'planning', 'goals', 'reports', 'notifications'];
+// 'assets', 'net-worth' (sub-projeto 11): o patrimônio muda com o saldo das contas e com as dívidas.
+const FINANCE_KEYS = [
+  'accounts', 'transactions', 'dashboard', 'categories', 'cards', 'loans', 'debts', 'calendar', 'repeated', 'budgets', 'planning', 'goals', 'reports',
+  'notifications', 'assets', 'net-worth',
+];
 
 /**
  * Mutação que, ao terminar, invalida tudo que depende de saldo.
