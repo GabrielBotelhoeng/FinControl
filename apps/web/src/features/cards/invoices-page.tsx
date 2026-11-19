@@ -159,7 +159,8 @@ export default function InvoicesPage() {
 
           {openInvoice && (
             <section aria-label="Fatura aberta" className="mb-6">
-              <InvoiceCard cardId={id} invoice={openInvoice} highlight={!target || target === openInvoice.month} onPay={setPaying} />
+              {/* A chave muda com `?fatura=`: o cartão é recriado e abre os lançamentos da fatura nova. */}
+              <InvoiceCard key={`${openInvoice.month}:${target}`} cardId={id} invoice={openInvoice} highlight={!target || target === openInvoice.month} onPay={setPaying} />
             </section>
           )}
 
@@ -168,7 +169,7 @@ export default function InvoicesPage() {
               <h2 className="mb-3 font-display text-lg font-semibold tracking-tight">Fechadas e histórico</h2>
               <div className="grid gap-4">
                 {otherInvoices.map((invoice) => (
-                  <InvoiceCard key={invoice.month} cardId={id} invoice={invoice} highlight={target === invoice.month} onPay={setPaying} />
+                  <InvoiceCard key={`${invoice.month}:${target}`} cardId={id} invoice={invoice} highlight={target === invoice.month} onPay={setPaying} />
                 ))}
               </div>
             </section>
