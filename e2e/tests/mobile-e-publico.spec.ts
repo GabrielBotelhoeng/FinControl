@@ -15,7 +15,7 @@ test.describe('tela de 360 px', () => {
 
     const paths = [
       '/', '/lancamentos', '/contas', faturas!, '/emprestimos', emprestimo!, '/dividas', divida!, '/planejamento', '/planejamento?aba=metas',
-      '/relatorios', '/notificacoes', '/assistente', '/categorias', '/perfil', '/privacidade', '/termos',
+      '/calendario', '/resumo', '/relatorios', '/notificacoes', '/assistente', '/categorias', '/perfil', '/privacidade', '/termos',
     ];
     for (const path of paths) {
       await page.goto(path);

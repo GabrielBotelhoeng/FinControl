@@ -3,6 +3,7 @@ import { accountsRouter } from '../modules/accounts/accounts.routes';
 import { assistantRouter } from '../modules/assistant/assistant.routes';
 import { banksRouter } from '../modules/bank-rates/bank-rates.routes';
 import { budgetsRouter, planningRouter } from '../modules/budgets/budgets.routes';
+import { calendarRouter } from '../modules/calendar/calendar.routes';
 import { cardsRouter } from '../modules/cards/cards.routes';
 import { categoriesRouter } from '../modules/categories/categories.routes';
 import { dashboardRouter } from '../modules/dashboard/dashboard.routes';
@@ -27,6 +28,7 @@ export function registerRoutes(api: Router, c: Container, opts: { rateLimitEnabl
   api.use('/banks', banksRouter(c.bankRates));
   api.use('/loans', loansRouter(c.loans));
   api.use('/debts', debtsRouter(c.debts));
+  api.use('/calendar', calendarRouter(c.calendar));
   api.use('/budgets', budgetsRouter(c.budgets));
   api.use('/planning', planningRouter(c.budgets));
   api.use('/goals', goalsRouter(c.goals));

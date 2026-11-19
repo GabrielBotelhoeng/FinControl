@@ -94,6 +94,20 @@ export default function ProfilePage() {
           </Panel>
           <Panel className="flex flex-wrap items-center justify-between gap-4 p-6">
             <div>
+              <h2 className="font-semibold">Calendário e resumo do mês</h2>
+              <p className="text-sm text-muted">O que vence em cada dia e o que mudou no mês em poucas frases.</p>
+            </div>
+            <div className="flex flex-wrap gap-x-4 gap-y-1">
+              <Link to="/calendario" className="text-sm font-medium text-primary hover:underline">
+                Ver calendário
+              </Link>
+              <Link to="/resumo" className="text-sm font-medium text-primary hover:underline">
+                Ver resumo do mês
+              </Link>
+            </div>
+          </Panel>
+          <Panel className="flex flex-wrap items-center justify-between gap-4 p-6">
+            <div>
               <h2 className="font-semibold">Relatórios</h2>
               <p className="text-sm text-muted">Resumo do período, evolução das dívidas e exportação em PDF e CSV.</p>
             </div>

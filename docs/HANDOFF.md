@@ -1,6 +1,12 @@
 # HANDOFF — FinControl
 
-_Atualizado em 2026-11-18 (dívidas com credores)._
+_Atualizado em 2026-11-19 (calendário e resumo do mês)._
+
+## Sub-projeto 8: calendário de contas e resumo do mês (2026-11-19, branch feat/calendario-resumo)
+
+- **Spec:** `docs/superpowers/specs/2026-11-19-fincontrol-sp8-calendario-resumo-design.md` (K1–K4, M1–M3). Sem migration.
+- **Entregue:** `GET /calendar` e `/calendario` (grade do mês, totais, pagar pelo calendário, faturas); `/resumo` (frases do mês a partir do relatório e do orçamento). Menu do computador, Perfil e link no "A pagar" do painel.
+- **Testes:** 2 novos na API (`calendar.test.ts`) e 6 na web; o de 360 px cobre `/calendario` e `/resumo`.
 
 ## Sub-projeto 6: dívidas com credores (2026-11-18, branch feat/dividas)
 
