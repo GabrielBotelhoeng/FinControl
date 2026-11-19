@@ -21,6 +21,7 @@ const reportFixture = (over: Partial<ReportDTO> = {}): ReportDTO => ({
     { categoryId: 'home', name: 'Moradia', icon: 'house', color: '#22c55e', total: 0, share: 0, previous: 150000, change: -1 },
   ],
   incomeByCategory: [{ categoryId: 'salary', name: 'Salário', icon: 'wallet', color: '#16a34a', total: 500000, share: 1, previous: 400000, change: 0.25 }],
+  expenseByTag: [],
   monthly: months.map((month) => ({ month, income: 400000, expense: 200000, net: 200000 })),
   debts: months.map((month, i) => ({ month, cards: 10000 * i, loans: 2500000 - 10000 * i, others: 0, total: 2500000 })),
   topExpenses: [{ id: 't1', date: '2026-11-03', description: 'Mercado novembro', category: 'Alimentação', account: 'Corrente', amount: 200000 }],
@@ -64,6 +65,28 @@ describe('ReportsPage', () => {
     expect(within(list).getByRole('listitem', { name: 'Moradia' })).toHaveTextContent('-100%');
     expect(screen.getByRole('list', { name: 'Maiores despesas' })).toHaveTextContent(/Mercado novembro.*03\/11\/2026/);
     expect(screen.getByRole('region', { name: 'Saldo das contas' })).toHaveTextContent(/Saldo das contas em 30\/11\/2026.*Corrente.*R\$\s*4\.700,00/);
+  });
+
+  it('H4 (sub-projeto 14): gastos por tag com participação, quantidade, valor anterior e variação; sem tags, nada aparece', async () => {
+    const withTags = reportFixture({
+      expenseByTag: [
+        { name: 'bebida', total: 6000, count: 2, share: 0.02, previous: 6000, change: 0 },
+        { name: 'bar', total: 4000, count: 1, share: 4000 / 300000, previous: 0, change: null },
+        { name: 'natal', total: 0, count: 0, share: 0, previous: 8000, change: -1 },
+      ],
+    });
+    const { unmount } = renderApp(<ReportsPage />, { api: api(withTags) });
+    const list = await screen.findByRole('list', { name: 'Gastos por tag' });
+    expect(within(list).getAllByRole('listitem').map((li) => li.getAttribute('aria-label'))).toEqual(['#bebida', '#bar', '#natal']);
+    expect(within(list).getByRole('listitem', { name: '#bebida' })).toHaveTextContent(/R\$\s*60,00.*2% das despesas · 2 lançamentos · antes R\$\s*60,00.*0%/);
+    expect(within(list).getByRole('listitem', { name: '#bar' })).toHaveTextContent(/1 lançamento · antes.*novo/);
+    expect(within(list).getByRole('listitem', { name: '#natal' })).toHaveTextContent('-100%');
+    expect(screen.getByText(/Um lançamento com duas tags conta inteiro nas duas/)).toBeInTheDocument();
+    unmount();
+
+    renderApp(<ReportsPage />, { api: api() });
+    await screen.findByRole('list', { name: 'Gastos por categoria' });
+    expect(screen.queryByRole('heading', { name: 'Gastos por tag' })).not.toBeInTheDocument();
   });
 
   it('os atalhos "Ano" e "12 meses" pedem o período certo, sem passar do mês atual', async () => {
