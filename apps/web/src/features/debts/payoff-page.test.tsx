@@ -53,6 +53,12 @@ describe('PayoffPage', () => {
     expect(screen.queryByRole('button', { name: /^Avalanche/ })).not.toBeInTheDocument();
   });
 
+  it('juros acima de 30% ao mês avisam que o plano usa 30%', async () => {
+    renderPage();
+    await userEvent.type(await screen.findByLabelText('Juros ao mês (%) de Cheque especial'), '40');
+    expect(screen.getByText('Máximo de 30% ao mês: o plano usa 30%.')).toBeInTheDocument();
+  });
+
   it('guarda os dados no navegador', async () => {
     renderPage();
     await userEvent.type(await screen.findByLabelText('Juros ao mês (%) de Cheque especial'), '5');

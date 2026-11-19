@@ -72,6 +72,12 @@ describe('simulatePayoff (Q3, Q4)', () => {
     }
   });
 
+  it('sem parcela, o centavo que falta não é perdoado: espera o valor do mês seguinte', () => {
+    const r = simulatePayoff([{ id: 'x', name: 'x', balance: 10050, monthlyRate: 0, minimum: 0 }], 10000, 'snowball', '2026-12');
+    expect(r.months).toBe(2);
+    expect(r.totalPaid).toBe(10050);
+  });
+
   it('o mínimo considera os juros do 1º mês quando a parcela passa do saldo', () => {
     expect(minimumBudget([{ id: 'x', name: 'x', balance: 5000, monthlyRate: 0.1, minimum: 10000 }])).toBe(5500);
   });

@@ -249,7 +249,10 @@ export default function PayoffPage() {
                   return (
                     <div key={d.id} className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_10rem_12rem] sm:items-end">
                       <p className="truncate text-sm font-medium sm:pb-3">{`${d.name} · ${formatBRL(d.balance)}`}</p>
-                      <Field label={`Juros ao mês (%) de ${d.name}`}>
+                      <Field
+                        label={`Juros ao mês (%) de ${d.name}`}
+                        error={Number(o.rate.trim().replace(',', '.')) > MAX_RATE_PERCENT ? `Máximo de ${MAX_RATE_PERCENT}% ao mês: o plano usa ${MAX_RATE_PERCENT}%.` : undefined}
+                      >
                         <Input inputMode="decimal" value={o.rate} placeholder="Ex.: 8" onChange={(e) => set({ rate: e.target.value })} />
                       </Field>
                       <Field label={`Parcela de ${d.name}`}>

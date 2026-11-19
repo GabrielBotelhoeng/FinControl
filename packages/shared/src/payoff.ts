@@ -82,8 +82,9 @@ export function simulatePayoff(debts: PayoffDebt[], budget: number, strategy: Pa
       }
     }
     for (const d of state) {
-      // Resto de arredondamento (abaixo de R$ 1) vai junto com o pagamento do mês, como na última parcela do banco.
-      if (d.balance > 0 && d.balance < 100) {
+      // Resto de arredondamento (abaixo de R$ 1) de uma dívida com parcela vai junto com ela, como na última parcela do
+      // banco. Sem parcela, o centavo continua devido até o valor mensal cobrir (CodeRabbit).
+      if (d.minimum > 0 && d.balance > 0 && d.balance < 100) {
         totalPaid += d.balance;
         d.balance = 0;
       }
