@@ -72,7 +72,7 @@ export function createDemoService(deps: DemoServiceDeps) {
         for (const r of plan.recurrences) {
           await tx.recurrencesRepo.create(userId, {
             frequency: 'monthly', startDate: r.startDate, endDate: null, type: r.type, amount: r.amount, description: r.description,
-            accountId: accountId(r.accountKey), destinationAccountId: null, categoryId: categoryId(r.categoryName, r.type), nature: 'fixed',
+            accountId: accountId(r.accountKey), destinationAccountId: null, categoryId: categoryId(r.categoryName, r.type), nature: 'fixed', tags: [],
           });
         }
 

@@ -130,6 +130,7 @@ export function createTransactionsService(deps: TransactionsServiceDeps) {
         installmentNumber: null,
         installmentTotal: null,
         installmentGroupId: null,
+        tags: input.tags,
       });
       return toTransactionDTO(row, today());
     },

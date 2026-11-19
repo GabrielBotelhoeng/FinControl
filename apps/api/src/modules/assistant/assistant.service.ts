@@ -1,10 +1,11 @@
-import { todayInSaoPaulo, type AssistantConfigDTO, type AssistantMessage, type AssistantReplyDTO } from '@fincontrol/shared';
+import { compareTags, todayInSaoPaulo, type AssistantConfigDTO, type AssistantMessage, type AssistantReplyDTO } from '@fincontrol/shared';
 import { AppError, ConflictError, ForbiddenError } from '../../http/errors';
 import { AiError, type AiBlock, type AiClient, type AiMessage, type AiToolResultBlock } from '../../infra/ai-client';
 import type { Logger } from '../../infra/logger';
 import type { AuthClaims } from '../../infra/token-verifier';
 import type { CategoriesRepository } from '../categories/categories.repository';
 import type { ProfileRepository } from '../profile/profile.repository';
+import type { TagsService } from '../tags/tags.routes';
 import type { AssistantRepository } from './assistant.repository';
 import { ToolInputError, type AssistantTools } from './assistant.tools';
 
@@ -17,6 +18,8 @@ export type AssistantServiceDeps = {
   tools: AssistantTools;
   profileRepo: Pick<ProfileRepository, 'find' | 'setAiConsent'>;
   categoriesRepo: Pick<CategoriesRepository, 'list'>;
+  /** Sub-projeto 13 (T9): os nomes das tags entram no prompt, para o modelo saber o que buscar. */
+  tags: Pick<TagsService, 'list'>;
   logger: Pick<Logger, 'info' | 'error'>;
   clock: () => Date;
 };
@@ -32,7 +35,10 @@ export const DEADLINE_MS = 60_000;
 
 const WEEKDAYS = ['domingo', 'segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira', 'sábado'];
 
-function systemPrompt(name: string, today: string, expense: string[], income: string[]): string {
+/** Tags no prompt: no máximo estas, pelas mais usadas, para o contexto continuar enxuto. */
+const PROMPT_TAGS = 30;
+
+function systemPrompt(name: string, today: string, expense: string[], income: string[], tags: string[]): string {
   const weekday = WEEKDAYS[new Date(`${today}T12:00:00Z`).getUTCDay()];
   return [
     'Você é o assistente do FinControl, um app de finanças pessoais. Ajude a pessoa a entender e controlar o próprio dinheiro.',
@@ -45,6 +51,7 @@ function systemPrompt(name: string, today: string, expense: string[], income: st
     'Pode sugerir onde cortar gastos e como organizar o orçamento, mas não recomende investimentos ou produtos financeiros específicos.',
     `Categorias de despesa: ${expense.join(', ') || 'nenhuma'}.`,
     `Categorias de receita: ${income.join(', ') || 'nenhuma'}.`,
+    ...(tags.length > 0 ? [`Tags da pessoa: ${tags.join(', ')}.`] : []),
   ].join('\n');
 }
 
@@ -127,11 +134,12 @@ export function createAssistantService(deps: AssistantServiceDeps) {
       if (used.user >= DAILY_LIMIT_PER_USER) throw new AppError(429, 'Limite do dia', `Você chegou a ${DAILY_LIMIT_PER_USER} perguntas hoje. O assistente volta amanhã.`);
       if (used.total >= DAILY_LIMIT_TOTAL) throw new AppError(503, 'Limite do dia', 'O assistente atingiu o limite de uso de hoje. Ele volta amanhã.');
 
-      const categories = await deps.categoriesRepo.list(claims.userId);
+      const [categories, tagRows] = await Promise.all([deps.categoriesRepo.list(claims.userId), deps.tags.list(claims.userId)]);
       const names = (type: string) => categories.filter((c) => c.type === type).map((c) => c.name);
+      const tags = [...tagRows].sort((a, b) => b.count - a.count).slice(0, PROMPT_TAGS).map((t) => t.name).sort(compareTags);
       // Só o primeiro nome vai para a Anthropic (como dizem o aceite e a política de privacidade).
       const firstName = profile.name.trim().split(/\s+/)[0] || 'a pessoa';
-      const system = systemPrompt(firstName, today, names('expense'), names('income'));
+      const system = systemPrompt(firstName, today, names('expense'), names('income'), tags);
       const messages: AiMessage[] = history.map((m) => ({ role: m.role, content: m.content }));
       const usage = { input: 0, output: 0, rounds: 0 };
       const started = Date.now();

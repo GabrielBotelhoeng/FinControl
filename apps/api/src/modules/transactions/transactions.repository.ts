@@ -1,5 +1,5 @@
 import {
-  monthOf, startOfMonth,
+  compareTags, monthOf, startOfMonth,
   type AccountType, type DateOnly, type TransactionNature, type TransactionStatus, type TransactionType, type YearMonth,
 } from '@fincontrol/shared';
 import type { Prisma } from '../../generated/prisma/client';
@@ -30,14 +30,23 @@ export type TransactionRow = {
   loanId: string | null;
   /** Pagamento de dívida com credor (sub-projeto 6, V1); parcela de acordo quando tem `installmentNumber`. */
   debtId: string | null;
+  /** Sub-projeto 13 (T1–T3): em ordem alfabética. */
+  tags: string[];
   createdAt: Date;
 };
 
 /** Tipo e dias de fatura de uma conta, para as regras de cartão nos caminhos de lançamentos (decisão R10/R11). */
 export type AccountCardInfo = { type: AccountType; closingDay: number | null; dueDay: number | null };
 
-/** `loanId` e `debtId` são opcionais na criação: só os módulos de empréstimos e de dívidas os preenchem. */
-export type NewTransaction = Omit<TransactionRow, 'id' | 'createdAt' | 'loanId' | 'debtId'> & { loanId?: string | null; debtId?: string | null };
+/**
+ * `loanId` e `debtId` são opcionais na criação: só os módulos de empréstimos e de dívidas os preenchem. Sem `tags`,
+ * o banco grava a lista vazia (sub-projeto 13).
+ */
+export type NewTransaction = Omit<TransactionRow, 'id' | 'createdAt' | 'loanId' | 'debtId' | 'tags'> & {
+  loanId?: string | null;
+  debtId?: string | null;
+  tags?: string[];
+};
 
 export type TransactionFilters = {
   from?: DateOnly;
@@ -47,6 +56,8 @@ export type TransactionFilters = {
   type?: TransactionType;
   status?: TransactionStatus;
   q?: string;
+  /** Sub-projeto 13 (T5): uma tag, já normalizada. */
+  tag?: string;
 };
 
 export type Cursor = { dueDate: DateOnly; id: string };
@@ -85,6 +96,8 @@ export const toTransactionRow = (t: TransactionRecord): TransactionRow => ({
   installmentGroupId: t.installmentGroupId,
   loanId: t.loanId,
   debtId: t.debtId,
+  // A renomeação das tags (sub-projeto 13) grava sem ordem; a ordem da tela sai daqui.
+  tags: [...t.tags].sort(compareTags),
   createdAt: t.createdAt,
 });
 
@@ -124,6 +137,7 @@ export function createTransactionsRepository(db: DbClient) {
       if (f.type) and.push({ type: f.type });
       if (f.status) and.push({ status: f.status });
       if (f.q) and.push({ description: { contains: escapeLike(f.q), mode: 'insensitive' } });
+      if (f.tag) and.push({ tags: { has: f.tag } });
       if (cursor) {
         const d = fromDateOnly(cursor.dueDate);
         and.push({ OR: [{ dueDate: { lt: d } }, { dueDate: d, id: { lt: cursor.id } }] });
