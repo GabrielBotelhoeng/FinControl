@@ -1,6 +1,6 @@
 import {
-  addMonthsToYm, changeRatio, endOfMonth, monthOf, reportPeriod, seriesMonths, startOfMonth, todayInSaoPaulo,
-  type ReportCategoryDTO, type ReportDTO, type YearMonth,
+  addMonthsToYm, changeRatio, compareTags, endOfMonth, monthOf, reportPeriod, seriesMonths, startOfMonth, todayInSaoPaulo,
+  type ReportCategoryDTO, type ReportDTO, type ReportTagDTO, type YearMonth,
 } from '@fincontrol/shared';
 import { savingsRate } from '../../domain/health';
 import { UnprocessableError } from '../../http/errors';
@@ -12,6 +12,8 @@ import { renderReportXlsx } from './report-xlsx';
 import type { CsvRow, ReportsRepository } from './reports.repository';
 
 const TOP_EXPENSES = 10;
+
+type TagTotals = Awaited<ReturnType<ReportsRepository['totalsByTag']>>;
 
 export type ReportsServiceDeps = {
   repo: ReportsRepository;
@@ -49,6 +51,20 @@ export function createReportsService(deps: ReportsServiceDeps) {
       .sort((a, b) => b.total - a.total || b.previous - a.previous || a.name.localeCompare(b.name, 'pt-BR'));
   }
 
+  /**
+   * H1–H3 (sub-projeto 14): as tags com despesa paga no período ou no anterior (a que só existiu antes entra com 0),
+   * do maior total para o menor. A participação é sobre o total de despesas do período.
+   */
+  function tagRows(now: TagTotals, before: TagTotals, expense: number): ReportTagDTO[] {
+    return [...new Set([...now.keys(), ...before.keys()])]
+      .map((name) => {
+        const total = now.get(name)?.total ?? 0;
+        const previous = before.get(name)?.total ?? 0;
+        return { name, total, count: now.get(name)?.count ?? 0, share: expense === 0 ? 0 : total / expense, previous, change: changeRatio(total, previous) };
+      })
+      .sort((a, b) => b.total - a.total || b.previous - a.previous || compareTags(a.name, b.name));
+  }
+
   async function csvRows(userId: string, from: YearMonth, to: YearMonth): Promise<CsvRow[]> {
     checkPeriod(from, to);
     await deps.recurrences.materialize(userId, endOfMonth(to));
@@ -62,7 +78,7 @@ export function createReportsService(deps: ReportsServiceDeps) {
     const series = seriesMonths(from, to);
     const balanceDate = endOfMonth(to);
 
-    const [expenseByCategory, incomeByCategory, monthTotals, previousTotals, debtSources, topExpenses, balances] = await Promise.all([
+    const [expenseByCategory, incomeByCategory, monthTotals, previousTotals, debtSources, topExpenses, balances, tagsNow, tagsBefore] = await Promise.all([
       categoryRows(userId, 'expense', range, previousRange),
       categoryRows(userId, 'income', range, previousRange),
       repo.monthTotals(userId, startOfMonth(series[0]!), endOfMonth(to)),
@@ -70,6 +86,8 @@ export function createReportsService(deps: ReportsServiceDeps) {
       deps.debts.load(userId),
       repo.topExpenses(userId, ...range, TOP_EXPENSES),
       repo.balances(userId, balanceDate),
+      repo.totalsByTag(userId, ...range),
+      repo.totalsByTag(userId, ...previousRange),
     ]);
 
     const sumIn = (totals: Map<string, { income: number; expense: number }>, months: (m: string) => boolean) => {
@@ -99,6 +117,7 @@ export function createReportsService(deps: ReportsServiceDeps) {
       },
       expenseByCategory,
       incomeByCategory,
+      expenseByTag: tagRows(tagsNow, tagsBefore, current.expense),
       monthly: series.map((month) => {
         const t = monthTotals.get(month) ?? { income: 0, expense: 0 };
         return { month, income: t.income, expense: t.expense, net: t.income - t.expense };

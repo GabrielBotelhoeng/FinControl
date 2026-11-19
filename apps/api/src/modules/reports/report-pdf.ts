@@ -149,12 +149,13 @@ export async function renderReportPdf(report: ReportDTO, generatedAt: Date): Pro
   });
   y -= 64;
 
-  // ---------- Categorias ----------
-  const categories = (label: string, rows: ReportCategoryDTO[], color: RGB) => {
-    heading(label, 'Participação no período e variação contra o período anterior.');
+  // ---------- Categorias e tags ----------
+  type ShareRow = Pick<ReportCategoryDTO, 'name' | 'total' | 'share' | 'previous' | 'change'>;
+  const shares = (label: string, rows: ShareRow[], color: RGB, o: { column?: string; note?: string } = {}) => {
+    heading(label, o.note ?? 'Participação no período e variação contra o período anterior.');
     if (rows.length === 0) return empty('Nada pago no período.');
     const columns: Column[] = [
-      { label: 'Categoria', width: 145 }, { label: '', width: 95 }, { label: 'Total', width: 80, align: 'right' },
+      { label: o.column ?? 'Categoria', width: 145 }, { label: '', width: 95 }, { label: 'Total', width: 80, align: 'right' },
       { label: 'Part.', width: 42, align: 'right' }, { label: 'Anterior', width: 80, align: 'right' }, { label: 'Var.', width: WIDTH - 442, align: 'right' },
     ];
     const barX = MARGIN + 145;
@@ -171,8 +172,14 @@ export async function renderReportPdf(report: ReportDTO, generatedAt: Date): Pro
       },
     );
   };
-  categories('Gastos por categoria', report.expenseByCategory, C.expense);
-  categories('Receitas por categoria', report.incomeByCategory, C.income);
+  shares('Gastos por categoria', report.expenseByCategory, C.expense);
+  shares('Receitas por categoria', report.incomeByCategory, C.income);
+  // Sub-projeto 14 (H5): só quando há tags. Um lançamento com duas tags conta inteiro nas duas (H2).
+  if (report.expenseByTag.length > 0) {
+    shares('Gastos por tag', report.expenseByTag.map((t) => ({ ...t, name: `#${t.name}` })), C.expense, {
+      column: 'Tag', note: 'Participação nas despesas e variação. Um lançamento com duas tags conta inteiro nas duas.',
+    });
+  }
 
   // ---------- Evolução mensal (gráfico de barras + tabela) ----------
   const chartHeight = 110;
