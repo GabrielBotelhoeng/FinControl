@@ -66,7 +66,7 @@ export function AssetDialog({ assetId, title, onOpenChange }: { assetId: string;
 
   const valuations = asset.data?.valuations ?? [];
   return (
-    <Dialog open onOpenChange={onOpenChange} title={title}>
+    <Dialog open onOpenChange={onOpenChange} title={asset.data?.name ?? title}>
       {asset.isPending && <ListSkeleton rows={3} />}
       {asset.isError && <ErrorState message={asset.error.message} onRetry={() => asset.refetch()} />}
       {asset.data && (
@@ -90,7 +90,8 @@ export function AssetDialog({ assetId, title, onOpenChange }: { assetId: string;
               Vendi ou perdi este bem
             </label>
             <p className="text-xs text-muted">
-              Uma data no passado completa o histórico. Na venda, o bem passa a valer R$ 0,00 a partir da data, e os meses antes continuam no gráfico.
+              Uma data no passado completa o histórico. Na venda, use a data em que vendeu: o bem passa a valer R$ 0,00 a partir dela, e os
+              meses antes continuam no gráfico.
             </p>
             {error && (
               <p role="alert" className="text-sm text-expense">
@@ -117,7 +118,7 @@ export function AssetDialog({ assetId, title, onOpenChange }: { assetId: string;
                     <Button
                       size="icon"
                       variant="ghost"
-                      aria-label={`Excluir o valor de ${formatDate(v.date)}`}
+                      aria-label={`Excluir o valor de ${formatBRL(v.amount)} de ${formatDate(v.date)}`}
                       title={valuations.length === 1 ? 'O único valor do bem não pode ser excluído.' : undefined}
                       disabled={valuations.length === 1 || removeValuation.isPending}
                       onClick={() => deleteValuation(v.id)}

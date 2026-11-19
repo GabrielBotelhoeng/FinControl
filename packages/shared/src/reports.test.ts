@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { loanSummary, outstandingBalance } from './loan';
-import { cardDebtAt, changeRatio, csvCell, loanOutstandingAt, pdfSafe, reportPeriod, seriesMonths, toCsv } from './reports';
+import { cardCreditAt, cardDebtAt, changeRatio, csvCell, loanOutstandingAt, pdfSafe, reportPeriod, seriesMonths, toCsv } from './reports';
 
 describe('reportPeriod (R1, R3)', () => {
   it('um mês compara com o mês anterior, atravessando o ano', () => {
@@ -54,6 +54,19 @@ describe('cardDebtAt (R5)', () => {
   });
   it('saldo inicial negativo do cartão é dívida', () => {
     expect(cardDebtAt({ initialBalance: -3000, charges: [], credits: [] }, '2026-01-31')).toBe(3000);
+  });
+});
+
+describe('cardCreditAt (B1 do sub-projeto 11)', () => {
+  const overpaid = { initialBalance: 0, charges: [{ amount: 5000, startDate: '2026-01-01' }], credits: [{ amount: 9000, date: '2026-01-02' }] };
+  it('o que foi pago a mais (ou estornado depois do pagamento) é crédito, a partir da data', () => {
+    expect(cardCreditAt(overpaid, '2026-01-01')).toBe(0);
+    expect(cardCreditAt(overpaid, '2026-01-02')).toBe(4000);
+    expect(cardDebtAt(overpaid, '2026-01-02')).toBe(0);
+  });
+  it('com dívida não há crédito; saldo inicial positivo é crédito', () => {
+    expect(cardCreditAt({ ...overpaid, credits: [] }, '2026-01-31')).toBe(0);
+    expect(cardCreditAt({ initialBalance: 2500, charges: [], credits: [] }, '2026-01-31')).toBe(2500);
   });
 });
 

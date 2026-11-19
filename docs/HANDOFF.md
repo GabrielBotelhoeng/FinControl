@@ -9,6 +9,8 @@ _Atualizado em 2026-11-19 (patrimônio líquido)._
 - **Regra:** contas não arquivadas e sem cartão + bens − dívidas (o cartão entra só como dívida, pela R5). O valor de um bem numa data é o do registro mais recente até ela; antes do primeiro, 0.
 - **Entregue:** `/assets` (bens com o histórico de valores), `GET /net-worth` (hoje e os 12 últimos meses), `netWorth` no resumo do painel, a página `/patrimonio` (menu do computador e Perfil) e a linha no painel, os bens e o patrimônio na ferramenta `saldos_e_dividas`, e na demo o "Carro" e a "Previdência privada". A política de privacidade passou a listar todos os dados guardados.
 - **Reaproveitado:** `balancesAt` (saldos de várias datas numa leitura, em `reports.repository.ts`) e as peças dos gráficos em `components/ui/chart.tsx`.
+- **Revisão final (revisor novo):** seção 8 da spec. Conta arquivada continua nos meses antes do arquivamento, o crédito de cartão pago a mais entra no patrimônio e a venda não pode ficar antes de um valor posterior.
+- **Testes:** 209 no shared, 343 na API e 232 na web, além de 15 E2E (novo: `e2e/tests/patrimonio.spec.ts`; o de 360 px cobre `/patrimonio`).
 
 ## Atalhos no ícone do app (2026-11-19, branch feat/atalhos-pwa)
 

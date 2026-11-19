@@ -56,6 +56,29 @@ describe('bens (sub-projeto 11)', () => {
     expect((await addValuation(user, asset.id, 100, '2026-11-12')).status).toBe(422);
   });
 
+  it('revisão: a venda (valor 0) não pode ficar antes de um valor maior que zero já registrado (B6)', async () => {
+    const user = await newUser();
+    const asset = (await createAsset(user, { since: '2025-06-01', purchaseValue: 4500000 })).body;
+    const early = await addValuation(user, asset.id, 0, '2026-09-01');
+    expect(early.status).toBe(422);
+    expect(early.body.detail).toBe('Há um valor registrado depois desta data. Para registrar a venda nela, exclua antes os valores posteriores.');
+    expect((await addValuation(user, asset.id, 0, '2026-11-11')).body.value).toBe(0);
+    // Com a venda já registrada, antecipar a data dela vale: o registro posterior também é zero.
+    const moved = await addValuation(user, asset.id, 0, '2026-09-01');
+    expect(moved.status).toBe(201);
+    expect(moved.body.value).toBe(0);
+  });
+
+  it('revisão: excluir dois registros ao mesmo tempo não deixa o bem sem valor', async () => {
+    const user = await newUser();
+    const asset = (await createAsset(user, { since: '2025-06-01', purchaseValue: 4500000 })).body;
+    const results = await Promise.all(
+      asset.valuations.map((v: { id: string }) => request(app).delete(`/api/v1/assets/${asset.id}/valuations/${v.id}`).set(user.auth)),
+    );
+    expect(results.map((r) => r.status).sort()).toEqual([204, 422]);
+    expect((await request(app).get(`/api/v1/assets/${asset.id}`).set(user.auth)).body.valuations).toHaveLength(1);
+  });
+
   it('lista do maior valor ao menor, com o bem vendido no fim', async () => {
     const user = await newUser();
     const car = (await createAsset(user)).body;

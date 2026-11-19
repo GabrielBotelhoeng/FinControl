@@ -2,7 +2,7 @@ import request from 'supertest';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { buildTestApp } from './helpers/app';
 import { newUser, type TestUser } from './helpers/auth';
-import { resetDb } from './helpers/db';
+import { resetDb, testDb } from './helpers/db';
 import { categoryId, createAccount, createTransaction } from './helpers/factories';
 
 // Hoje nos testes é 2026-11-11 (FIXED_NOW).
@@ -12,7 +12,7 @@ const { app } = buildTestApp();
 async function scenario(user: TestUser) {
   const checking = await createAccount(app, user, { name: 'Corrente', initialBalance: 500000 });
   await createAccount(app, user, { name: 'Poupança', type: 'savings', initialBalance: 100000 });
-  const old = await createAccount(app, user, { name: 'Antiga', initialBalance: 99900 });
+  const old = await createAccount(app, user, { name: 'Antiga', initialBalance: 0 });
   expect((await request(app).post(`/api/v1/accounts/${old.id}/archive`).set(user.auth)).status).toBe(200);
   const salary = await categoryId(app, user, 'Salário', 'income');
   const food = await categoryId(app, user, 'Alimentação', 'expense');
@@ -45,6 +45,7 @@ describe('patrimônio líquido (sub-projeto 11)', () => {
         expect.objectContaining({ name: 'Corrente', type: 'checking', balance: 740000 }),
         expect.objectContaining({ name: 'Poupança', type: 'savings', balance: 100000 }),
       ],
+      cardCredit: 0,
       total: 840000,
     });
     expect(res.body.assets.total).toBe(4000000);
@@ -73,12 +74,48 @@ describe('patrimônio líquido (sub-projeto 11)', () => {
     expect(summary.body.netWorth).toBe(4600000);
   });
 
+  it('revisão: conta arquivada continua nos meses antes do arquivamento, e o passado não muda (B1)', async () => {
+    const user = await newUser();
+    const old = await createAccount(app, user, { name: 'Antiga', initialBalance: 1000000 });
+    const fresh = await createAccount(app, user, { name: 'Nova', initialBalance: 0 });
+    const closed = await createAccount(app, user, { name: 'Fechada', initialBalance: 50000 });
+    await createTransaction(app, user, { type: 'transfer', amount: 1000000, description: 'Mudança de banco', accountId: old.id, destinationAccountId: fresh.id, dueDate: '2026-09-15', status: 'paid', paidDate: '2026-09-15' });
+    // A Antiga foi arquivada já zerada e a Fechada com saldo, em 20/10 (meio-dia em São Paulo).
+    await testDb.account.updateMany({ where: { id: { in: [old.id, closed.id] } }, data: { archivedAt: new Date('2026-10-20T15:00:00Z') } });
+    const res = (await request(app).get('/api/v1/net-worth').set(user.auth)).body;
+    const accounts = (month: string) => res.series.find((p: { month: string }) => p.month === month).accounts;
+    // A transferência entre contas comuns não muda nada; a Fechada sai a partir do fim de outubro.
+    expect(accounts('2025-12')).toBe(1050000);
+    expect(accounts('2026-09')).toBe(1050000);
+    expect(accounts('2026-10')).toBe(1000000);
+    expect(accounts('2026-11')).toBe(1000000);
+    expect(res.accounts.items.map((a: { name: string }) => a.name)).toEqual(['Nova']);
+  });
+
+  it('revisão: o crédito do cartão pago a mais continua no patrimônio, também no painel (B1)', async () => {
+    const user = await newUser();
+    const checking = await createAccount(app, user, { name: 'Corrente', initialBalance: 500000 });
+    const food = await categoryId(app, user, 'Alimentação', 'expense');
+    const card = await createAccount(app, user, { name: 'Cartão', type: 'credit_card', color: '#7c3aed', creditLimit: 800000, closingDay: 26, dueDay: 5, paymentAccountId: checking.id });
+    await createTransaction(app, user, { type: 'expense', amount: 100000, description: 'Compra', accountId: card.id, categoryId: food, nature: 'variable', dueDate: '2026-11-05' });
+    const pay = await request(app).post(`/api/v1/cards/${card.id}/invoices/2026-11/payments`).set(user.auth).send({ amount: 150000, accountId: checking.id, paidDate: '2026-11-10' });
+    expect(pay.status).toBe(201);
+    const res = (await request(app).get('/api/v1/net-worth').set(user.auth)).body;
+    // Corrente: 5.000 − 1.500 = 3.500, mais R$ 500 de crédito no cartão; a dívida do cartão é zero.
+    expect(res.debts.cards).toBe(0);
+    expect(res.accounts).toMatchObject({ cardCredit: 50000, total: 400000 });
+    expect(res.total).toBe(400000);
+    expect(res.series[11]).toMatchObject({ accounts: 400000, total: 400000 });
+    expect(res.series[10]).toMatchObject({ accounts: 500000, total: 500000 });
+    expect((await request(app).get('/api/v1/dashboard/summary').set(user.auth)).body.netWorth).toBe(400000);
+  });
+
   it('quem não tem nada: tudo zero, e o bem de outra pessoa não entra', async () => {
     const user = await newUser();
     const other = await newUser();
     await request(app).post('/api/v1/assets').set(other.auth).send({ name: 'Casa', kind: 'property', value: 30000000 });
     const res = await request(app).get('/api/v1/net-worth').set(user.auth);
-    expect(res.body).toMatchObject({ accounts: { items: [], total: 0 }, assets: { items: [], total: 0 }, debts: { total: 0 }, total: 0 });
+    expect(res.body).toMatchObject({ accounts: { items: [], cardCredit: 0, total: 0 }, assets: { items: [], total: 0 }, debts: { total: 0 }, total: 0 });
     expect(res.body.series.every((p: { total: number }) => p.total === 0)).toBe(true);
     expect((await request(app).get('/api/v1/dashboard/summary').set(user.auth)).body.netWorth).toBe(0);
   });

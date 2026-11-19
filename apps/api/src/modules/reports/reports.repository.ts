@@ -1,5 +1,5 @@
 import {
-  monthOf, type AccountType, type DateOnly, type ReportBalanceDTO, type ReportExpenseDTO, type TransactionNature, type TransactionStatus, type TransactionType,
+  monthOf, todayInSaoPaulo, type AccountType, type DateOnly, type ReportBalanceDTO, type ReportExpenseDTO, type TransactionNature, type TransactionStatus, type TransactionType,
 } from '@fincontrol/shared';
 import type { Prisma } from '../../generated/prisma/client';
 import { fromDateOnly, toDateOnly } from '../../infra/date-mapping';
@@ -27,31 +27,53 @@ export type CsvRow = {
 
 export function createReportsRepository(db: Db) {
   /**
-   * Saldo no fim de cada dia de `dates` (na mesma ordem) das contas não arquivadas, sem cartões (R7): uma leitura só,
-   * e cada data sai em memória (a série do patrimônio, B8 do sub-projeto 11, tem 12 datas).
+   * Saldo no fim de cada dia de `dates` (na ordem recebida) das contas sem cartões (R7). Sem `today`, só as não
+   * arquivadas. Com `today` (a série do patrimônio, B1 do sub-projeto 11), a conta arquivada ainda conta nas datas
+   * antes do dia em que foi arquivada, para o passado não mudar quando ela é arquivada; hoje, como no saldo total, não.
+   * O saldo até a primeira data sai agrupado por conta; só o trecho até a última vem dia a dia.
    */
-  async function balancesAt(userId: string, dates: DateOnly[]): Promise<ReportBalanceDTO[][]> {
+  async function balancesAt(userId: string, dates: DateOnly[], opts: { today?: DateOnly } = {}): Promise<ReportBalanceDTO[][]> {
+    if (dates.length === 0) return [];
     const accounts = await db.account.findMany({
-      where: { userId, archivedAt: null, type: { not: 'credit_card' } },
+      where: { userId, type: { not: 'credit_card' }, ...(opts.today ? {} : { archivedAt: null }) },
       orderBy: [{ name: 'asc' }, { id: 'asc' }],
-      select: { id: true, name: true, type: true, initialBalance: true },
+      select: { id: true, name: true, type: true, initialBalance: true, archivedAt: true },
     });
-    if (accounts.length === 0 || dates.length === 0) return dates.map(() => []);
+    if (accounts.length === 0) return dates.map(() => []);
     const ids = accounts.map((a) => a.id);
-    const last = dates.reduce((a, b) => (a > b ? a : b));
-    const until = { userId, status: 'paid' as const, paidDate: { lte: fromDateOnly(last) } };
-    const [own, incoming] = await Promise.all([
-      db.transaction.groupBy({ by: ['accountId', 'type', 'paidDate'], where: { ...until, accountId: { in: ids } }, _sum: { amount: true } }),
-      db.transaction.groupBy({ by: ['destinationAccountId', 'paidDate'], where: { ...until, type: 'transfer', destinationAccountId: { in: ids } }, _sum: { amount: true } }),
+    const sorted = [...dates].sort();
+    const first = sorted[0]!;
+    const last = sorted[sorted.length - 1]!;
+    const own = { userId, status: 'paid' as const, accountId: { in: ids } };
+    const incoming = { userId, status: 'paid' as const, type: 'transfer' as const, destinationAccountId: { in: ids } };
+    const upToFirst = { lte: fromDateOnly(first) };
+    const afterFirst = { gt: fromDateOnly(first), lte: fromDateOnly(last) };
+    const [ownBase, incomingBase, ownDaily, incomingDaily] = await Promise.all([
+      db.transaction.groupBy({ by: ['accountId', 'type'], where: { ...own, paidDate: upToFirst }, _sum: { amount: true } }),
+      db.transaction.groupBy({ by: ['destinationAccountId'], where: { ...incoming, paidDate: upToFirst }, _sum: { amount: true } }),
+      first === last ? [] : db.transaction.groupBy({ by: ['accountId', 'type', 'paidDate'], where: { ...own, paidDate: afterFirst }, _sum: { amount: true } }),
+      first === last ? [] : db.transaction.groupBy({ by: ['destinationAccountId', 'paidDate'], where: { ...incoming, paidDate: afterFirst }, _sum: { amount: true } }),
     ]);
+    const sign = (type: TransactionType) => (type === 'income' ? 1 : -1);
+    const base = new Map(accounts.map((a) => [a.id, Number(a.initialBalance)]));
+    for (const g of ownBase) base.set(g.accountId, base.get(g.accountId)! + sign(g.type) * Number(g._sum.amount ?? 0n));
+    for (const g of incomingBase) {
+      if (g.destinationAccountId) base.set(g.destinationAccountId, base.get(g.destinationAccountId)! + Number(g._sum.amount ?? 0n));
+    }
     const moves = [
-      ...own.flatMap((g) => (g.paidDate ? [{ accountId: g.accountId, date: toDateOnly(g.paidDate), delta: (g.type === 'income' ? 1 : -1) * Number(g._sum.amount ?? 0n) }] : [])),
-      ...incoming.flatMap((g) => (g.destinationAccountId && g.paidDate ? [{ accountId: g.destinationAccountId, date: toDateOnly(g.paidDate), delta: Number(g._sum.amount ?? 0n) }] : [])),
+      ...ownDaily.flatMap((g) => (g.paidDate ? [{ accountId: g.accountId, date: toDateOnly(g.paidDate), delta: sign(g.type) * Number(g._sum.amount ?? 0n) }] : [])),
+      ...incomingDaily.flatMap((g) =>
+        g.destinationAccountId && g.paidDate ? [{ accountId: g.destinationAccountId, date: toDateOnly(g.paidDate), delta: Number(g._sum.amount ?? 0n) }] : [],
+      ),
     ];
+    const counts = (archivedAt: Date | null, at: DateOnly) =>
+      archivedAt === null || (opts.today !== undefined && at < opts.today && todayInSaoPaulo(archivedAt) > at);
     return dates.map((at) => {
-      const balance = new Map(accounts.map((a) => [a.id, Number(a.initialBalance)]));
+      const balance = new Map(base);
       for (const m of moves) if (m.date <= at) balance.set(m.accountId, balance.get(m.accountId)! + m.delta);
-      return accounts.map((a) => ({ accountId: a.id, name: a.name, type: a.type as AccountType, balance: balance.get(a.id)! }));
+      return accounts
+        .filter((a) => counts(a.archivedAt, at))
+        .map((a) => ({ accountId: a.id, name: a.name, type: a.type as AccountType, balance: balance.get(a.id)! }));
     });
   }
 

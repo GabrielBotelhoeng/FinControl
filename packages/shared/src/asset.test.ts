@@ -49,12 +49,13 @@ describe('assetSummary', () => {
     });
   });
 
-  it('dois registros no primeiro dia: vale o primeiro gravado', () => {
+  it('dois registros no primeiro dia: vale o último gravado, como no gráfico (B3)', () => {
     const v = [
       { date: '2026-01-01', recordedAt: at('2026-01-01', '10:00'), amount: 700 },
       { date: '2026-01-01', recordedAt: at('2026-01-01', '09:00'), amount: 500 },
+      { date: '2026-06-01', recordedAt: at('2026-06-01', '09:00'), amount: 600 },
     ];
-    expect(assetSummary(v, '2026-11-19')).toMatchObject({ since: '2026-01-01', firstValue: 500, value: 700 });
+    expect(assetSummary(v, '2026-11-19')).toMatchObject({ since: '2026-01-01', firstValue: 700, value: 600 });
   });
 
   it('sem registro devolve null', () => expect(assetSummary([], '2026-11-19')).toBeNull());

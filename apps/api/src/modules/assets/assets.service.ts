@@ -1,5 +1,5 @@
 import {
-  assetSummary, compareByMoment, todayInSaoPaulo,
+  assetSummary, assetValueAt, compareByMoment, todayInSaoPaulo,
   type AssetDetailDTO, type AssetDTO, type AssetValuationInput, type CreateAssetInput, type DateOnly, type UpdateAssetInput,
 } from '@fincontrol/shared';
 import { NotFoundError, UnprocessableError } from '../../http/errors';
@@ -68,8 +68,14 @@ export function createAssetsService(deps: { repo: AssetsRepository; clock: () =>
     },
 
     async addValuation(userId: string, id: string, input: AssetValuationInput): Promise<AssetDetailDTO> {
-      await getOwned(userId, id);
+      const asset = await getOwned(userId, id);
       assertNotFuture(input.date);
+      // B6 (revisão): pela regra B3, um valor maior que zero que valha depois da data desfaria a venda. Vale o que
+      // conta em cada dia: um valor substituído no mesmo dia por outro zero não atrapalha.
+      const undoneLater = asset.valuations.some((v) => v.date > input.date && assetValueAt(asset.valuations, v.date) > 0);
+      if (input.amount === 0 && undoneLater) {
+        throw new UnprocessableError('Há um valor registrado depois desta data. Para registrar a venda nela, exclua antes os valores posteriores.');
+      }
       await deps.repo.addValuation(userId, id, input);
       return detail(userId, id);
     },

@@ -1,5 +1,5 @@
 import {
-  accountTypeSchema, addMonthsToYm, assetValueAt, endOfMonth, maxDate, monthOf, startOfMonth, todayInSaoPaulo,
+  accountTypeSchema, addMonthsToYm, assetValueAt, cardCreditAt, endOfMonth, maxDate, monthOf, startOfMonth, todayInSaoPaulo,
   type AccountType, type CategorySpendDTO, type DashboardSummaryDTO, type EvolutionPointDTO, type UpcomingItemDTO, type YearMonth,
 } from '@fincontrol/shared';
 import { computeForecast, percentChange } from '../../domain/balance';
@@ -100,8 +100,12 @@ export function createDashboardService(deps: DashboardServiceDeps) {
         upcoming,
         budget,
         debts,
-        // B9: o mesmo número de hoje da página do patrimônio.
-        netWorth: netWorthBalance + assets.reduce((sum, a) => sum + assetValueAt(a.valuations, t), 0) - debts.total,
+        // B9: o mesmo número de hoje da página do patrimônio, com o crédito dos cartões pagos a mais.
+        netWorth:
+          netWorthBalance
+          + debtSources.cards.reduce((sum, c) => sum + cardCreditAt(c, t), 0)
+          + assets.reduce((sum, a) => sum + assetValueAt(a.valuations, t), 0)
+          - debts.total,
         health: {
           savingsRate: savingsRate(now.income, now.expense),
           reserveMonths: reserve.months,

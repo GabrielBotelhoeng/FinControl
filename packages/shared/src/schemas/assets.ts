@@ -53,8 +53,11 @@ export type NetWorthPointDTO = { month: string; date: string; accounts: number; 
 
 export type NetWorthDTO = {
   date: string;
-  /** Contas não arquivadas, sem cartões (B1, a regra R7 do relatório). */
-  accounts: { items: ReportBalanceDTO[]; total: number };
+  /**
+   * Contas não arquivadas, sem cartões (B1, a regra R7 do relatório), mais o crédito dos cartões pagos a mais.
+   * `total` = soma de `items` + `cardCredit`.
+   */
+  accounts: { items: ReportBalanceDTO[]; cardCredit: number; total: number };
   assets: { items: AssetDTO[]; total: number };
   debts: DebtsDTO;
   total: number;

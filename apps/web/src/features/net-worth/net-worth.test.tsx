@@ -2,6 +2,7 @@ import { addMonthsToYm, endOfMonth } from '@fincontrol/shared';
 import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
+import { ApiError } from '../../lib/api-client';
 import { fakeApi } from '../../test/fakes';
 import { renderApp } from '../../test/render';
 import NetWorthPage from './net-worth-page';
@@ -17,6 +18,7 @@ const netWorth = (over: Record<string, unknown> = {}) => ({
       { accountId: 'c1', name: 'Corrente', type: 'checking', balance: 740000 },
       { accountId: 'c2', name: 'Poupança', type: 'savings', balance: 100000 },
     ],
+    cardCredit: 0,
     total: 840000,
   },
   assets: { items: [asset(), asset({ id: 'a2', name: 'Moto', value: 0, firstValue: 900000, since: '2024-01-10', updatedOn: '2026-10-01' })], total: 4000000 },
@@ -57,12 +59,27 @@ describe('NetWorthPage (sub-projeto 11)', () => {
     expect(have).toHaveTextContent(/R\$\s*48\.400,00/);
     expect(have).toHaveTextContent(/Corrente\s*R\$\s*7\.400,00/);
     expect(have).toHaveTextContent(/Bens\s*R\$\s*40\.000,00/);
+    expect(have).not.toHaveTextContent('Crédito nos cartões');
     const owe = screen.getByRole('region', { name: 'O que você deve' });
     expect(owe).toHaveTextContent(/R\$\s*2\.400,00/);
     expect(owe).toHaveTextContent(/Cartões\s*R\$\s*1\.100,00/);
     expect(owe).toHaveTextContent(/Credores\s*R\$\s*1\.300,00/);
     expect(within(owe).getByRole('link', { name: 'Ver dívidas' })).toHaveAttribute('href', '/dividas');
     expect(screen.getByText(/nov\/2026: o que você tem/)).toBeInTheDocument();
+  });
+
+  it('revisão: o crédito dos cartões pagos a mais aparece em "O que você tem"', async () => {
+    const items = netWorth().accounts.items;
+    renderApp(<NetWorthPage />, { api: api({ 'GET /net-worth': netWorth({ accounts: { items, cardCredit: 50000, total: 890000 } }) }) });
+    const have = await screen.findByRole('region', { name: 'O que você tem' });
+    expect(have).toHaveTextContent(/R\$\s*48\.900,00/);
+    expect(have).toHaveTextContent(/Crédito nos cartões\s*R\$\s*500,00/);
+  });
+
+  it('erro ao carregar mostra a mensagem e "Tentar de novo"', async () => {
+    renderApp(<NetWorthPage />, { api: api({ 'GET /net-worth': () => new ApiError(500, 'Erro', 'Não foi possível carregar o patrimônio.') }) });
+    expect(await screen.findByRole('alert')).toHaveTextContent('Não foi possível carregar o patrimônio.');
+    expect(screen.getByRole('button', { name: 'Tentar de novo' })).toBeInTheDocument();
   });
 
   it('lista os bens com tipo, valor, atualização e variação; o vendido diz que está sem valor', async () => {
@@ -112,6 +129,8 @@ describe('NetWorthPage (sub-projeto 11)', () => {
     renderApp(<NetWorthPage />, { api: client });
     const dialog = await openCar();
     expect(await within(dialog).findByRole('listitem', { name: /20\/11\/2025/ })).toHaveTextContent(/R\$\s*45\.000,00/);
+    // Revisão: o nome do botão leva o valor, para dois registros no mesmo dia não terem o mesmo nome.
+    expect(within(dialog).getByRole('button', { name: /Excluir o valor de R\$\s*40\.000,00 de 11\/11\/2026/ })).toBeInTheDocument();
     await userEvent.type(within(dialog).getByLabelText('Novo valor'), '3900000');
     await userEvent.clear(within(dialog).getByLabelText('Data do valor'));
     await userEvent.type(within(dialog).getByLabelText('Data do valor'), '2026-11-15');
@@ -123,23 +142,39 @@ describe('NetWorthPage (sub-projeto 11)', () => {
     await userEvent.click(within(dialog).getByRole('button', { name: 'Salvar valor' }));
     expect(client.post).toHaveBeenLastCalledWith('/assets/a1/valuations', { amount: 0, date: '2026-11-15' });
 
-    await userEvent.click(within(dialog).getByRole('button', { name: 'Excluir o valor de 20/11/2025' }));
+    await userEvent.click(within(dialog).getByRole('button', { name: /Excluir o valor de R\$\s*45\.000,00 de 20\/11\/2025/ }));
     expect(client.del).toHaveBeenCalledWith('/assets/a1/valuations/v1');
+  });
+
+  it('a recusa da API aparece no diálogo (venda antes de um valor posterior, B6)', async () => {
+    const message = 'Há um valor registrado depois desta data. Para registrar a venda nela, exclua antes os valores posteriores.';
+    renderApp(<NetWorthPage />, { api: api({ 'POST /assets/a1/valuations': () => new ApiError(422, 'Regra', message) }) });
+    const dialog = await openCar();
+    await userEvent.click(await within(dialog).findByRole('checkbox', { name: 'Vendi ou perdi este bem' }));
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Salvar valor' }));
+    expect(await within(dialog).findByRole('alert')).toHaveTextContent(message);
   });
 
   it('o único registro não pode ser excluído; excluir o bem pede confirmação (B7)', async () => {
     const client = api({ 'GET /assets/a1': detail([{ id: 'v1', date: '2025-11-20', amount: 4500000 }]) });
     renderApp(<NetWorthPage />, { api: client });
     const dialog = await openCar();
-    expect(await within(dialog).findByRole('button', { name: 'Excluir o valor de 20/11/2025' })).toBeDisabled();
+    expect(await within(dialog).findByRole('button', { name: /Excluir o valor de R\$\s*45\.000,00 de 20\/11\/2025/ })).toBeDisabled();
     await userEvent.click(within(dialog).getByRole('button', { name: 'Excluir bem' }));
     expect(dialog).toHaveTextContent('Ele sai também dos meses passados do gráfico.');
     await userEvent.click(within(dialog).getByRole('button', { name: 'Confirmar exclusão' }));
     expect(client.del).toHaveBeenCalledWith('/assets/a1');
   });
 
-  it('editar o bem muda o nome e o tipo', async () => {
-    const client = api();
+  it('editar o bem muda o nome e o tipo, e o título do diálogo acompanha (revisão)', async () => {
+    let assetName = 'Carro';
+    const client = api({
+      'GET /assets/a1': () => ({ ...detail([{ id: 'v1', date: '2025-11-20', amount: 4500000 }]), name: assetName }),
+      'PATCH /assets/a1': (_p: string, body: unknown) => {
+        assetName = (body as { name: string }).name;
+        return { ...detail([]), name: assetName };
+      },
+    });
     renderApp(<NetWorthPage />, { api: client });
     const dialog = await openCar();
     await userEvent.click(await within(dialog).findByRole('button', { name: 'Editar bem' }));
@@ -150,5 +185,6 @@ describe('NetWorthPage (sub-projeto 11)', () => {
     await userEvent.type(name, 'Carro da família');
     await userEvent.click(within(form).getByRole('button', { name: 'Salvar bem' }));
     expect(client.patch).toHaveBeenCalledWith('/assets/a1', { name: 'Carro da família', kind: 'vehicle' });
+    expect(await screen.findByRole('dialog', { name: 'Carro da família' })).toBeInTheDocument();
   });
 });

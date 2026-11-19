@@ -16,12 +16,15 @@ export function assetValueAt(valuations: AssetValuationEntry[], date: DateOnly):
   return latest?.amount ?? 0;
 }
 
-/** Valor de hoje, desde quando a pessoa tem o bem (o primeiro registro) e a data da última atualização. */
+/**
+ * Valor de hoje, desde quando a pessoa tem o bem (a data do primeiro registro), o valor no fim desse dia (B3: com
+ * dois registros no dia, o último gravado, o mesmo do gráfico) e a data da última atualização.
+ */
 export function assetSummary(valuations: AssetValuationEntry[], today: DateOnly): AssetSummary | null {
   if (valuations.length === 0) return null;
   const sorted = [...valuations].sort(compareByMoment);
-  const first = sorted[0]!;
-  return { value: assetValueAt(valuations, today), since: first.date, firstValue: first.amount, updatedOn: sorted[sorted.length - 1]!.date };
+  const since = sorted[0]!.date;
+  return { value: assetValueAt(valuations, today), since, firstValue: assetValueAt(valuations, since), updatedOn: sorted[sorted.length - 1]!.date };
 }
 
 /** B8: os pontos da série, do mais antigo ao mais novo — o fim de cada mês e, no mês atual, hoje. */

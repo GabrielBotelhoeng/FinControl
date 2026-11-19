@@ -35,11 +35,13 @@ function Composition({ data }: { data: NetWorthDTO }) {
           <span className="tabular font-display text-lg font-semibold">{formatBRL(data.accounts.total + data.assets.total)}</span>
         </div>
         <Row label="Contas" value={data.accounts.total} strong />
-        {data.accounts.items.length > 0 && (
+        {(data.accounts.items.length > 0 || data.accounts.cardCredit > 0) && (
           <div className="grid gap-1.5 border-l border-border pl-3">
             {data.accounts.items.map((a) => (
               <Row key={a.accountId} label={a.name} value={a.balance} />
             ))}
+            {/* Revisão: o que foi pago a mais no cartão é dinheiro da pessoa. */}
+            {data.accounts.cardCredit > 0 && <Row label="Crédito nos cartões" value={data.accounts.cardCredit} />}
           </div>
         )}
         <Row label="Bens" value={data.assets.total} strong />

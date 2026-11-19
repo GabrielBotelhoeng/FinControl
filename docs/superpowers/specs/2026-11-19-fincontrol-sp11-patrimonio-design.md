@@ -58,7 +58,7 @@ Data futura e data antes de 1900 dão 422 e 400. Bem de outra pessoa dá 404.
 - O saldo inicial de uma conta não tem data: nos meses passados, ele conta como se a conta sempre tivesse existido (a mesma regra do gráfico "Últimos 6 meses" do painel).
 - O relatório, o PDF e a planilha ainda não mostram os bens. A evolução do patrimônio fica na página dele.
 - O valor dos bens é o que a pessoa informa: o app não consulta a tabela FIPE nem o preço de imóveis.
-- Conta arquivada com saldo fica de fora, como no saldo total e no relatório (R7).
+- Conta arquivada com saldo sai do patrimônio no dia em que foi arquivada: o gráfico mostra a queda nesse mês. O gráfico "Últimos 6 meses" do painel e o relatório continuam com a regra R7 (só contas não arquivadas, em qualquer data).
 
 ## 7. Ordem de implementação
 
@@ -67,3 +67,15 @@ Data futura e data antes de 1900 dão 422 e 400. Bem de outra pessoa dá 404.
 3. Módulos `assets` e `net-worth` na API, `netWorth` no painel, ferramenta do assistente e demo, com testes contra o Postgres.
 4. Web: página, diálogos, gráfico, menu, Perfil, painel e política, com testes.
 5. E2E do patrimônio e o de 360 px.
+
+## 8. Revisão final (revisor novo)
+
+Nada crítico nem alto, e nenhum vazamento entre usuários. Corrigidos, cada um com teste:
+
+- **Conta arquivada (médio):** arquivar uma conta, mesmo zerada, apagava o saldo dela de todos os meses passados e criava um salto falso no gráfico. Agora ela conta nos meses antes do dia em que foi arquivada; hoje, como no saldo total, não conta.
+- **Crédito do cartão:** o que foi pago a mais no cartão (ou estornado depois do pagamento) sumia do patrimônio, porque a dívida do cartão para no zero. Agora ele soma nas contas ("Crédito nos cartões"), também no painel.
+- **Venda com data antiga:** "Vendi ou perdi este bem" com uma data anterior a um valor maior que zero já registrado não zerava o bem hoje. Agora dá 422 com a explicação, e o texto de ajuda pede a data da venda.
+- **Valor na compra:** com dois registros no primeiro dia, o cartão do bem usava o primeiro gravado e o gráfico o último. Agora os dois usam o último (B3).
+- **Web:** o título do diálogo acompanha a edição do nome, e o botão de excluir um registro diz o valor e a data (dois registros no mesmo dia tinham o mesmo nome).
+- **Desempenho:** o saldo do relatório (uma data só) voltou a ser agrupado por conta; só a série do patrimônio lê dia a dia, e só o trecho entre a primeira e a última data.
+- **Testes novos:** exclusões simultâneas de registros (a trava funciona), erro ao carregar a página e a recusa da API no diálogo.
