@@ -47,6 +47,7 @@ Gestão financeira pessoal: contas, cartões de crédito, empréstimos e financi
 - **Lançamentos**: receitas e despesas, fixas ou variáveis, pagas ou pendentes, com vencimento e categoria.
 - **Recorrências**: o lançamento se repete (toda semana, todo mês ou todo ano) e cada mês ganha a sua ocorrência, que pode ser paga ou editada. Dá para editar “só esta” ou “esta e as próximas”, sem mexer no que já foi pago.
 - **Histórico com filtros combinados**: período, conta, categoria, tipo, situação e busca, com paginação.
+- **Primeiros passos**: quem acabou de criar a conta vê no painel um quadro com os quatro passos (cadastrar uma conta, fazer o primeiro lançamento ou importar o extrato, definir um limite e criar uma meta), cada um com o atalho direto para o formulário e a barra de progresso. O quadro some sozinho quando tudo está feito.
 - **Painel**: saldo total, total de dívidas, patrimônio líquido, previsão para o fim do mês, receitas e despesas comparadas com o mês anterior, evolução de 6 meses, gastos por categoria e contas a pagar, com as faturas de cartão em aberto.
 - **Saúde financeira**: taxa de poupança (meta de 20%), reserva de emergência em meses de gasto (meta de 3 a 6) e comprometimento de renda com parcelas de empréstimos e do cartão e faturas vencidas (meta de até 30%). Cada indicador mostra a situação por escrito e a conta que gerou o número.
 - **Demo isolada por visitante**: cada pessoa recebe uma conta anônima com dados próprios, apagada automaticamente após 7 dias.
@@ -99,9 +100,9 @@ As decisões, com as alternativas descartadas e os motivos, estão nas specs do 
 | Camada | Quantidade | Como roda |
 |---|---|---|
 | `packages/shared` | 209 | Unitários (Vitest) |
-| `apps/api` | 344 | Integração contra **Postgres real**: rotas HTTP, regras de saldo, recorrência, cartão e fatura, empréstimos, relatórios, CSV e PDF, sincronização com o Banco Central e isolamento entre usuários |
-| `apps/web` | 233 | Componentes e fluxos (Testing Library), com o provedor de identidade simulado |
-| `e2e` | 15 | Chromium contra a pilha inteira |
+| `apps/api` | 346 | Integração contra **Postgres real**: rotas HTTP, regras de saldo, recorrência, cartão e fatura, empréstimos, relatórios, CSV e PDF, sincronização com o Banco Central e isolamento entre usuários |
+| `apps/web` | 241 | Componentes e fluxos (Testing Library), com o provedor de identidade simulado |
+| `e2e` | 16 | Chromium contra a pilha inteira |
 
 O E2E roda a **web buildada como em produção**, a **API real** e o **Postgres real**. A única peça simulada é o provedor de identidade: um servidor Auth mínimo ([`e2e/fake-auth.ts`](e2e/fake-auth.ts)) que fala o mesmo protocolo do Supabase e assina JWTs ES256 de verdade. Assim, a API valida os tokens pelo mesmo caminho de produção (JWKS, issuer e audience), sem segredos no CI e sem sujar o projeto real. Os cenários seguem os critérios de aceite da spec:
 
@@ -114,6 +115,7 @@ O E2E roda a **web buildada como em produção**, a **API real** e o **Postgres 
 - relatórios da demo, com o download do CSV e do PDF;
 - dívida com credor: cadastro com juros, acordo com parcelas em Lançamentos e cancelamento;
 - patrimônio: um bem com a data da compra e um valor novo, com o mesmo número no painel;
+- primeiro acesso a 360 px: os primeiros passos no painel, a conta cadastrada pelo atalho e o quadro oculto, que continua oculto depois de recarregar;
 - notificações da demo: a ação marca como lido, "marcar todas" zera o contador e as preferências do Perfil valem na hora;
 - “Excluir minha conta” apagando também o usuário no Auth;
 - nenhuma rolagem horizontal nem conteúdo cortado a 360 px, em todas as páginas, inclusive no cabeçalho;
@@ -158,4 +160,4 @@ Dois projetos na Vercel a partir deste monorepo: `fincontrol-web` (raiz `apps/we
 
 ## Roadmap
 
-Prontos: os sub-projetos 1 a 11 (fundação e fluxo de caixa; crédito; planejamento e metas; relatórios e exportação; notificações; dívidas com credores; plano de quitação; calendário e resumo do mês; importação de extrato; gastos que se repetem; patrimônio líquido), além do assistente com IA e da planilha de análise. Os próximos, da [pesquisa de concorrentes](docs/pesquisa-concorrentes-2026-11-18.md), são o primeiro acesso guiado e as tags e subcategorias. Cada um sai com spec, testes e deploy.
+Prontos: os sub-projetos 1 a 12 (fundação e fluxo de caixa; crédito; planejamento e metas; relatórios e exportação; notificações; dívidas com credores; plano de quitação; calendário e resumo do mês; importação de extrato; gastos que se repetem; patrimônio líquido; primeiros passos), além do assistente com IA e da planilha de análise. O próximo, da [pesquisa de concorrentes](docs/pesquisa-concorrentes-2026-11-18.md), são as tags e subcategorias. Cada um sai com spec, testes e deploy.

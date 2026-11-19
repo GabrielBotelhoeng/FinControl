@@ -1,7 +1,7 @@
 import type { AccountDTO } from '@fincontrol/shared';
 import { Archive, ArchiveRestore, ArrowLeftRight, ArrowRight, Landmark, PiggyBank, Pencil, Plus, TrendingUp, Wallet, type LucideIcon } from 'lucide-react';
-import { useState } from 'react';
-import { Link } from 'react-router';
+import { useEffect, useState } from 'react';
+import { Link, useSearchParams } from 'react-router';
 import { toast } from 'sonner';
 import { Button } from '../../components/ui/button';
 import { HeroAmount } from '../../components/ui/money';
@@ -90,8 +90,17 @@ function AccountItem({ account, onEdit }: { account: AccountDTO; onEdit: () => v
 export default function AccountsPage() {
   const [showArchived, setShowArchived] = useState(false);
   const accounts = useAccounts(showArchived);
-  const [editing, setEditing] = useState<AccountDTO | 'new' | null>(null);
+  const [params, setParams] = useSearchParams();
+  // `?novo=1` (primeiros passos do painel, sub-projeto 12) já abre "Nova conta", como o atalho de Lançamentos.
+  const [editing, setEditing] = useState<AccountDTO | 'new' | null>(params.get('novo') === '1' ? 'new' : null);
   const [transferOpen, setTransferOpen] = useState(false);
+  // O `?novo=1` sai da URL assim que é usado: voltar no histórico não reabre o formulário.
+  useEffect(() => {
+    if (!params.has('novo')) return;
+    const next = new URLSearchParams(params);
+    next.delete('novo');
+    setParams(next, { replace: true });
+  }, [params, setParams]);
   const active = (accounts.data ?? []).filter((a) => a.archivedAt === null);
   // Cartão não entra como origem nem destino (decisão R18): o botão só aparece havendo para onde transferir.
   const transferable = active.filter((a) => a.type !== 'credit_card');

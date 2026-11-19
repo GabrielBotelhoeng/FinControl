@@ -15,6 +15,7 @@ import { importsRouter } from '../modules/imports/imports.routes';
 import { repeatedRouter } from '../modules/repeated/repeated.routes';
 import { loansRouter } from '../modules/loans/loans.routes';
 import { netWorthRouter } from '../modules/net-worth/net-worth.routes';
+import { onboardingRouter } from '../modules/onboarding/onboarding.routes';
 import { reportsRouter } from '../modules/reports/reports.routes';
 import { notificationsRouter } from '../modules/notifications/notifications.routes';
 import { pushRouter } from '../modules/push/push.routes';
@@ -36,6 +37,7 @@ export function registerRoutes(api: Router, c: Container, opts: { rateLimitEnabl
   api.use('/net-worth', netWorthRouter(c.netWorth));
   api.use('/calendar', calendarRouter(c.calendar));
   api.use('/repeated', repeatedRouter(c.repeated));
+  api.use('/onboarding', onboardingRouter(c.onboarding));
   api.use('/imports', importsRouter(c.imports, opts));
   api.use('/budgets', budgetsRouter(c.budgets));
   api.use('/planning', planningRouter(c.budgets));

@@ -59,5 +59,8 @@ export type FinancialHealthDTO = {
   debtPayments: number;
 };
 
+/** Primeiros passos (sub-projeto 12, G2): cada passo está feito quando existe pelo menos um registro dele. */
+export type OnboardingDTO = { account: boolean; transaction: boolean; budget: boolean; goal: boolean };
+
 export type EvolutionPointDTO = { month: string; income: number; expense: number; endBalance: number };
 export type CategorySpendDTO = { categoryId: string; name: string; icon: string; color: string; total: number };

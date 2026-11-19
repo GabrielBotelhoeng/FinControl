@@ -11,6 +11,7 @@ import { formatBRL, formatMonthLabel } from '../../lib/format';
 import { BudgetCard } from './budget-card';
 import { DebtCard } from './debt-card';
 import { HealthTiles } from './health-tiles';
+import { OnboardingCard } from './onboarding-card';
 import { useAccounts } from '../accounts/api';
 import { useAssistantConfig } from '../assistant/api';
 import { useCategories } from '../categories/api';
@@ -77,6 +78,8 @@ export default function DashboardPage() {
           </Button>
         </div>
       </div>
+
+      <OnboardingCard />
 
       {summary.isPending && (
         <div className="grid gap-4">

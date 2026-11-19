@@ -1,11 +1,17 @@
 # HANDOFF — FinControl
 
-_Atualizado em 2026-11-19 (patrimônio líquido)._
+_Atualizado em 2026-11-19 (primeiros passos)._
 
-## Sub-projeto 11: patrimônio líquido (2026-11-19, branch feat/patrimonio)
+## Sub-projeto 12: primeiros passos (2026-11-19, branch feat/primeiros-passos)
+
+- **Spec:** `docs/superpowers/specs/2026-11-19-fincontrol-sp12-primeiros-passos-design.md` (G1–G6). Sem migration.
+- **Entregue:** `GET /onboarding` (cada passo feito quando existe um registro dele) e o quadro "Primeiros passos" no topo do painel, só para contas reais: cadastrar uma conta, fazer o primeiro lançamento (ou importar o extrato), definir um limite e criar uma meta, com a barra de progresso. Some sozinho com tudo feito, e "Ocultar" fica lembrado no navegador. Contas passou a aceitar `?novo=1`.
+- **Testes:** 209 no shared, 346 na API e 241 na web, além de 16 E2E (novo: `e2e/tests/primeiro-acesso.spec.ts`, a 360 px).
+
+## Sub-projeto 11: patrimônio líquido — no ar desde 2026-11-19 (PR #32)
 
 - **Spec:** `docs/superpowers/specs/2026-11-19-fincontrol-sp11-patrimonio-design.md` (B1–B14).
-- **Migration:** `20261119164547_patrimonio` (tabelas `assets` e `asset_valuations`, com RLS e a checagem do valor). **Antes do deploy da API, aplicar no Supabase** pelo comando do usuário.
+- **Migration:** `20261119164547_patrimonio` (tabelas `assets` e `asset_valuations`, com RLS e a checagem do valor), **aplicada em produção em 2026-11-19, antes do merge**, com `cd apps/api && node --env-file=../../.secrets/api.production.env ../../node_modules/prisma/build/index.js migrate deploy` (funciona em PowerShell e bash). Conferido em produção pela demo a 1440 e 360 px.
 - **Regra:** contas não arquivadas e sem cartão + crédito dos cartões pagos a mais + bens − dívidas (a dívida do cartão segue a R5). O valor de um bem numa data é o do registro mais recente até ela; antes do primeiro, 0.
 - **Entregue:** `/assets` (bens com o histórico de valores), `GET /net-worth` (hoje e os 12 últimos meses), `netWorth` no resumo do painel, a página `/patrimonio` (menu do computador e Perfil) e a linha no painel, os bens e o patrimônio na ferramenta `saldos_e_dividas`, e na demo o "Carro" e a "Previdência privada". A política de privacidade passou a listar todos os dados guardados.
 - **Reaproveitado:** `balancesAt` (saldos de várias datas numa leitura, em `reports.repository.ts`) e as peças dos gráficos em `components/ui/chart.tsx`.
