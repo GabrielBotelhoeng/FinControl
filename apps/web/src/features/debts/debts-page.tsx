@@ -1,5 +1,5 @@
 import { type DebtDTO } from '@fincontrol/shared';
-import { ChevronRight, HandCoins, Plus } from 'lucide-react';
+import { ChevronRight, HandCoins, Plus, TrendingDown } from 'lucide-react';
 import { useState } from 'react';
 import { Link } from 'react-router';
 import { Button } from '../../components/ui/button';
@@ -87,6 +87,18 @@ export default function DebtsPage() {
       Nova dívida
     </Button>
   );
+  const actions = (
+    <div className="flex flex-wrap gap-2">
+      {newButton}
+      <Link
+        to="/dividas/plano"
+        className="inline-flex h-11 items-center gap-2 rounded-full border border-border px-5 text-sm font-medium hover:border-muted"
+      >
+        <TrendingDown aria-hidden className="h-4 w-4" strokeWidth={1.75} />
+        Plano de quitação
+      </Link>
+    </div>
+  );
 
   return (
     <>
@@ -94,7 +106,7 @@ export default function DebtsPage() {
         light="Suas"
         bold="dívidas"
         description="Dívidas com lojas, pessoas, contas atrasadas e outros credores: negociações, acordos e quanto falta para quitar."
-        actions={newButton}
+        actions={actions}
       />
 
       {debts.isPending && (
