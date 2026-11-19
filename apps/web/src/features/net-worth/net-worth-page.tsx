@@ -83,7 +83,8 @@ function AssetItem({ asset, onOpen }: { asset: AssetDTO; onOpen: () => void }) {
             <Icon className="h-5 w-5" strokeWidth={1.75} />
           </span>
           <div className="min-w-0">
-            <p className="truncate font-display text-lg font-semibold tracking-tight">{asset.name}</p>
+            {/* Quebra em vez de cortar: a 360 px, "Previdência privada" virava "Previdênci…". */}
+            <p className="break-words font-display text-lg font-semibold leading-snug tracking-tight">{asset.name}</p>
             <p className="truncate text-sm text-muted">{ASSET_KIND_LABELS[asset.kind]}</p>
           </div>
         </div>
