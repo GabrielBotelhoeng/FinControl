@@ -21,7 +21,7 @@ type TypeFilter = 'all' | TransactionType;
 export default function TransactionsPage() {
   const today = todayInSaoPaulo();
   // `?mes=AAAA-MM` abre no mês pedido (o "Pagar" das notificações leva ao mês do vencimento).
-  const [params] = useSearchParams();
+  const [params, setParams] = useSearchParams();
   const requested = params.get('mes');
   const [month, setMonth] = useState<YearMonth>(requested && /^\d{4}-(0[1-9]|1[0-2])$/.test(requested) ? requested : monthOf(today));
   const [type, setType] = useState<TypeFilter>('all');
@@ -156,7 +156,22 @@ export default function TransactionsPage() {
         </div>
       )}
 
-      {editing && <TransactionForm open onOpenChange={(o) => !o && setEditing(null)} {...(editing === 'new' ? {} : { transaction: editing })} />}
+      {editing && (
+        <TransactionForm
+          open
+          onOpenChange={(o) => {
+            if (o) return;
+            setEditing(null);
+            // Tira o `?novo=1` do atalho: voltar no histórico não reabre o formulário sozinho (CodeRabbit).
+            if (params.has('novo')) {
+              const next = new URLSearchParams(params);
+              next.delete('novo');
+              setParams(next, { replace: true });
+            }
+          }}
+          {...(editing === 'new' ? {} : { transaction: editing })}
+        />
+      )}
     </>
   );
 }
