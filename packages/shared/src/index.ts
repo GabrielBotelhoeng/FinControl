@@ -10,3 +10,4 @@ export * from './debt';
 export * from './payoff';
 export * from './statement';
 export * from './subscriptions';
+export * from './asset';
