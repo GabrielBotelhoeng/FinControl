@@ -33,11 +33,15 @@
 - Web: o painel com as tags e o painel ausente sem tags.
 - E2E: o relatório da demo mostra "#passeios" em "Gastos por tag", e o CSV baixado tem a coluna "Tags".
 
-## 5. Ajuste do sub-projeto 13
+## 5. Limites aceitos
+
+- No PDF, letras fora do alfabeto latino numa tag (por exemplo, 旅行) somem, como em todo texto do PDF: a R10 do sub-projeto 4 usa as fontes padrão, que só desenham o WinAnsi. A tela, o CSV e o Excel mostram o nome inteiro. Embutir uma fonte com todos os alfabetos deixaria a função da Vercel bem maior para um caso raro num app em português (apontado pelo CodeRabbit).
+
+## 6. Ajuste do sub-projeto 13
 
 - Em Categorias → Tags, a quantidade de lançamentos foi para baixo do nome da tag. Ao lado dos botões, "42 lançamentos" quebrava em duas linhas a 360 px (visto na conferência em produção do sub-projeto 13).
 
-## 6. Fora deste sub-projeto
+## 7. Fora deste sub-projeto
 
 - O assistente: `buscar_lancamentos` já filtra por tag e devolve o total.
 - O resumo do mês, o painel, um filtro do relatório inteiro por tag e um link da tag no relatório para Lançamentos.
