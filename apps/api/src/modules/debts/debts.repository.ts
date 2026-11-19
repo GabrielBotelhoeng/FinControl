@@ -22,7 +22,9 @@ export type DebtData = { row: DebtRow; events: DebtEventRow[]; transactions: Deb
 
 export type NewDebtTransaction = {
   amount: number; description: string; accountId: string; categoryId: string; status: 'pending' | 'paid';
-  dueDate: DateOnly; paidDate: DateOnly | null; installmentNumber: number | null; installmentTotal: number | null; createdAt: Date;
+  dueDate: DateOnly; paidDate: DateOnly | null; installmentNumber: number | null; installmentTotal: number | null;
+  /** Milissegundos depois do momento do registro, que só é marcado dentro da trava (a ordem da regra V3 depende dele). */
+  order: number;
 };
 
 
@@ -114,11 +116,11 @@ export function createDebtsRepository(db: Db) {
     }));
   }
 
-  const txData = (userId: string, debtId: string, t: NewDebtTransaction) => ({
+  const txData = (userId: string, debtId: string, t: NewDebtTransaction, at: Date) => ({
     userId, debtId, type: 'expense' as const, amount: BigInt(t.amount), description: t.description, accountId: t.accountId,
     categoryId: t.categoryId, nature: (t.installmentNumber ? 'fixed' : 'variable') as 'fixed' | 'variable', status: t.status,
     dueDate: fromDateOnly(t.dueDate), paidDate: t.paidDate ? fromDateOnly(t.paidDate) : null,
-    installmentNumber: t.installmentNumber, installmentTotal: t.installmentTotal, createdAt: t.createdAt,
+    installmentNumber: t.installmentNumber, installmentTotal: t.installmentTotal, createdAt: new Date(at.getTime() + t.order),
   });
 
   const load = (userId: string, ids?: string[]) => loadWith(db, userId, ids);
@@ -196,19 +198,21 @@ export function createDebtsRepository(db: Db) {
       userId: string,
       debtId: string,
       check: LockedCheck,
-      a: { date: DateOnly; downPayment: number; installments: number; installmentAmount: number; recordedAt: Date },
+      a: { date: DateOnly; downPayment: number; installments: number; installmentAmount: number },
       transactions: NewDebtTransaction[],
     ): Promise<void> {
       await db.$transaction(async (tx) => {
         await lockAndCheck(tx, userId, debtId, check);
+        // O momento do registro é marcado só agora, com a trava: um registro que esperou a trava vem depois (V3).
+        const at = new Date();
         await tx.debtEvent.create({
           data: {
-            debtId, userId, kind: 'agreement', date: fromDateOnly(a.date), recordedAt: a.recordedAt,
+            debtId, userId, kind: 'agreement', date: fromDateOnly(a.date), recordedAt: at,
             amount: BigInt(a.downPayment + a.installments * a.installmentAmount), downPayment: BigInt(a.downPayment),
             installments: a.installments, installmentAmount: BigInt(a.installmentAmount),
           },
         });
-        await tx.transaction.createMany({ data: transactions.map((t) => txData(userId, debtId, t)) });
+        await tx.transaction.createMany({ data: transactions.map((t) => txData(userId, debtId, t, at)) });
       });
     },
 
@@ -236,7 +240,7 @@ export function createDebtsRepository(db: Db) {
     async addPayment(userId: string, debtId: string, check: LockedCheck, t: NewDebtTransaction): Promise<void> {
       await db.$transaction(async (tx) => {
         await lockAndCheck(tx, userId, debtId, check);
-        await tx.transaction.create({ data: txData(userId, debtId, t) });
+        await tx.transaction.create({ data: txData(userId, debtId, t, new Date()) });
       });
     },
   };

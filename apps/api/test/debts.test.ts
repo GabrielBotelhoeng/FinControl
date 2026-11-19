@@ -238,11 +238,14 @@ describe('dívidas com credores', () => {
     const { user, checking, debt } = await debtScenario();
     await request(app).post(`/api/v1/debts/${debt.id}/agreement`).set(user.auth).send(agreementBody(checking.id));
     const first = await testDb.transaction.findFirst({ where: { debtId: debt.id, installmentNumber: 1 } });
-    const [pay] = await Promise.all([
+    const [pay, cancel] = await Promise.all([
       request(app).post(`/api/v1/transactions/${first!.id}/pay`).set(user.auth).send({ paidDate: '2026-11-11' }),
       request(app).delete(`/api/v1/debts/${debt.id}/agreement`).set(user.auth),
     ]);
+    expect(cancel.status).toBe(200);
+    expect([200, 404]).toContain(pay.status);
     const after = (await request(app).get(`/api/v1/debts/${debt.id}`).set(user.auth)).body;
+    expect(after).toMatchObject({ status: 'open', agreement: null });
     // Pagou antes do cancelamento: a âncora já desconta os 20.000. Chegou depois: a parcela foi apagada (404).
     expect(after.balance).toBe(pay.status === 200 ? 60000 : 80000);
     expect(after.paid).toBe(pay.status === 200 ? 30000 : 10000);

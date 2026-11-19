@@ -174,14 +174,13 @@ export function createDebtsService(deps: DebtsServiceDeps) {
       if (input.firstDueDate > addDays(t, 366)) throw new UnprocessableError('O 1º vencimento do acordo deve ser em até 1 ano.');
       await assertPayingAccount(userId, input.accountId);
       const category = await categoryId(userId);
-      const recordedAt = new Date();
       const base = { accountId: input.accountId, categoryId: category, installmentTotal: input.installments };
       const rows: NewDebtTransaction[] = [];
       if (input.downPayment > 0) {
         rows.push({
           // Número 0: a entrada faz parte do acordo e tem as mesmas travas das parcelas em Lançamentos (revisão final).
           ...base, amount: input.downPayment, description: `Entrada do acordo ${d.row.name}`, status: 'paid', dueDate: t, paidDate: t,
-          installmentNumber: 0, installmentTotal: null, createdAt: new Date(recordedAt.getTime() + 1),
+          installmentNumber: 0, installmentTotal: null, order: 1,
         });
       }
       const firstMonth = monthOf(input.firstDueDate);
@@ -190,12 +189,12 @@ export function createDebtsService(deps: DebtsServiceDeps) {
         rows.push({
           ...base, amount: input.installmentAmount, description: `Acordo ${d.row.name} (${k}/${input.installments})`, status: 'pending',
           dueDate: dateInMonth(addMonthsToYm(firstMonth, k - 1), day), paidDate: null, installmentNumber: k,
-          createdAt: new Date(recordedAt.getTime() + 2),
+          order: 2,
         });
       }
       await deps.repo.createAgreement(
         userId, id, check,
-        { date: t, downPayment: input.downPayment, installments: input.installments, installmentAmount: input.installmentAmount, recordedAt },
+        { date: t, downPayment: input.downPayment, installments: input.installments, installmentAmount: input.installmentAmount },
         rows,
       );
       return detail(userId, id);
@@ -233,7 +232,7 @@ export function createDebtsService(deps: DebtsServiceDeps) {
       const category = await categoryId(userId);
       await deps.repo.addPayment(userId, id, check, {
         amount: input.amount, description: `Pagamento ${d.row.name}`, accountId: input.accountId, categoryId: category,
-        status: 'paid', dueDate: input.date, paidDate: input.date, installmentNumber: null, installmentTotal: null, createdAt: new Date(),
+        status: 'paid', dueDate: input.date, paidDate: input.date, installmentNumber: null, installmentTotal: null, order: 0,
       });
       return detail(userId, id);
     },
