@@ -44,6 +44,7 @@ Gestão financeira pessoal: contas, cartões de crédito, empréstimos e financi
 - **Resumo do mês**: em poucas frases, quanto gastou contra o mês anterior, quanto sobrou, a categoria que mais subiu e a que mais caiu, a maior despesa, o orçamento e as dívidas.
 - **Importar extrato**: traz de uma vez o extrato do banco em OFX ou CSV (Nubank, Inter, planilhas), lido no próprio navegador. A categoria vem sugerida pelo que a pessoa já lançou e por palavras-chave, e os lançamentos que parecem repetidos começam desmarcados.
 - **Gastos que se repetem**: o app acha sozinho o que sai todo mês com valor parecido (assinaturas, academia, apps) e mostra o custo de cada um no ano.
+- **Tags**: rótulos livres no lançamento, além da categoria, para juntar gastos espalhados (como "bebida" no mercado e no bar). Elas valem nas parcelas do cartão e nos próximos meses de uma recorrência. Dá para filtrar Lançamentos por tag e renomear, juntar ou excluir tags em Categorias, e o assistente busca por tag.
 - **Lançamentos**: receitas e despesas, fixas ou variáveis, pagas ou pendentes, com vencimento e categoria.
 - **Recorrências**: o lançamento se repete (toda semana, todo mês ou todo ano) e cada mês ganha a sua ocorrência, que pode ser paga ou editada. Dá para editar “só esta” ou “esta e as próximas”, sem mexer no que já foi pago.
 - **Histórico com filtros combinados**: período, conta, categoria, tipo, situação e busca, com paginação.
@@ -99,10 +100,10 @@ As decisões, com as alternativas descartadas e os motivos, estão nas specs do 
 
 | Camada | Quantidade | Como roda |
 |---|---|---|
-| `packages/shared` | 209 | Unitários (Vitest) |
-| `apps/api` | 346 | Integração contra **Postgres real**: rotas HTTP, regras de saldo, recorrência, cartão e fatura, empréstimos, relatórios, CSV e PDF, sincronização com o Banco Central e isolamento entre usuários |
-| `apps/web` | 241 | Componentes e fluxos (Testing Library), com o provedor de identidade simulado |
-| `e2e` | 16 | Chromium contra a pilha inteira |
+| `packages/shared` | 213 | Unitários (Vitest) |
+| `apps/api` | 356 | Integração contra **Postgres real**: rotas HTTP, regras de saldo, recorrência, cartão e fatura, empréstimos, relatórios, CSV e PDF, sincronização com o Banco Central e isolamento entre usuários |
+| `apps/web` | 244 | Componentes e fluxos (Testing Library), com o provedor de identidade simulado |
+| `e2e` | 17 | Chromium contra a pilha inteira |
 
 O E2E roda a **web buildada como em produção**, a **API real** e o **Postgres real**. A única peça simulada é o provedor de identidade: um servidor Auth mínimo ([`e2e/fake-auth.ts`](e2e/fake-auth.ts)) que fala o mesmo protocolo do Supabase e assina JWTs ES256 de verdade. Assim, a API valida os tokens pelo mesmo caminho de produção (JWKS, issuer e audience), sem segredos no CI e sem sujar o projeto real. Os cenários seguem os critérios de aceite da spec:
 
@@ -115,6 +116,7 @@ O E2E roda a **web buildada como em produção**, a **API real** e o **Postgres 
 - relatórios da demo, com o download do CSV e do PDF;
 - dívida com credor: cadastro com juros, acordo com parcelas em Lançamentos e cancelamento;
 - patrimônio: um bem com a data da compra e um valor novo, com o mesmo número no painel;
+- tags: o lançamento marcado mostra a tag, o filtro mostra só ele e Categorias conta os lançamentos da tag;
 - primeiro acesso a 360 px: os primeiros passos no painel, a conta cadastrada pelo atalho e o quadro oculto, que continua oculto depois de recarregar;
 - notificações da demo: a ação marca como lido, "marcar todas" zera o contador e as preferências do Perfil valem na hora;
 - “Excluir minha conta” apagando também o usuário no Auth;
@@ -160,4 +162,4 @@ Dois projetos na Vercel a partir deste monorepo: `fincontrol-web` (raiz `apps/we
 
 ## Roadmap
 
-Prontos: os sub-projetos 1 a 12 (fundação e fluxo de caixa; crédito; planejamento e metas; relatórios e exportação; notificações; dívidas com credores; plano de quitação; calendário e resumo do mês; importação de extrato; gastos que se repetem; patrimônio líquido; primeiros passos), além do assistente com IA e da planilha de análise. O próximo, da [pesquisa de concorrentes](docs/pesquisa-concorrentes-2026-11-18.md), são as tags e subcategorias. Cada um sai com spec, testes e deploy.
+Prontos: os sub-projetos 1 a 13 (fundação e fluxo de caixa; crédito; planejamento e metas; relatórios e exportação; notificações; dívidas com credores; plano de quitação; calendário e resumo do mês; importação de extrato; gastos que se repetem; patrimônio líquido; primeiros passos; tags), além do assistente com IA e da planilha de análise. Os próximos são as tags nos relatórios (sub-projeto 14) e as subcategorias, da [pesquisa de concorrentes](docs/pesquisa-concorrentes-2026-11-18.md). Cada um sai com spec, testes e deploy.

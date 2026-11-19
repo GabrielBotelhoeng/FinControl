@@ -1,6 +1,14 @@
 # HANDOFF — FinControl
 
-_Atualizado em 2026-11-19 (primeiros passos)._
+_Atualizado em 2026-11-19 (tags)._
+
+## Sub-projeto 13: tags nos lançamentos (2026-11-19, branch feat/tags)
+
+- **Spec:** `docs/superpowers/specs/2026-11-19-fincontrol-sp13-tags-design.md` (T1–T9).
+- **Migration:** `20261119185515_tags` (coluna `tags` em `transactions` e `recurrences`, não nula, com até 10). **Antes do deploy da API, aplicar no Supabase** com o comando do sub-projeto 11.
+- **Entregue:** tags no lançamento (normalizadas: minúsculas, sem "#", sem repetidas), nas parcelas do cartão e no modelo da recorrência; `?tag=` na lista; `GET /tags`, `PATCH /tags/:name` (renomear ou juntar) e `DELETE /tags/:name`; o campo "Tags (opcional)" no formulário, as tags na linha do lançamento, o filtro em Lançamentos e a seção Tags em Categorias; o assistente busca por tag e recebe os nomes das tags no prompt (a política de privacidade cita as tags).
+- **Testes:** 213 no shared, 356 na API e 244 na web, além de 17 E2E (novo: `e2e/tests/tags.spec.ts`).
+- **Próximo:** sub-projeto 14, as tags nos relatórios, no Excel e no CSV.
 
 ## Sub-projeto 12: primeiros passos — no ar desde 2026-11-19 (PR #33)
 

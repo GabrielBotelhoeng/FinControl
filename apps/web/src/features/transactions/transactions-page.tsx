@@ -11,6 +11,7 @@ import { Segmented } from '../../components/ui/segmented';
 import { EmptyState, ErrorState, ListSkeleton } from '../../components/ui/states';
 import { useAccounts } from '../accounts/api';
 import { useCategories } from '../categories/api';
+import { useTags } from '../tags/api';
 import { useTransactions } from './api';
 import { groupByDay } from './group-by-day';
 import { TransactionForm } from './transaction-form';
@@ -27,6 +28,7 @@ export default function TransactionsPage() {
   const [type, setType] = useState<TypeFilter>('all');
   const [status, setStatus] = useState<'' | 'pending' | 'paid'>('');
   const [accountId, setAccountId] = useState('');
+  const [tag, setTag] = useState('');
   const [search, setSearch] = useState('');
   const q = useDeferredValue(search.trim());
   // `?novo=1` (atalho do ícone do app) já abre o formulário de novo lançamento.
@@ -47,13 +49,15 @@ export default function TransactionsPage() {
       status: status || undefined,
       accountId: accountId || undefined,
       q: q || undefined,
+      tag: tag || undefined,
     }),
-    [month, type, status, accountId, q],
+    [month, type, status, accountId, q, tag],
   );
 
   const transactions = useTransactions(filters);
   const accounts = useAccounts(true);
   const categories = useCategories();
+  const tags = useTags();
   const accountById = new Map((accounts.data ?? []).map((a) => [a.id, a]));
   const categoryById = new Map((categories.data ?? []).map((c) => [c.id, c]));
   const items = transactions.data?.pages.flatMap((p) => p.items) ?? [];
@@ -119,6 +123,17 @@ export default function TransactionsPage() {
               </option>
             ))}
           </Select>
+          {/* Sub-projeto 13 (T5): só aparece quando há alguma tag. */}
+          {(tags.data ?? []).length > 0 && (
+            <Select aria-label="Tag" value={tag} onChange={(e) => setTag(e.target.value)}>
+              <option value="">Todas as tags</option>
+              {(tags.data ?? []).map((t) => (
+                <option key={t.name} value={t.name}>
+                  {`#${t.name}`}
+                </option>
+              ))}
+            </Select>
+          )}
         </div>
       </div>
 
