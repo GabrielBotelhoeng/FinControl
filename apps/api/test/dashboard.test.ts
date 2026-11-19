@@ -311,7 +311,7 @@ describe('dashboard', () => {
     const user = await newUser();
     const { checking, card, food } = await cardScenario(user);
     const empty = await request(app).get('/api/v1/dashboard/summary').set(user.auth);
-    expect(empty.body.debts).toEqual({ cards: 0, loans: 0, total: 0 });
+    expect(empty.body.debts).toEqual({ cards: 0, loans: 0, others: 0, total: 0 });
 
     // R$ 1.200 em 12x em 27/10: as 11 parcelas futuras já são dívida (R5).
     await createTransaction(app, user, {
@@ -327,7 +327,7 @@ describe('dashboard', () => {
     const outstanding = (await request(app).get(`/api/v1/loans/${loan.body.id}`).set(user.auth)).body.outstanding;
 
     const res = await request(app).get('/api/v1/dashboard/summary').set(user.auth);
-    expect(res.body.debts).toEqual({ cards: 110000, loans: outstanding, total: 110000 + outstanding });
+    expect(res.body.debts).toEqual({ cards: 110000, loans: outstanding, others: 0, total: 110000 + outstanding });
     expect(outstanding).toBe(2477608);
   });
 
@@ -340,6 +340,6 @@ describe('dashboard', () => {
     await testDb.account.update({ where: { id: card.id }, data: { archivedAt: new Date() } });
     expect((await request(app).get('/api/v1/dashboard/summary').set(user.auth)).body.debts.cards).toBe(30000);
     const other = await newUser();
-    expect((await request(app).get('/api/v1/dashboard/summary').set(other.auth)).body.debts).toEqual({ cards: 0, loans: 0, total: 0 });
+    expect((await request(app).get('/api/v1/dashboard/summary').set(other.auth)).body.debts).toEqual({ cards: 0, loans: 0, others: 0, total: 0 });
   });
 });

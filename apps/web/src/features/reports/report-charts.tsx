@@ -78,6 +78,7 @@ export function DebtChart({ data }: { data: ReportDebtPointDTO[] }) {
       <Legend
         items={[
           { label: 'Empréstimos', swatch: 'h-2.5 w-2.5 rounded-sm bg-primary' },
+          { label: 'Credores', swatch: 'h-2.5 w-2.5 rounded-sm bg-expense' },
           { label: 'Cartões', swatch: `h-2.5 w-2.5 rounded-sm bg-muted ${HATCH}` },
         ]}
       />
@@ -93,14 +94,15 @@ export function DebtChart({ data }: { data: ReportDebtPointDTO[] }) {
             <CartesianGrid vertical={false} stroke="var(--border)" />
             <XAxis dataKey="month" tickFormatter={formatMonthShort} tickLine={false} axisLine={false} tick={axisTick} minTickGap={8} />
             <YAxis tickFormatter={compact} tickLine={false} axisLine={false} width={48} tick={axisTick} />
-            <Tooltip content={<Tip rows={[['loans', 'Empréstimos'], ['cards', 'Cartões'], ['total', 'Total']]} />} cursor={{ fill: 'var(--surface-2)' }} />
+            <Tooltip content={<Tip rows={[['loans', 'Empréstimos'], ['others', 'Credores'], ['cards', 'Cartões'], ['total', 'Total']]} />} cursor={{ fill: 'var(--surface-2)' }} />
             <Bar dataKey="loans" stackId="debt" fill="var(--primary)" maxBarSize={28} />
+            <Bar dataKey="others" stackId="debt" fill="var(--expense)" maxBarSize={28} />
             <Bar dataKey="cards" stackId="debt" fill="url(#report-hatch-cards)" radius={[4, 4, 0, 0]} maxBarSize={28} />
           </BarChart>
         </ResponsiveContainer>
       </div>
       <figcaption className="sr-only">
-        {data.map((d) => `${formatMonthShort(d.month)}: empréstimos ${formatBRL(d.loans)}, cartões ${formatBRL(d.cards)}, total ${formatBRL(d.total)}`).join('; ')}
+        {data.map((d) => `${formatMonthShort(d.month)}: empréstimos ${formatBRL(d.loans)}, credores ${formatBRL(d.others)}, cartões ${formatBRL(d.cards)}, total ${formatBRL(d.total)}`).join('; ')}
       </figcaption>
     </figure>
   );

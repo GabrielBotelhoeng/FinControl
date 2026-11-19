@@ -22,7 +22,7 @@ const reportFixture = (over: Partial<ReportDTO> = {}): ReportDTO => ({
   ],
   incomeByCategory: [{ categoryId: 'salary', name: 'Salário', icon: 'wallet', color: '#16a34a', total: 500000, share: 1, previous: 400000, change: 0.25 }],
   monthly: months.map((month) => ({ month, income: 400000, expense: 200000, net: 200000 })),
-  debts: months.map((month, i) => ({ month, cards: 10000 * i, loans: 2500000 - 10000 * i, total: 2500000 })),
+  debts: months.map((month, i) => ({ month, cards: 10000 * i, loans: 2500000 - 10000 * i, others: 0, total: 2500000 })),
   topExpenses: [{ id: 't1', date: '2026-11-03', description: 'Mercado novembro', category: 'Alimentação', account: 'Corrente', amount: 200000 }],
   balances: { date: '2026-11-30', items: [{ accountId: 'a', name: 'Corrente', type: 'checking', balance: 470000 }], total: 470000 },
   ...over,

@@ -175,10 +175,14 @@ export async function renderReportXlsx(d: XlsxData, generatedAt: Date): Promise<
   for (const r of d.natures) nat.addRow([r.nature, reais(r.total), r.share]);
 
   // ---------- Dívidas e Saldos ----------
-  const debt = sheet(wb, 'Dívidas', [{ header: 'Mês', width: 12 }, { header: 'Cartões', width: 16, fmt: MONEY }, { header: 'Empréstimos', width: 16, fmt: MONEY }, { header: 'Total', width: 16, fmt: MONEY }], 'Saldo no fim de cada mês: cartões com parcelas futuras e saldo devedor dos empréstimos.');
+  const debt = sheet(
+    wb, 'Dívidas',
+    [{ header: 'Mês', width: 12 }, { header: 'Cartões', width: 16, fmt: MONEY }, { header: 'Empréstimos', width: 16, fmt: MONEY }, { header: 'Credores', width: 16, fmt: MONEY }, { header: 'Total', width: 16, fmt: MONEY }],
+    'Saldo no fim de cada mês: cartões com parcelas futuras, saldo devedor dos empréstimos e dívidas com credores.',
+  );
   for (const m of report.debts) {
     const n = debt.rowCount + 1;
-    debt.addRow([monthLabel(m.month), reais(m.cards), reais(m.loans), formula(`B${n}+C${n}`, reais(m.total))]);
+    debt.addRow([monthLabel(m.month), reais(m.cards), reais(m.loans), reais(m.others), formula(`B${n}+C${n}+D${n}`, reais(m.total))]);
   }
   const bal = sheet(wb, 'Saldos', [{ header: 'Conta', width: 28 }, { header: 'Saldo', width: 16, fmt: MONEY }], `Saldo das contas ativas, sem cartões, no fim do período. Útil para a ficha "Bens e Direitos" do IR.`);
   for (const b of report.balances.items) bal.addRow([safeText(b.name), reais(b.balance)]);

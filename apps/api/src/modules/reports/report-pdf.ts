@@ -207,10 +207,13 @@ export async function renderReportPdf(report: ReportDTO, generatedAt: Date): Pro
   );
 
   // ---------- Dívidas ----------
-  heading('Evolução das dívidas', 'Saldo no fim de cada mês: cartões (com parcelas futuras) e empréstimos (saldo devedor).');
+  heading('Evolução das dívidas', 'Saldo no fim de cada mês: cartões (com parcelas futuras), empréstimos (saldo devedor) e dívidas com credores.');
   table(
-    [{ label: 'Mês', width: 120 }, { label: 'Cartões', width: 125, align: 'right' }, { label: 'Empréstimos', width: 125, align: 'right' }, { label: 'Total', width: WIDTH - 370, align: 'right' }],
-    report.debts.map((d) => [`${monthName(d.month)} de ${d.month.slice(0, 4)}`, formatBRL(d.cards), formatBRL(d.loans), formatBRL(d.total)]),
+    [
+      { label: 'Mês', width: 120 }, { label: 'Cartões', width: 95, align: 'right' }, { label: 'Empréstimos', width: 100, align: 'right' },
+      { label: 'Credores', width: 95, align: 'right' }, { label: 'Total', width: WIDTH - 410, align: 'right' },
+    ],
+    report.debts.map((d) => [`${monthName(d.month)} de ${d.month.slice(0, 4)}`, formatBRL(d.cards), formatBRL(d.loans), formatBRL(d.others), formatBRL(d.total)]),
   );
 
   // ---------- Maiores despesas ----------

@@ -149,6 +149,12 @@ export function createAccountsService(deps: AccountsServiceDeps) {
           `Esta conta paga parcelas pendentes do empréstimo "${loanName}". Exclua o empréstimo ou mova as parcelas para outra conta antes de arquivar.`,
         );
       }
+      const debtName = await repo.pendingDebtName(userId, id);
+      if (debtName) {
+        throw new UnprocessableError(
+          `Esta conta paga parcelas pendentes do acordo da dívida "${debtName}". Cancele o acordo ou mova as parcelas para outra conta antes de arquivar.`,
+        );
+      }
       return withBalance(userId, await repo.setArchived(userId, id, new Date()));
     },
 

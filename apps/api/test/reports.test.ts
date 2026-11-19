@@ -118,7 +118,7 @@ describe('relatórios', () => {
     const at = (m: string) => r.debts.find((d) => d.month === m)!;
     expect(at('2026-09').cards).toBe(0);
     expect(at('2026-10').cards).toBe(120000);
-    expect(at('2026-11')).toEqual({ month: '2026-11', cards: 110000, loans: outstanding, total: 110000 + outstanding });
+    expect(at('2026-11')).toEqual({ month: '2026-11', cards: 110000, loans: outstanding, others: 0, total: 110000 + outstanding });
     // Em junho, 7 das 12 parcelas pagas antes do cadastro já tinham vencido (dez/25 a jun/26): o saldo era maior.
     expect(at('2026-06').loans).toBeGreaterThan(outstanding);
   });

@@ -10,9 +10,11 @@ test.describe('tela de 360 px', () => {
     const faturas = await page.getByRole('article', { name: 'Cartão principal' }).getByRole('link', { name: 'Ver faturas' }).getAttribute('href');
     await page.goto('/emprestimos');
     const emprestimo = await page.getByRole('article', { name: 'Financiamento do carro' }).getByRole('link', { name: /Ver detalhes/ }).getAttribute('href');
+    await page.goto('/dividas');
+    const divida = await page.getByRole('article', { name: 'Crediário da loja de móveis' }).getByRole('link', { name: /Ver detalhes/ }).getAttribute('href');
 
     const paths = [
-      '/', '/lancamentos', '/contas', faturas!, '/emprestimos', emprestimo!, '/planejamento', '/planejamento?aba=metas',
+      '/', '/lancamentos', '/contas', faturas!, '/emprestimos', emprestimo!, '/dividas', divida!, '/planejamento', '/planejamento?aba=metas',
       '/relatorios', '/notificacoes', '/assistente', '/categorias', '/perfil', '/privacidade', '/termos',
     ];
     for (const path of paths) {

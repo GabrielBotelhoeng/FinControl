@@ -52,6 +52,21 @@ enum LoanKind {
   other
 }
 
+enum DebtKind {
+  bank
+  store
+  utility
+  tax
+  person
+  other
+}
+
+enum DebtEventKind {
+  valuation
+  agreement
+  note
+}
+
 enum Frequency {
   weekly
   monthly
@@ -83,6 +98,7 @@ model Profile {
   notifications     Notification[]
   pushSubscriptions PushSubscription[]
   aiUsage           AiUsage[]
+  debts             Debt[]
 
   @@index([isDemo, createdAt])
   @@map("profiles")
@@ -197,12 +213,18 @@ model Transaction {
   recurrence           Recurrence?        @relation(fields: [recurrenceId], references: [id], onDelete: SetNull)
   loanId               String?            @map("loan_id") @db.Uuid
   loan                 Loan?              @relation(fields: [loanId], references: [id], onDelete: SetNull)
+  /**
+   * Pagamento de uma dívida com credor (sub-projeto 6, V1): avulso, ou parcela de acordo quando tem `installmentNumber`.
+   */
+  debtId               String?            @map("debt_id") @db.Uuid
+  debt                 Debt?              @relation(fields: [debtId], references: [id], onDelete: SetNull)
 
   @@unique([recurrenceId, occurrenceDate])
   @@index([userId, dueDate])
   @@index([userId, paidDate])
   @@index([accountId, invoiceMonth])
   @@index([loanId])
+  @@index([debtId])
   @@map("transactions")
 }
 
@@ -361,4 +383,48 @@ model AiUsage {
   @@id([userId, day])
   @@index([day])
   @@map("ai_usage")
+}
+
+/**
+ * Dívida com qualquer credor (sub-projeto 6). O saldo é sempre calculado (V3): âncoras em `debt_events`
+ * e pagamentos em `transactions.debt_id`.
+ */
+model Debt {
+  id             String        @id @default(uuid()) @db.Uuid
+  userId         String        @map("user_id") @db.Uuid
+  name           String
+  creditor       String
+  kind           DebtKind
+  originalAmount BigInt        @map("original_amount")
+  since          DateTime      @db.Date
+  createdAt      DateTime      @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime      @updatedAt @map("updated_at") @db.Timestamptz
+  user           Profile       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  events         DebtEvent[]
+  transactions   Transaction[]
+
+  @@index([userId])
+  @@map("debts")
+}
+
+/**
+ * Atualização de valor e acordo (âncoras, V3/V7) ou negociação (V5). Os campos do acordo só valem em `agreement`.
+ */
+model DebtEvent {
+  id                String        @id @default(uuid()) @db.Uuid
+  debtId            String        @map("debt_id") @db.Uuid
+  userId            String        @map("user_id") @db.Uuid
+  kind              DebtEventKind
+  date              DateTime      @db.Date
+  amount            BigInt?
+  note              String?
+  downPayment       BigInt?       @map("down_payment")
+  installments      Int?
+  installmentAmount BigInt?       @map("installment_amount")
+  cancelledAt       DateTime?     @map("cancelled_at") @db.Timestamptz
+  recordedAt        DateTime      @default(now()) @map("recorded_at") @db.Timestamptz
+  debt              Debt          @relation(fields: [debtId], references: [id], onDelete: Cascade)
+
+  @@index([debtId])
+  @@map("debt_events")
 }

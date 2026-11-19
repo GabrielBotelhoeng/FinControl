@@ -36,7 +36,7 @@ export type ReportCategoryDTO = {
 };
 
 export type ReportMonthDTO = { month: string; income: number; expense: number; net: number };
-export type ReportDebtPointDTO = { month: string; cards: number; loans: number; total: number };
+export type ReportDebtPointDTO = { month: string; cards: number; loans: number; others: number; total: number };
 export type ReportExpenseDTO = { id: string; date: string; description: string; category: string; account: string; amount: number };
 export type ReportBalanceDTO = { accountId: string; name: string; type: AccountType; balance: number };
 
@@ -63,4 +63,5 @@ export type ReportDTO = {
 };
 
 /** R8: dívida total hoje (cartões pela R5, empréstimos pela R6). */
-export type DebtsDTO = { cards: number; loans: number; total: number };
+/** `others` = dívidas com credores (sub-projeto 6, V11). */
+export type DebtsDTO = { cards: number; loans: number; others: number; total: number };

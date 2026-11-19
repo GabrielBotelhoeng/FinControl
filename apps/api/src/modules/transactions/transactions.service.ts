@@ -10,6 +10,15 @@ export const LOAN_INSTALLMENT_MESSAGES = {
   remove: 'Esta é uma parcela de empréstimo. Para apagá-la, exclua o empréstimo na página Empréstimos.',
   amount: 'O valor de uma parcela de empréstimo vem do contrato. Para mudar, exclua e cadastre o empréstimo de novo.',
 } as const;
+
+/** Parcelas de acordo de dívida (sub-projeto 6, V8): mesma regra das de empréstimo. Pagamentos avulsos ficam livres. */
+export const DEBT_INSTALLMENT_MESSAGES = {
+  remove: 'Esta é uma parcela de acordo de dívida. Para apagá-la, cancele o acordo na página Dívidas.',
+  amount: 'O valor de uma parcela de acordo vem do acordo. Para mudar, cancele o acordo e feche outro na página Dívidas.',
+  /** O valor atualizado (ou o acordo) da dívida já contou este pagamento: mexer nele agora contaria duas vezes (V3). */
+  frozen: 'Este pagamento já está incluído numa atualização de valor ou num acordo posterior da dívida e não pode ser desmarcado nem pago de novo.',
+  beforeAnchor: 'A data do pagamento não pode ser anterior à última atualização do valor da dívida.',
+} as const;
 import type { RecurrencesService } from '../recurrences/recurrences.service';
 import { assertCardCreateRules, assertCardEditRules, assertNotCardTransaction, buildCardPurchaseRows } from './transactions.cards';
 import { decodeCursor, encodeCursor } from './transactions.cursor';
@@ -24,6 +33,15 @@ export type TransactionsServiceDeps = {
   validateRefs: ValidateRefs;
   recurrences: RecurrencesService;
   clock: () => Date;
+  /**
+   * Pagar ou desmarcar um lançamento de dívida (sub-projeto 6, V3) com a dívida travada: recebe a última âncora e o
+   * repositório da transação. A âncora trava os pagamentos que ela já contou; a trava evita correr com o cancelamento.
+   */
+  withDebtLock: <T>(
+    userId: string,
+    debtId: string,
+    fn: (anchor: { date: DateOnly; recordedAt: Date } | null, repo: Pick<TransactionsRepository, 'update'>) => Promise<T>,
+  ) => Promise<T>;
   /** Grava as N parcelas de uma compra no cartão numa única transação do banco (decisão R10). */
   createInstallments: (userId: string, rows: NewTransaction[]) => Promise<TransactionRow[]>;
 };
@@ -44,6 +62,19 @@ export function createTransactionsService(deps: TransactionsServiceDeps) {
     const date = paidDate ?? t;
     if (date > t) throw new UnprocessableError('A data de pagamento não pode estar no futuro.');
     return date;
+  }
+
+  /** V3: um lançamento registrado antes da última âncora já está no valor dela; pagar ou desmarcar contaria duas vezes. */
+  /** Muda a situação; num lançamento de dívida, só depois de conferir a última âncora com a dívida travada. */
+  async function setStatus(userId: string, current: TransactionRow, patch: { status: TransactionStatus; paidDate: DateOnly | null }) {
+    if (!current.debtId) return repo.update(userId, current.id, patch);
+    return deps.withDebtLock(userId, current.debtId, async (anchor, txRepo) => {
+      if (anchor) {
+        if (current.createdAt <= anchor.recordedAt) throw new UnprocessableError(DEBT_INSTALLMENT_MESSAGES.frozen);
+        if (patch.paidDate && patch.paidDate < anchor.date) throw new UnprocessableError(DEBT_INSTALLMENT_MESSAGES.beforeAnchor);
+      }
+      return txRepo.update(userId, current.id, patch);
+    });
   }
 
   async function isCard(userId: string, accountId: string): Promise<boolean> {
@@ -123,6 +154,9 @@ export function createTransactionsService(deps: TransactionsServiceDeps) {
       if (current.loanId && input.amount !== undefined && input.amount !== current.amount) {
         throw new UnprocessableError(LOAN_INSTALLMENT_MESSAGES.amount);
       }
+      if (current.debtId && current.installmentNumber !== null && input.amount !== undefined && input.amount !== current.amount) {
+        throw new UnprocessableError(DEBT_INSTALLMENT_MESSAGES.amount);
+      }
       // Guarda de cartão (decisão R11): antes de ramificar por escopo, para também bloquear mover uma
       // recorrência comum para um cartão via scope=future. Só bloqueia accountId/destinationAccountId que
       // realmente mudam de valor — reenviar o mesmo valor (como o formulário da web sempre faz) é permitido.
@@ -162,6 +196,7 @@ export function createTransactionsService(deps: TransactionsServiceDeps) {
       const current = await getOwned(userId, id);
       // Sem esta guarda, o empréstimo ficaria "47 de 48" para sempre, sem como religar a parcela (revisão da Parte B).
       if (current.loanId) throw new UnprocessableError(LOAN_INSTALLMENT_MESSAGES.remove);
+      if (current.debtId && current.installmentNumber !== null) throw new UnprocessableError(DEBT_INSTALLMENT_MESSAGES.remove);
       if (!current.recurrenceId) {
         await repo.delete(userId, id);
         return;
@@ -173,14 +208,14 @@ export function createTransactionsService(deps: TransactionsServiceDeps) {
     async pay(userId: string, id: string, paidDate?: DateOnly): Promise<TransactionDTO> {
       const current = await getOwned(userId, id);
       assertNotCardTransaction(await isCard(userId, current.accountId));
-      const row = await repo.update(userId, id, { status: 'paid', paidDate: resolvePaidDate('paid', paidDate) });
+      const row = await setStatus(userId, current, { status: 'paid', paidDate: resolvePaidDate('paid', paidDate) });
       return toTransactionDTO(row, today());
     },
 
     async unpay(userId: string, id: string): Promise<TransactionDTO> {
       const current = await getOwned(userId, id);
       assertNotCardTransaction(await isCard(userId, current.accountId));
-      return toTransactionDTO(await repo.update(userId, id, { status: 'pending', paidDate: null }), today());
+      return toTransactionDTO(await setStatus(userId, current, { status: 'pending', paidDate: null }), today());
     },
   };
 }
