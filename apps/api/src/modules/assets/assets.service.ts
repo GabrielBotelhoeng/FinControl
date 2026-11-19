@@ -1,9 +1,9 @@
 import {
-  assetSummary, assetValueAt, compareByMoment, todayInSaoPaulo,
+  assetSummary, compareByMoment, todayInSaoPaulo,
   type AssetDetailDTO, type AssetDTO, type AssetValuationInput, type CreateAssetInput, type DateOnly, type UpdateAssetInput,
 } from '@fincontrol/shared';
 import { NotFoundError, UnprocessableError } from '../../http/errors';
-import { OnlyValuationError, type AssetRow, type AssetsRepository } from './assets.repository';
+import { OnlyValuationError, SaleUndoneLaterError, type AssetRow, type AssetsRepository } from './assets.repository';
 
 /** Resumo do bem para hoje; o repositório sempre devolve pelo menos um registro (B6). */
 export function toAssetDTO(a: AssetRow, today: DateOnly): AssetDTO {
@@ -68,15 +68,18 @@ export function createAssetsService(deps: { repo: AssetsRepository; clock: () =>
     },
 
     async addValuation(userId: string, id: string, input: AssetValuationInput): Promise<AssetDetailDTO> {
-      const asset = await getOwned(userId, id);
+      await getOwned(userId, id);
       assertNotFuture(input.date);
-      // B6 (revisão): pela regra B3, um valor maior que zero que valha depois da data desfaria a venda. Vale o que
-      // conta em cada dia: um valor substituído no mesmo dia por outro zero não atrapalha.
-      const undoneLater = asset.valuations.some((v) => v.date > input.date && assetValueAt(asset.valuations, v.date) > 0);
-      if (input.amount === 0 && undoneLater) {
-        throw new UnprocessableError('Há um valor registrado depois desta data. Para registrar a venda nela, exclua antes os valores posteriores.');
+      try {
+        await deps.repo.addValuation(userId, id, input);
+      } catch (err) {
+        // B6 (revisão): conferido sob a trava do bem. Vale o que conta em cada dia: um valor substituído no mesmo dia
+        // por outro zero não atrapalha.
+        if (err instanceof SaleUndoneLaterError) {
+          throw new UnprocessableError('Há um valor registrado depois desta data. Para registrar a venda nela, exclua antes os valores posteriores.');
+        }
+        throw err;
       }
-      await deps.repo.addValuation(userId, id, input);
       return detail(userId, id);
     },
 

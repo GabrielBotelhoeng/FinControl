@@ -1,4 +1,4 @@
-import type { AssetKind, AssetValuationEntry, DateOnly } from '@fincontrol/shared';
+import { assetValueAt, type AssetKind, type AssetValuationEntry, type DateOnly } from '@fincontrol/shared';
 import { fromDateOnly, toDateOnly } from '../../infra/date-mapping';
 import type { Db } from '../../infra/prisma';
 
@@ -21,6 +21,9 @@ const toRow = (a: AssetRecord): AssetRow => ({
 
 /** B6: o bem não pode ficar sem nenhum registro de valor. */
 export class OnlyValuationError extends Error {}
+
+/** B6: a venda (valor 0) não pode ficar antes de um valor maior que zero que valha depois dela. */
+export class SaleUndoneLaterError extends Error {}
 
 export function createAssetsRepository(db: Db) {
   return {
@@ -60,8 +63,22 @@ export function createAssetsRepository(db: Db) {
       await db.asset.delete({ where: { id, userId } });
     },
 
+    /**
+     * Trava o bem (revisão do CodeRabbit): o momento do registro nunca empata com o último nem fica antes dele, mesmo
+     * com dois pedidos no mesmo milissegundo ou com o relógio de outra instância adiantado (B3: vale o último gravado).
+     */
     async addValuation(userId: string, assetId: string, v: { date: DateOnly; amount: number }): Promise<void> {
-      await db.assetValuation.create({ data: { assetId, userId, date: fromDateOnly(v.date), amount: BigInt(v.amount), recordedAt: new Date() } });
+      await db.$transaction(async (tx) => {
+        await tx.$queryRaw`SELECT "id" FROM "assets" WHERE "id" = ${assetId}::uuid FOR UPDATE`;
+        const rows = await tx.assetValuation.findMany({ where: { assetId }, select: { date: true, amount: true, recordedAt: true } });
+        const existing = rows.map((r) => ({ date: toDateOnly(r.date), amount: Number(r.amount), recordedAt: r.recordedAt.toISOString() }));
+        // B6: pela regra B3, um valor maior que zero que valha depois da data desfaria a venda.
+        if (v.amount === 0 && existing.some((e) => e.date > v.date && assetValueAt(existing, e.date) > 0)) throw new SaleUndoneLaterError();
+        const last = rows.reduce((max, r) => Math.max(max, r.recordedAt.getTime()), 0);
+        await tx.assetValuation.create({
+          data: { assetId, userId, date: fromDateOnly(v.date), amount: BigInt(v.amount), recordedAt: new Date(Math.max(Date.now(), last + 1)) },
+        });
+      });
     },
 
     /** Trava o bem: dois pedidos juntos não apagam os dois últimos registros (B6). */

@@ -3,7 +3,7 @@ import {
 } from '@fincontrol/shared';
 import type { Prisma } from '../../generated/prisma/client';
 import { fromDateOnly, toDateOnly } from '../../infra/date-mapping';
-import type { Db } from '../../infra/prisma';
+import type { Db, DbClient } from '../../infra/prisma';
 
 export type CategoryRef = { id: string; name: string; icon: string; color: string };
 export type MonthTotals = Map<string, { income: number; expense: number }>;
@@ -30,10 +30,15 @@ export function createReportsRepository(db: Db) {
    * Saldo no fim de cada dia de `dates` (na ordem recebida) das contas sem cartões (R7). Sem `today`, só as não
    * arquivadas. Com `today` (a série do patrimônio, B1 do sub-projeto 11), a conta arquivada ainda conta nas datas
    * antes do dia em que foi arquivada, para o passado não mudar quando ela é arquivada; hoje, como no saldo total, não.
-   * O saldo até a primeira data sai agrupado por conta; só o trecho até a última vem dia a dia.
+   * O saldo até a primeira data sai agrupado por conta; só o trecho até a última vem dia a dia. As leituras ficam numa
+   * transação com leitura repetível (revisão do CodeRabbit): um pagamento que muda de data entre elas não conta duas vezes.
    */
   async function balancesAt(userId: string, dates: DateOnly[], opts: { today?: DateOnly } = {}): Promise<ReportBalanceDTO[][]> {
     if (dates.length === 0) return [];
+    return db.$transaction((tx) => readBalances(tx, userId, dates, opts), { isolationLevel: 'RepeatableRead' });
+  }
+
+  async function readBalances(db: DbClient, userId: string, dates: DateOnly[], opts: { today?: DateOnly }): Promise<ReportBalanceDTO[][]> {
     const accounts = await db.account.findMany({
       where: { userId, type: { not: 'credit_card' }, ...(opts.today ? {} : { archivedAt: null }) },
       orderBy: [{ name: 'asc' }, { id: 'asc' }],

@@ -2,7 +2,7 @@ import request from 'supertest';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { buildTestApp } from './helpers/app';
 import { newUser, type TestUser } from './helpers/auth';
-import { resetDb } from './helpers/db';
+import { resetDb, testDb } from './helpers/db';
 
 // Hoje nos testes é 2026-11-11 (FIXED_NOW).
 const { app } = buildTestApp();
@@ -67,6 +67,16 @@ describe('bens (sub-projeto 11)', () => {
     const moved = await addValuation(user, asset.id, 0, '2026-09-01');
     expect(moved.status).toBe(201);
     expect(moved.body.value).toBe(0);
+  });
+
+  it('CodeRabbit: a ordem de registro só cresce, e o valor novo vence um anterior gravado com o relógio adiantado (B3)', async () => {
+    const user = await newUser();
+    const asset = (await createAsset(user)).body;
+    // Outra instância da API, com o relógio uma hora adiantado, gravou o registro de hoje.
+    await testDb.assetValuation.updateMany({ where: { assetId: asset.id }, data: { recordedAt: new Date(Date.now() + 3_600_000) } });
+    const res = await addValuation(user, asset.id, 3900000, '2026-11-11');
+    expect(res.status).toBe(201);
+    expect(res.body.value).toBe(3900000);
   });
 
   it('revisão: excluir dois registros ao mesmo tempo não deixa o bem sem valor', async () => {

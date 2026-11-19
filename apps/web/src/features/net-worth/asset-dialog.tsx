@@ -79,14 +79,21 @@ export function AssetDialog({ assetId, title, onOpenChange }: { assetId: string;
             <h3 className="font-semibold">Atualizar valor</h3>
             <div className="grid gap-4 sm:grid-cols-2">
               <Field label="Novo valor">
-                <MoneyInput value={sold ? 0 : amount} onChange={setAmount} disabled={sold} />
+                <MoneyInput value={sold ? 0 : amount} onChange={setAmount} disabled={sold || add.isPending} />
               </Field>
               <Field label="Data do valor">
-                <Input type="date" value={date} min="1900-01-01" max={today} onChange={(e) => setDate(e.target.value)} />
+                <Input type="date" value={date} min="1900-01-01" max={today} disabled={add.isPending} onChange={(e) => setDate(e.target.value)} />
               </Field>
             </div>
             <label className="flex items-center gap-2.5 text-sm">
-              <input type="checkbox" checked={sold} onChange={(e) => setSold(e.target.checked)} className="h-4 w-4 accent-[var(--primary)]" />
+              {/* Travados enquanto salva (revisão do CodeRabbit): a limpeza no fim não apaga o que foi digitado depois. */}
+              <input
+                type="checkbox"
+                checked={sold}
+                disabled={add.isPending}
+                onChange={(e) => setSold(e.target.checked)}
+                className="h-4 w-4 accent-[var(--primary)]"
+              />
               Vendi ou perdi este bem
             </label>
             <p className="text-xs text-muted">

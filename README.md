@@ -99,8 +99,8 @@ As decisões, com as alternativas descartadas e os motivos, estão nas specs do 
 | Camada | Quantidade | Como roda |
 |---|---|---|
 | `packages/shared` | 209 | Unitários (Vitest) |
-| `apps/api` | 343 | Integração contra **Postgres real**: rotas HTTP, regras de saldo, recorrência, cartão e fatura, empréstimos, relatórios, CSV e PDF, sincronização com o Banco Central e isolamento entre usuários |
-| `apps/web` | 232 | Componentes e fluxos (Testing Library), com o provedor de identidade simulado |
+| `apps/api` | 344 | Integração contra **Postgres real**: rotas HTTP, regras de saldo, recorrência, cartão e fatura, empréstimos, relatórios, CSV e PDF, sincronização com o Banco Central e isolamento entre usuários |
+| `apps/web` | 233 | Componentes e fluxos (Testing Library), com o provedor de identidade simulado |
 | `e2e` | 15 | Chromium contra a pilha inteira |
 
 O E2E roda a **web buildada como em produção**, a **API real** e o **Postgres real**. A única peça simulada é o provedor de identidade: um servidor Auth mínimo ([`e2e/fake-auth.ts`](e2e/fake-auth.ts)) que fala o mesmo protocolo do Supabase e assina JWTs ES256 de verdade. Assim, a API valida os tokens pelo mesmo caminho de produção (JWKS, issuer e audience), sem segredos no CI e sem sujar o projeto real. Os cenários seguem os critérios de aceite da spec:

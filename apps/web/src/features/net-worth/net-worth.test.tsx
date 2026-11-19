@@ -1,5 +1,5 @@
 import { addMonthsToYm, endOfMonth } from '@fincontrol/shared';
-import { screen, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import { ApiError } from '../../lib/api-client';
@@ -144,6 +144,23 @@ describe('NetWorthPage (sub-projeto 11)', () => {
 
     await userEvent.click(within(dialog).getByRole('button', { name: /Excluir o valor de R\$\s*45\.000,00 de 20\/11\/2025/ }));
     expect(client.del).toHaveBeenCalledWith('/assets/a1/valuations/v1');
+  });
+
+  it('CodeRabbit: enquanto o valor salva, os campos ficam travados (nada digitado depois se perde)', async () => {
+    let release: () => void = () => {};
+    const client = api({
+      'POST /assets/a1/valuations': () => new Promise((resolve) => { release = () => resolve(detail([])); }),
+    });
+    renderApp(<NetWorthPage />, { api: client });
+    const dialog = await openCar();
+    await userEvent.type(await within(dialog).findByLabelText('Novo valor'), '3900000');
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Salvar valor' }));
+    expect(within(dialog).getByLabelText('Novo valor')).toBeDisabled();
+    expect(within(dialog).getByLabelText('Data do valor')).toBeDisabled();
+    expect(within(dialog).getByRole('checkbox', { name: 'Vendi ou perdi este bem' })).toBeDisabled();
+    release();
+    await waitFor(() => expect(within(dialog).getByLabelText('Novo valor')).toBeEnabled());
+    expect(within(dialog).getByLabelText('Novo valor')).toHaveValue('');
   });
 
   it('a recusa da API aparece no diálogo (venda antes de um valor posterior, B6)', async () => {
