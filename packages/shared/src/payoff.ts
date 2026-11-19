@@ -29,10 +29,12 @@ export type PayoffResult = {
 };
 
 export const MAX_PAYOFF_MONTHS = 600;
+/** Saldo a partir do qual a simulação desiste ("não quita"): R$ 10 bilhões. Evita números sem sentido e `Infinity`. */
+const RUNAWAY = 1e12;
 
-/** Q2: soma dos pagamentos mínimos das dívidas com saldo. O valor mensal não pode ser menor. */
+/** Q2: soma das parcelas das dívidas com saldo, limitadas ao saldo com os juros do 1º mês. O valor mensal não pode ser menor. */
 export const minimumBudget = (debts: PayoffDebt[]) =>
-  debts.reduce((s, d) => (d.balance > 0 ? s + Math.min(d.minimum, d.balance) : s), 0);
+  debts.reduce((s, d) => (d.balance > 0 ? s + Math.min(d.minimum, Math.round(d.balance * (1 + d.monthlyRate))) : s), 0);
 
 /** Q3: avalanche = maior taxa primeiro (empate: menor saldo); bola de neve = menor saldo primeiro (empate: maior taxa). */
 function priority(strategy: PayoffStrategy) {
@@ -52,12 +54,14 @@ export function simulatePayoff(debts: PayoffDebt[], budget: number, strategy: Pa
   let totalPaid = 0;
   const balances: number[] = [];
   let month = 0;
-  while (state.some((d) => d.balance > 0) && month < MAX_PAYOFF_MONTHS) {
+  // Saldos em centavos fracionários: arredondar todo mês deixava 1 centavo no fim e um mês a mais (revisão final).
+  let runaway = false;
+  while (state.some((d) => d.balance > 0) && month < MAX_PAYOFF_MONTHS && !runaway) {
     month += 1;
     let pool = strategy === 'minimum' ? Number.POSITIVE_INFINITY : budget;
     for (const d of state) {
       if (d.balance <= 0) continue;
-      const interest = Math.round(d.balance * d.monthlyRate);
+      const interest = d.balance * d.monthlyRate;
       d.balance += interest;
       totalInterest += interest;
     }
@@ -77,19 +81,30 @@ export function simulatePayoff(debts: PayoffDebt[], budget: number, strategy: Pa
         totalPaid += pay;
       }
     }
-    for (const d of state) if (d.balance <= 0 && d.done === null) d.done = month;
-    balances.push(state.reduce((s, d) => s + Math.max(d.balance, 0), 0));
+    for (const d of state) {
+      // Resto de arredondamento (abaixo de R$ 1) vai junto com o pagamento do mês, como na última parcela do banco.
+      if (d.balance > 0 && d.balance < 100) {
+        totalPaid += d.balance;
+        d.balance = 0;
+      }
+      if (d.balance === 0 && d.done === null) d.done = month;
+    }
+    const total = state.reduce((s, d) => s + d.balance, 0);
+    runaway = !(total < RUNAWAY);
+    balances.push(Math.round(total));
   }
   const allDone = state.every((d) => d.done !== null);
+  const rank = priority(strategy === 'minimum' ? 'avalanche' : strategy);
+  // Empate no mês (ou dívidas que não acabam): a ordem da estratégia.
   const order = [...state]
-    .sort((a, b) => (a.done ?? Infinity) - (b.done ?? Infinity))
+    .sort((a, b) => (a.done ?? Infinity) - (b.done ?? Infinity) || rank(debts.find((x) => x.id === a.id)!, debts.find((x) => x.id === b.id)!))
     .map((d) => ({ id: d.id, name: d.name, month: d.done }));
   return {
     strategy,
     months: allDone ? month : null,
     payoffMonth: allDone && month > 0 ? addMonthsToYm(start, month - 1) : allDone ? start : null,
-    totalInterest,
-    totalPaid,
+    totalInterest: Math.round(totalInterest),
+    totalPaid: Math.round(totalPaid),
     order,
     balances,
   };

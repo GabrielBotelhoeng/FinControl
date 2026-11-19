@@ -10,7 +10,6 @@ import { Field, Input } from '../../components/ui/field';
 import { MoneyInput } from '../../components/ui/money-input';
 import { PageHeader } from '../../components/ui/page-header';
 import { Panel } from '../../components/ui/panel';
-import { Segmented } from '../../components/ui/segmented';
 import { EmptyState, ErrorState, ListSkeleton } from '../../components/ui/states';
 import { cn } from '../../lib/cn';
 import { formatBRL, formatMonthLabel, formatMonthShort } from '../../lib/format';
@@ -23,14 +22,27 @@ type Overrides = Record<string, { rate: string; minimum: number | null }>;
 type Saved = { budget?: number | null; overrides: Overrides };
 const STORAGE_KEY = 'fincontrol-plano-quitacao';
 
+const isCents = (v: unknown): v is number => typeof v === 'number' && Number.isInteger(v) && v >= 0;
+
+/** Lê e confere o formato: dado corrompido ou de outra versão é descartado, nunca derruba a página. */
 function load(): Saved {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return { overrides: {}, ...(JSON.parse(raw) as Partial<Saved>) };
+    const raw: unknown = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? 'null');
+    if (!raw || typeof raw !== 'object') return { overrides: {} };
+    const r = raw as Record<string, unknown>;
+    const overrides: Overrides = {};
+    if (r.overrides && typeof r.overrides === 'object') {
+      for (const [id, v] of Object.entries(r.overrides as Record<string, unknown>)) {
+        const o = v as Record<string, unknown> | null;
+        if (!o || typeof o.rate !== 'string' || !(o.minimum === null || isCents(o.minimum))) continue;
+        overrides[id] = { rate: o.rate, minimum: o.minimum as number | null };
+      }
+    }
+    return { overrides, ...(r.budget === null || isCents(r.budget) ? { budget: r.budget as number | null } : {}) };
   } catch {
-    // Sem armazenamento (aba anônima ou bloqueado): começa vazio.
+    // Sem armazenamento (aba anônima ou bloqueado) ou JSON inválido: começa vazio.
+    return { overrides: {} };
   }
-  return { overrides: {} };
 }
 
 function save(s: Saved) {
@@ -41,11 +53,15 @@ function save(s: Saved) {
   }
 }
 
-/** "2,5" → 0,025; vazio ou inválido → 0. */
+export const MAX_RATE_PERCENT = 30;
+
+/** "2,5" → 0,025; vazio ou inválido → 0; acima de 30% ao mês fica em 30% (o mesmo teto do aviso do empréstimo). */
 const parseRate = (text: string) => {
   const n = Number(text.trim().replace(',', '.'));
-  return Number.isFinite(n) && n > 0 ? n / 100 : 0;
+  return Number.isFinite(n) && n > 0 ? Math.min(n, MAX_RATE_PERCENT) / 100 : 0;
 };
+
+const compactBRL = new Intl.NumberFormat('pt-BR', { notation: 'compact', maximumFractionDigits: 1 });
 
 const STRATEGIES: Record<PayoffStrategy, { label: string; hint: string; icon: LucideIcon; color: string }> = {
   avalanche: { label: 'Avalanche', hint: 'Maior juros primeiro', icon: TrendingDown, color: 'var(--primary)' },
@@ -79,7 +95,6 @@ function StrategyCard({ result, best, selected, onSelect }: { result: PayoffResu
       type="button"
       onClick={onSelect}
       aria-pressed={selected}
-      aria-label={`${s.label}: ${result.payoffMonth ? `quita em ${formatMonthLabel(result.payoffMonth)}` : 'não quita'}, ${formatBRL(result.totalInterest)} de juros`}
       className={cn(
         'grid gap-2 rounded-[var(--radius-panel)] border bg-surface p-5 text-left transition-colors',
         selected ? 'border-primary' : 'border-border hover:border-muted',
@@ -97,8 +112,9 @@ function StrategyCard({ result, best, selected, onSelect }: { result: PayoffResu
         {result.payoffMonth ? `Quita em ${formatMonthLabel(result.payoffMonth)}` : 'Não quita'}
       </span>
       <span className="tabular text-sm text-muted">
-        {result.months !== null ? `${result.months} ${result.months === 1 ? 'mês' : 'meses'} · ` : ''}
-        {`${formatBRL(result.totalInterest)} de juros`}
+        {result.months !== null
+          ? `${result.months} ${result.months === 1 ? 'mês' : 'meses'} · ${formatBRL(result.totalInterest)} de juros`
+          : 'Os juros crescem mais que o pagamento'}
       </span>
     </button>
   );
@@ -118,7 +134,7 @@ function BalanceChart({ results, start }: { results: PayoffResult[]; start: stri
           <LineChart data={data} margin={{ top: 4, right: 8, bottom: 0, left: 0 }}>
             <CartesianGrid vertical={false} stroke="var(--border)" />
             <XAxis dataKey="month" tickFormatter={formatMonthShort} tickLine={false} axisLine={false} tick={{ fill: 'var(--text-muted)', fontSize: 12 }} minTickGap={16} />
-            <YAxis tickFormatter={(v: number) => `${Math.round(v / 100000)} mil`} tickLine={false} axisLine={false} width={52} tick={{ fill: 'var(--text-muted)', fontSize: 12 }} />
+            <YAxis tickFormatter={(v: number) => compactBRL.format(v / 100)} tickLine={false} axisLine={false} width={52} tick={{ fill: 'var(--text-muted)', fontSize: 12 }} />
             <Tooltip
               formatter={(v, name) => [formatBRL(Number(v)), STRATEGIES[name as PayoffStrategy].label]}
               labelFormatter={(m) => formatMonthShort(String(m))}
@@ -146,7 +162,10 @@ export default function PayoffPage() {
     setSaved(next);
     save(next);
   };
-  const start = addMonthsToYm(monthOf(todayInSaoPaulo()), 1);
+  const current = monthOf(todayInSaoPaulo());
+  // A parcela deste mês ainda em aberto faz parte do saldo: o plano começa neste mês (revisão final).
+  const dueThisMonth = [...(loans.data ?? []), ...(debts.data ?? [])].some((x) => x.nextDue && monthOf(x.nextDue.date) <= current);
+  const start = dueThisMonth ? current : addMonthsToYm(current, 1);
 
   const input = useMemo(
     () => (loans.data && debts.data ? toPayoffDebts(loans.data, debts.data, saved.overrides) : null),
@@ -164,6 +183,8 @@ export default function PayoffPage() {
   const best = finishing.length ? finishing.reduce((a, b) => (b.totalInterest < a.totalInterest ? b : a)).strategy : null;
   const chosen = results?.find((r) => r.strategy === selected);
   const openDebts = debts.data?.filter((d) => d.status === 'open') ?? [];
+  const lateDebts = debts.data?.filter((d) => d.status === 'late') ?? [];
+  const charted = results?.filter((r) => r.months !== null) ?? [];
   const isPending = loans.isPending || debts.isPending;
   const error = loans.error ?? debts.error;
 
@@ -182,7 +203,15 @@ export default function PayoffPage() {
       />
 
       {isPending && <ListSkeleton />}
-      {error && <ErrorState message={error.message} onRetry={() => (loans.isError ? loans.refetch() : debts.refetch())} />}
+      {error && (
+        <ErrorState
+          message={error.message}
+          onRetry={() => {
+            if (loans.isError) void loans.refetch();
+            if (debts.isError) void debts.refetch();
+          }}
+        />
+      )}
       {input && input.length === 0 && (
         <EmptyState
           icon={<TrendingDown className="h-7 w-7" strokeWidth={1.5} />}
@@ -206,7 +235,11 @@ export default function PayoffPage() {
                 <p className="text-sm text-muted">Dívidas sem acordo: informe os juros que o credor cobra e a parcela, se houver. Sem juros, o plano considera 0%.</p>
                 {openDebts.map((d) => {
                   const o = saved.overrides[d.id] ?? { rate: '', minimum: null };
-                  const set = (patch: Partial<Overrides[string]>) => update({ ...saved, overrides: { ...saved.overrides, [d.id]: { ...o, ...patch } } });
+                  const set = (patch: Partial<Overrides[string]>) => {
+                    // Só as dívidas que ainda estão em aberto: as apagadas ou em acordo saem do navegador.
+                    const kept = Object.fromEntries(Object.entries(saved.overrides).filter(([id]) => openDebts.some((x) => x.id === id)));
+                    update({ ...saved, overrides: { ...kept, [d.id]: { ...o, ...patch } } });
+                  };
                   return (
                     <div key={d.id} className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_10rem_12rem] sm:items-end">
                       <p className="truncate text-sm font-medium sm:pb-3">{`${d.name} · ${formatBRL(d.balance)}`}</p>
@@ -221,6 +254,14 @@ export default function PayoffPage() {
                 })}
               </div>
             )}
+            {lateDebts.length > 0 && (
+              <p className="text-sm font-medium text-expense">
+                {`${lateDebts.map((d) => d.name).join(', ')}: parcela atrasada. O plano supõe que você põe em dia agora; o que está vencido não entra no valor mínimo.`}
+              </p>
+            )}
+            {minimum === 0 && budget === 0 && (
+              <p className="text-sm">Informe quanto pode pagar por mês para ver em quanto tempo sai das dívidas.</p>
+            )}
             <p className="text-xs text-muted">Compras parceladas no cartão não têm juros e ficam fora do plano. É uma simulação: o banco pode cobrar diferente.</p>
           </Panel>
 
@@ -233,7 +274,7 @@ export default function PayoffPage() {
               </div>
 
               {best && results.find((r) => r.strategy === 'minimum') && (
-                <p role="status" className="text-sm">
+                <p className="text-sm">
                   {(() => {
                     const b = results.find((r) => r.strategy === best)!;
                     const min = results.find((r) => r.strategy === 'minimum')!;
@@ -245,21 +286,18 @@ export default function PayoffPage() {
                 </p>
               )}
 
-              <Panel role="region" aria-label="Saldo devedor ao longo do tempo" className="grid gap-3 p-5">
-                <h2 className="font-display text-lg font-semibold tracking-tight">Saldo devedor ao longo do tempo</h2>
-                <BalanceChart results={results} start={start} />
-              </Panel>
+              {charted.length > 0 && (
+                <Panel role="region" aria-label="Saldo devedor ao longo do tempo" className="grid gap-3 p-5">
+                  <h2 className="font-display text-lg font-semibold tracking-tight">Saldo devedor ao longo do tempo</h2>
+                  <BalanceChart results={charted} start={start} />
+                </Panel>
+              )}
 
               {chosen && (
                 <Panel role="region" aria-label="Ordem de quitação" className="grid gap-4 p-5">
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <h2 className="font-display text-lg font-semibold tracking-tight">Ordem de quitação</h2>
-                    <Segmented
-                      label="Estratégia"
-                      options={(Object.keys(STRATEGIES) as PayoffStrategy[]).map((s) => ({ value: s, label: STRATEGIES[s].label }))}
-                      value={selected}
-                      onChange={setSelected}
-                    />
+                  <div className="grid gap-1">
+                    <h2 className="font-display text-lg font-semibold tracking-tight">{`Ordem de quitação · ${STRATEGIES[selected].label}`}</h2>
+                    <p className="text-xs text-muted">Toque num dos cartões acima para ver a ordem de outra estratégia.</p>
                   </div>
                   <ol className="grid gap-3">
                     {chosen.order.map((o, i) => (
