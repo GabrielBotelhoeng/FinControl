@@ -22,6 +22,7 @@ import { createDebtsService } from '../modules/debts/debts.service';
 import { createDemoService } from '../modules/demo/demo.service';
 import { createGoalsRepository } from '../modules/goals/goals.repository';
 import { createGoalsService } from '../modules/goals/goals.service';
+import { createImportsService } from '../modules/imports/imports.service';
 import { createLoansRepository } from '../modules/loans/loans.repository';
 import { createLoansService } from '../modules/loans/loans.service';
 import { createProfileRepository } from '../modules/profile/profile.repository';
@@ -83,6 +84,7 @@ export function buildContainer(deps: AppDeps) {
   const cardsRepo = createCardsRepository(deps.db);
   const cards = createCardsService({ repo: cardsRepo, accountsRepo, accounts, transactionsRepo, clock: deps.clock });
   const calendar = createCalendarService({ db: deps.db, accountsRepo, cards, recurrences, clock: deps.clock });
+  const imports = createImportsService({ db: deps.db, accountsRepo, categoriesRepo });
   const debtsReader = createDebtsReader(deps.db);
   const debts = createDebtsService({ repo: debtsRepo, accountsRepo, categoriesRepo, clock: deps.clock });
   const dashboardRepo = createDashboardRepository(deps.db);
@@ -129,7 +131,7 @@ export function buildContainer(deps: AppDeps) {
   return {
     provisioner, profile, accountsRepo, accounts, categoriesRepo, categories,
     transactionsRepo, validateRefs, recurrencesRepo, recurrences, transactions, dashboard, demo,
-    cardsRepo, cards, bankRates, loansRepo, loans, budgets, goalsRepo, goals, debtsReader, debts, calendar, reports, notifications, push, assistant,
+    cardsRepo, cards, bankRates, loansRepo, loans, budgets, goalsRepo, goals, debtsReader, debts, calendar, imports, reports, notifications, push, assistant,
   };
 }
 

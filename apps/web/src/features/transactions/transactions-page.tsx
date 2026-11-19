@@ -1,7 +1,7 @@
 import { endOfMonth, monthOf, startOfMonth, todayInSaoPaulo, type TransactionDTO, type TransactionType, type YearMonth } from '@fincontrol/shared';
-import { ArrowLeftRight, Plus, Search } from 'lucide-react';
+import { ArrowLeftRight, FileUp, Plus, Search } from 'lucide-react';
 import { useDeferredValue, useMemo, useState } from 'react';
-import { useSearchParams } from 'react-router';
+import { useSearchParams, Link } from 'react-router';
 import { Button } from '../../components/ui/button';
 import { Input, Select } from '../../components/ui/field';
 import { MonthPicker } from '../../components/ui/month-picker';
@@ -58,10 +58,19 @@ export default function TransactionsPage() {
         light="Seus"
         bold="lançamentos"
         actions={
-          <Button onClick={() => setEditing('new')}>
-            <Plus aria-hidden className="h-4 w-4" strokeWidth={2} />
-            Novo lançamento
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button onClick={() => setEditing('new')}>
+              <Plus aria-hidden className="h-4 w-4" strokeWidth={2} />
+              Novo lançamento
+            </Button>
+            <Link
+              to="/importar"
+              className="inline-flex h-11 items-center gap-2 rounded-full border border-border px-5 text-sm font-medium hover:border-muted"
+            >
+              <FileUp aria-hidden className="h-4 w-4" strokeWidth={1.75} />
+              Importar extrato
+            </Link>
+          </div>
         }
       />
 
