@@ -2,7 +2,11 @@
 
 _Atualizado em 2026-11-19 (gastos que se repetem)._
 
-## Sub-projeto 10: gastos que se repetem (2026-11-19, branch feat/assinaturas)
+## Atalhos no ícone do app (2026-11-19, branch feat/atalhos-pwa)
+
+- `shortcuts` no manifest do PWA: "Novo lançamento" (`/lancamentos?novo=1`, que já abre o formulário), "Calendário de contas" e "Importar extrato".
+
+## Sub-projeto 10: gastos que se repetem — no ar desde 2026-11-19 (PR #29)
 
 - **Spec:** `docs/superpowers/specs/2026-11-19-fincontrol-sp10-gastos-repetidos-design.md` (S1–S4). Sem migration.
 - **Entregue:** `detectRepeatedSpending` (shared), `GET /repeated` e o bloco no Resumo do mês. A importação passou a dizer "Confira a categoria" quando sugere "Outros".

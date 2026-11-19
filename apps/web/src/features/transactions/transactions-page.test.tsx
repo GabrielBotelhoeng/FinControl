@@ -22,6 +22,11 @@ function api(item: Record<string, unknown>) {
 }
 
 describe('TransactionsPage', () => {
+  it('?novo=1 (atalho do ícone do app) já abre o formulário de novo lançamento', async () => {
+    renderApp(<TransactionsPage />, { api: api({}), route: '/lancamentos?novo=1', path: '/lancamentos' });
+    expect(await screen.findByRole('dialog')).toBeInTheDocument();
+  });
+
   it('?mes=AAAA-MM abre no mês pedido (o "Pagar" das notificações); valor inválido cai no mês atual', async () => {
     const client = api({});
     const { unmount } = renderApp(<TransactionsPage />, { api: client, route: '/lancamentos?mes=2026-10', path: '/lancamentos' });

@@ -24,6 +24,12 @@ export default defineConfig({
           { src: '/pwa-512.png', sizes: '512x512', type: 'image/png' },
           { src: '/maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
+        // Atalhos no ícone do app instalado (segurar o ícone no Android, botão direito no computador).
+        shortcuts: [
+          { name: 'Novo lançamento', short_name: 'Lançar', url: '/lancamentos?novo=1', icons: [{ src: '/pwa-192.png', sizes: '192x192' }] },
+          { name: 'Calendário de contas', short_name: 'Calendário', url: '/calendario', icons: [{ src: '/pwa-192.png', sizes: '192x192' }] },
+          { name: 'Importar extrato', short_name: 'Importar', url: '/importar', icons: [{ src: '/pwa-192.png', sizes: '192x192' }] },
+        ],
       },
       workbox: {
         // Só o shell do app vai para o cache; dados da API nunca (spec 3.2: sem dados offline).

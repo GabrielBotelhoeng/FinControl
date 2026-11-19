@@ -29,7 +29,8 @@ export default function TransactionsPage() {
   const [accountId, setAccountId] = useState('');
   const [search, setSearch] = useState('');
   const q = useDeferredValue(search.trim());
-  const [editing, setEditing] = useState<TransactionDTO | 'new' | null>(null);
+  // `?novo=1` (atalho do ícone do app) já abre o formulário de novo lançamento.
+  const [editing, setEditing] = useState<TransactionDTO | 'new' | null>(params.get('novo') === '1' ? 'new' : null);
 
   const filters = useMemo(
     () => ({
