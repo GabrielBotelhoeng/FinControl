@@ -34,7 +34,7 @@ export async function readStatementFile(file: File): Promise<string> {
 const SUGGESTION_LABEL: Record<ImportPreviewRowDTO['suggestion'], string> = {
   history: 'Aprendida do seu histórico',
   keyword: 'Sugerida pela descrição',
-  fallback: 'Escolha a categoria',
+  fallback: 'Confira a categoria',
 };
 
 type RowItemProps = { row: Row; index: number; categories: CategoryDTO[]; onChange: (index: number, patch: Partial<Row>) => void };
