@@ -1,4 +1,4 @@
-import { endOfMonth, monthOf, startOfMonth, todayInSaoPaulo, type TransactionDTO, type TransactionType, type YearMonth } from '@fincontrol/shared';
+import { compareTags, endOfMonth, monthOf, startOfMonth, todayInSaoPaulo, type TransactionDTO, type TransactionType, type YearMonth } from '@fincontrol/shared';
 import { ArrowLeftRight, FileUp, Plus, Search } from 'lucide-react';
 import { useDeferredValue, useMemo, useState, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router';
@@ -9,8 +9,10 @@ import { PageHeader } from '../../components/ui/page-header';
 import { Panel } from '../../components/ui/panel';
 import { Segmented } from '../../components/ui/segmented';
 import { EmptyState, ErrorState, ListSkeleton } from '../../components/ui/states';
+import { cn } from '../../lib/cn';
 import { useAccounts } from '../accounts/api';
 import { useCategories } from '../categories/api';
+import { useTags } from '../tags/api';
 import { useTransactions } from './api';
 import { groupByDay } from './group-by-day';
 import { TransactionForm } from './transaction-form';
@@ -27,6 +29,7 @@ export default function TransactionsPage() {
   const [type, setType] = useState<TypeFilter>('all');
   const [status, setStatus] = useState<'' | 'pending' | 'paid'>('');
   const [accountId, setAccountId] = useState('');
+  const [tag, setTag] = useState('');
   const [search, setSearch] = useState('');
   const q = useDeferredValue(search.trim());
   // `?novo=1` (atalho do ícone do app) já abre o formulário de novo lançamento.
@@ -47,18 +50,24 @@ export default function TransactionsPage() {
       status: status || undefined,
       accountId: accountId || undefined,
       q: q || undefined,
+      tag: tag || undefined,
     }),
-    [month, type, status, accountId, q],
+    [month, type, status, accountId, q, tag],
   );
 
   const transactions = useTransactions(filters);
   const accounts = useAccounts(true);
   const categories = useCategories();
+  const tags = useTags();
   const accountById = new Map((accounts.data ?? []).map((a) => [a.id, a]));
   const categoryById = new Map((categories.data ?? []).map((c) => [c.id, c]));
   const items = transactions.data?.pages.flatMap((p) => p.items) ?? [];
   const groups = groupByDay(items, today);
-  const filtered = type !== 'all' || status !== '' || accountId !== '' || q !== '';
+  const filtered = type !== 'all' || status !== '' || accountId !== '' || q !== '' || tag !== '';
+  // Sub-projeto 13 (T5): a tag escolhida continua no seletor mesmo quando sai do último lançamento (numa edição, por
+  // exemplo), para a pessoa poder voltar a "Todas as tags".
+  const tagNames = (tags.data ?? []).map((t) => t.name);
+  const tagOptions = tag && !tagNames.includes(tag) ? [...tagNames, tag].sort(compareTags) : tagNames;
 
   return (
     <>
@@ -100,7 +109,8 @@ export default function TransactionsPage() {
           />
           </div>
         </div>
-        <div className="grid gap-3 sm:grid-cols-[1fr_180px_200px]">
+        {/* Duas colunas até caber a linha inteira: a busca não fica espremida ao lado do menu do computador. */}
+        <div className={cn('grid gap-3 sm:grid-cols-2', tagOptions.length > 0 ? 'xl:grid-cols-[1fr_180px_200px_180px]' : 'lg:grid-cols-[1fr_180px_200px]')}>
           <label className="relative">
             <span className="sr-only">Buscar</span>
             <Search aria-hidden className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" strokeWidth={1.75} />
@@ -119,6 +129,17 @@ export default function TransactionsPage() {
               </option>
             ))}
           </Select>
+          {/* Sub-projeto 13 (T5): só aparece quando há alguma tag. */}
+          {tagOptions.length > 0 && (
+            <Select aria-label="Tag" value={tag} onChange={(e) => setTag(e.target.value)}>
+              <option value="">Todas as tags</option>
+              {tagOptions.map((name) => (
+                <option key={name} value={name}>
+                  {`#${name}`}
+                </option>
+              ))}
+            </Select>
+          )}
         </div>
       </div>
 

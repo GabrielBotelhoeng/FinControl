@@ -27,7 +27,7 @@ export function useAccounts(includeArchived = false) {
 // 'onboarding' (sub-projeto 12): o passo vira "feito" assim que a pessoa cria a conta, o lançamento, o limite ou a meta.
 const FINANCE_KEYS = [
   'accounts', 'transactions', 'dashboard', 'categories', 'cards', 'loans', 'debts', 'calendar', 'repeated', 'budgets', 'planning', 'goals', 'reports',
-  'notifications', 'assets', 'net-worth', 'onboarding',
+  'notifications', 'assets', 'net-worth', 'onboarding', 'tags',
 ];
 
 /**

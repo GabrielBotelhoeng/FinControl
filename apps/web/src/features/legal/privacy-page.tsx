@@ -100,7 +100,7 @@ export default function PrivacyPage() {
           </li>
           <li>
             <strong>Anthropic:</strong> apenas se você aceitar usar o assistente com IA. Cada pergunta envia à Anthropic, nos Estados
-            Unidos, o seu primeiro nome, a lista das suas categorias, a pergunta, as mensagens da conversa e os dados financeiros que o
+            Unidos, o seu primeiro nome, a lista das suas categorias e tags, a pergunta, as mensagens da conversa e os dados financeiros que o
             assistente consultar para responder (lançamentos, saldos, orçamento, metas, dívidas e bens). Pelos termos da API, a Anthropic não usa esses
             dados para treinar modelos e os guarda por até 30 dias, para segurança. O assistente
             só consulta: não cria, não altera e não apaga nada. Você retira o consentimento na tela do assistente, em “Retirar

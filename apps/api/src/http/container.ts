@@ -37,6 +37,7 @@ import { createPushService } from '../modules/push/push.service';
 import { createNotificationsRepository } from '../modules/notifications/notifications.repository';
 import { createNotificationsService } from '../modules/notifications/notifications.service';
 import { createNetWorthService } from '../modules/net-worth/net-worth.service';
+import { createTagsService } from '../modules/tags/tags.routes';
 import { createOnboardingService } from '../modules/onboarding/onboarding.routes';
 import { createDebtsReader } from '../modules/reports/debts';
 import { createReportsRepository } from '../modules/reports/reports.repository';
@@ -92,6 +93,7 @@ export function buildContainer(deps: AppDeps) {
   const imports = createImportsService({ db: deps.db, accountsRepo, categoriesRepo });
   const repeated = createRepeatedService({ db: deps.db, clock: deps.clock });
   const onboarding = createOnboardingService({ db: deps.db });
+  const tags = createTagsService({ db: deps.db });
   const debtsReader = createDebtsReader(deps.db);
   const debts = createDebtsService({ repo: debtsRepo, accountsRepo, categoriesRepo, clock: deps.clock });
   const assetsRepo = createAssetsRepository(deps.db);
@@ -118,7 +120,7 @@ export function buildContainer(deps: AppDeps) {
     ai: deps.aiClient ?? (ANTHROPIC_API_KEY ? createAnthropicClient({ apiKey: ANTHROPIC_API_KEY, model: AI_MODEL, logger: deps.logger }) : null),
     allowedEmails: AI_ALLOWED_EMAILS, usage: createAssistantRepository(deps.db),
     tools: createAssistantTools({ reports, transactions, categoriesRepo, budgets, goals, accounts, dashboard, debts, assets, clock: deps.clock }),
-    profileRepo: createProfileRepository(deps.db), categoriesRepo, logger: deps.logger, clock: deps.clock,
+    profileRepo: createProfileRepository(deps.db), categoriesRepo, tags, logger: deps.logger, clock: deps.clock,
   });
   const demo = createDemoService({
     repo: createDemoRepository(deps.db), categories: categoriesRepo, profile, clock: deps.clock,
@@ -142,7 +144,7 @@ export function buildContainer(deps: AppDeps) {
   return {
     provisioner, profile, accountsRepo, accounts, categoriesRepo, categories,
     transactionsRepo, validateRefs, recurrencesRepo, recurrences, transactions, dashboard, demo,
-    cardsRepo, cards, bankRates, loansRepo, loans, budgets, goalsRepo, goals, debtsReader, debts, assetsRepo, assets, netWorth, calendar, imports, repeated, onboarding, reports,
+    cardsRepo, cards, bankRates, loansRepo, loans, budgets, goalsRepo, goals, debtsReader, debts, assetsRepo, assets, netWorth, calendar, imports, repeated, onboarding, tags, reports,
     notifications, push, assistant,
   };
 }

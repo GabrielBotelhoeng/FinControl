@@ -1,4 +1,4 @@
-import { todayInSaoPaulo, type Frequency, type Scope, type TransactionDTO, type TransactionType } from '@fincontrol/shared';
+import { compareTags, tagSchema, todayInSaoPaulo, type Frequency, type Scope, type TransactionDTO, type TransactionType } from '@fincontrol/shared';
 import { Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
@@ -6,10 +6,12 @@ import { Button } from '../../components/ui/button';
 import { Dialog } from '../../components/ui/dialog';
 import { Field, Input, Select } from '../../components/ui/field';
 import { MoneyInput } from '../../components/ui/money-input';
+import { TagInput } from '../../components/ui/tag-input';
 import { Segmented } from '../../components/ui/segmented';
 import { ApiError } from '../../lib/api-client';
 import { useAccounts } from '../accounts/api';
 import { useCategories } from '../categories/api';
+import { useTags } from '../tags/api';
 import { useCreateTransaction, useDeleteTransaction, useUpdateTransaction, type TransactionFields } from './api';
 import { CardPurchaseFields } from './card-purchase-fields';
 import { ScopeDialog } from './scope-dialog';
@@ -32,6 +34,7 @@ export function TransactionForm({ open, onOpenChange, transaction, defaultType =
   const editing = Boolean(transaction);
   const accounts = useAccounts();
   const categories = useCategories();
+  const knownTags = useTags();
   const create = useCreateTransaction();
   const update = useUpdateTransaction();
   const remove = useDeleteTransaction();
@@ -39,6 +42,9 @@ export function TransactionForm({ open, onOpenChange, transaction, defaultType =
   const [type, setType] = useState<TransactionType>(transaction?.type ?? defaultType);
   const [amount, setAmount] = useState<number | null>(transaction?.amount ?? null);
   const [description, setDescription] = useState(transaction?.description ?? '');
+  const [tags, setTags] = useState<string[]>(transaction?.tags ?? []);
+  // A tag digitada sem Enter entra ao salvar. Virar etiqueta ao sair do campo empurrava o botão "Salvar" e perdia o clique.
+  const [tagDraft, setTagDraft] = useState('');
   const [accountId, setAccountId] = useState(transaction?.accountId ?? '');
   const [destinationAccountId, setDestination] = useState(transaction?.destinationAccountId ?? '');
   const [categoryId, setCategoryId] = useState(transaction?.categoryId ?? '');
@@ -75,6 +81,8 @@ export function TransactionForm({ open, onOpenChange, transaction, defaultType =
     if (!effectiveAccount) next.accountId = 'Cadastre uma conta antes de lançar.';
     if (isTransfer && (!destinationAccountId || destinationAccountId === effectiveAccount)) next.destinationAccountId = 'Escolha uma conta de destino diferente.';
     if (!isTransfer && !effectiveCategory) next.categoryId = 'Escolha uma categoria.';
+    const pendingTag = tagDraft.trim() ? tagSchema.safeParse(tagDraft) : null;
+    if (pendingTag && !pendingTag.success) next.tags = pendingTag.error.issues[0]?.message ?? 'Tag inválida';
     setErrors(next);
     if (Object.keys(next).length > 0 || !amount) return null;
     return {
@@ -85,6 +93,7 @@ export function TransactionForm({ open, onOpenChange, transaction, defaultType =
       categoryId: effectiveCategory,
       nature: isTransfer ? null : nature,
       dueDate,
+      tags: pendingTag?.success ? [...new Set([...tags, pendingTag.data])].sort(compareTags) : tags,
     };
   }
 
@@ -230,6 +239,15 @@ export function TransactionForm({ open, onOpenChange, transaction, defaultType =
               onInstallmentsChange={setInstallments}
             />
           )}
+          <Field label="Tags (opcional)" hint="Juntam lançamentos de categorias diferentes, como “bebida”." error={errors.tags}>
+            <TagInput
+              value={tags}
+              onChange={setTags}
+              draft={tagDraft}
+              onDraftChange={setTagDraft}
+              suggestions={(knownTags.data ?? []).map((t) => t.name)}
+            />
+          </Field>
           {!editing && !isCardPurchase && (
             <div className="grid gap-3 rounded-[var(--radius-control)] border border-border p-4">
               <label className="flex items-center gap-3 text-sm">

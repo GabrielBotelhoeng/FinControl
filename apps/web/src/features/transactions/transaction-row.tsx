@@ -22,7 +22,10 @@ export function TransactionRow({ tx, account, category, destination, onEdit }: P
   const isCardTransaction = account?.type === 'credit_card';
   const Icon = tx.type === 'transfer' ? ArrowLeftRight : iconFor(category?.icon ?? '');
   const tint = tx.type === 'transfer' ? 'var(--primary)' : (category?.color ?? 'var(--text-muted)');
-  const meta = tx.type === 'transfer' ? `${account?.name ?? 'Conta'} → ${destination?.name ?? 'Conta'}` : [category?.name, account?.name].filter(Boolean).join(' · ');
+  const base = tx.type === 'transfer' ? `${account?.name ?? 'Conta'} → ${destination?.name ?? 'Conta'}` : [category?.name, account?.name].filter(Boolean).join(' · ');
+  // Sub-projeto 13 (T8): as tags na mesma linha, que corta com "…" quando não cabe. Durante o deploy, a API antiga
+  // ainda não manda o campo.
+  const meta = [base, (tx.tags ?? []).map((t) => `#${t}`).join(' ')].filter(Boolean).join(' · ');
 
   return (
     <li aria-label={tx.description} className="group flex items-center gap-3 px-4 py-3 sm:gap-4 sm:px-5">

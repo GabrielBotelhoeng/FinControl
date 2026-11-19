@@ -1,8 +1,17 @@
 # HANDOFF — FinControl
 
-_Atualizado em 2026-11-19 (primeiros passos)._
+_Atualizado em 2026-11-19 (tags)._
 
-## Sub-projeto 12: primeiros passos (2026-11-19, branch feat/primeiros-passos)
+## Sub-projeto 13: tags nos lançamentos (2026-11-19, branch feat/tags)
+
+- **Spec:** `docs/superpowers/specs/2026-11-19-fincontrol-sp13-tags-design.md` (T1–T9).
+- **Migration:** `20261119185515_tags` (coluna `tags` em `transactions` e `recurrences`, não nula, com até 10). **Antes do deploy da API, aplicar no Supabase** com o comando do sub-projeto 11.
+- **Entregue:** tags no lançamento (normalizadas: minúsculas, sem "#", sem repetidas), nas parcelas do cartão e no modelo da recorrência; `?tag=` na lista; `GET /tags`, `PATCH /tags/:name` (renomear ou juntar) e `DELETE /tags/:name`; o campo "Tags (opcional)" no formulário, as tags na linha do lançamento, o filtro em Lançamentos e a seção Tags em Categorias; o assistente busca por tag e recebe os nomes das tags no prompt (a política de privacidade cita as tags); na demo, a tag "passeios" em Restaurante, Cinema e Lazer (T10).
+- **Revisão final:** seção 6 da spec (sessão nova e CodeRabbit). Corrigidos o filtro só por tag sem resultado, o seletor que sumia com o filtro ligado, a barra de filtros espremida numa tela média, o campo de tags que apagava a tag inválida e a mensagem do renomear. Mantidos como limites (seção 5): as ocorrências já pagas depois desta em "esta e as próximas" e a corrida entre trocar a tag e criar ocorrências.
+- **Testes:** 213 no shared, 357 na API e 246 na web, além de 17 E2E (novo: `e2e/tests/tags.spec.ts`).
+- **Próximo:** sub-projeto 14, as tags nos relatórios, no Excel e no CSV.
+
+## Sub-projeto 12: primeiros passos — no ar desde 2026-11-19 (PR #33)
 
 - **Spec:** `docs/superpowers/specs/2026-11-19-fincontrol-sp12-primeiros-passos-design.md` (G1–G6). Sem migration.
 - **Entregue:** `GET /onboarding` (cada passo feito quando existe um registro dele) e o quadro "Primeiros passos" no topo do painel, só para contas reais: cadastrar uma conta, fazer o primeiro lançamento (ou importar o extrato), definir um limite e criar uma meta, com a barra de progresso. Some sozinho com tudo feito, e "Ocultar" fica lembrado no navegador. Contas passou a aceitar `?novo=1`.

@@ -1,5 +1,5 @@
 import {
-  addMonthsToYm, ASSET_KIND_LABELS, dateOnlySchema, DEBT_KIND_LABELS, DEBT_STATUS_LABELS, endOfMonth, monthOf, startOfMonth, todayInSaoPaulo, yearMonthSchema,
+  addMonthsToYm, ASSET_KIND_LABELS, dateOnlySchema, DEBT_KIND_LABELS, tagSchema, DEBT_STATUS_LABELS, endOfMonth, monthOf, startOfMonth, todayInSaoPaulo, yearMonthSchema,
   type GoalStatus, type ListTransactionsQuery, type TransactionDTO, type TransactionStatus, type TransactionType,
 } from '@fincontrol/shared';
 import { z } from 'zod';
@@ -54,6 +54,8 @@ const searchSchema = z.object({
   de: dateOnlySchema.optional(),
   ate: dateOnlySchema.optional(),
   tipo: z.enum(['despesa', 'receita']).optional(),
+  /** Sub-projeto 13 (T9). */
+  tag: tagSchema.optional(),
 });
 const monthSchema = z.object({ mes: yearMonthSchema.optional() });
 
@@ -69,7 +71,7 @@ export const TOOL_DEFINITIONS: AiTool[] = [
   },
   {
     name: 'buscar_lancamentos',
-    description: 'Busca lançamentos (pagos e pendentes) por texto da descrição, categoria, datas e tipo. Devolve quantidade, total e os 20 mais recentes. Sem datas, olha os últimos 3 meses.',
+    description: 'Busca lançamentos (pagos e pendentes) por texto da descrição, categoria, tag, datas e tipo. Devolve quantidade, total e os 20 mais recentes. Sem datas, olha os últimos 3 meses.',
     input_schema: {
       type: 'object',
       properties: {
@@ -78,6 +80,7 @@ export const TOOL_DEFINITIONS: AiTool[] = [
         de: { type: 'string', description: 'Data inicial AAAA-MM-DD' },
         ate: { type: 'string', description: 'Data final AAAA-MM-DD' },
         tipo: { type: 'string', enum: ['despesa', 'receita'] },
+        tag: { type: 'string', description: 'Uma tag da pessoa, sem o #, ex.: "bebida"' },
       },
     },
   },
@@ -156,6 +159,7 @@ export function createAssistantTools(deps: AssistantToolsDeps) {
       ...(f.texto ? { q: f.texto } : {}),
       ...(categoryId ? { categoryId } : {}),
       ...(f.tipo ? { type: f.tipo === 'despesa' ? 'expense' : 'income' } : {}),
+      ...(f.tag ? { tag: f.tag } : {}),
     };
     const items: TransactionDTO[] = [];
     let cursor: string | null = null;
@@ -179,6 +183,7 @@ export function createAssistantTools(deps: AssistantToolsDeps) {
         tipo: TYPE_LABEL[i.type],
         categoria: i.categoryId ? (names.get(i.categoryId) ?? null) : null,
         situacao: STATUS_LABEL[i.status],
+        ...(i.tags.length > 0 ? { tags: i.tags } : {}),
       })),
     };
   }

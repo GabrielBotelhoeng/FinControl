@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { centsSchema, dateOnlySchema, idSchema, NON_EMPTY_MESSAGE, nonEmpty } from './common';
+import { tagSchema, tagsSchema } from './tags';
 
 export const transactionTypeSchema = z.enum(['income', 'expense', 'transfer']);
 export const natureSchema = z.enum(['fixed', 'variable']);
@@ -61,6 +62,8 @@ export const createTransactionSchema = z
     paidDate: dateOnlySchema.nullable().default(null),
     recurrence: recurrenceSchema.nullable().default(null),
     installments: installmentsSchema.optional(),
+    /** Sub-projeto 13 (T4): valem também para as parcelas do cartão e para as próximas ocorrências da recorrência. */
+    tags: tagsSchema.default([]),
   })
   .superRefine((v, ctx) => {
     for (const issue of transactionShapeIssues(v)) ctx.addIssue({ code: 'custom', path: [issue.path], message: issue.message });
@@ -82,6 +85,7 @@ export const updateTransactionSchema = z
     nature: natureSchema.nullable(),
     dueDate: dateOnlySchema,
     recurrence: recurrenceSchema,
+    tags: tagsSchema,
   })
   .partial()
   .refine(nonEmpty, NON_EMPTY_MESSAGE);
@@ -95,6 +99,8 @@ export const listTransactionsQuerySchema = z
     type: transactionTypeSchema.optional(),
     status: statusSchema.optional(),
     q: z.string().trim().min(1).max(100).optional(),
+    /** Sub-projeto 13 (T5): uma tag, já normalizada. */
+    tag: tagSchema.optional(),
     cursor: z.string().max(200).optional(),
     limit: z.coerce.number().int().min(1).max(100).default(50),
   })
@@ -125,6 +131,8 @@ export type TransactionDTO = {
   installmentTotal: number | null;
   /** Parcela de empréstimo (spec C10). */
   loanId: string | null;
+  /** Sub-projeto 13: em ordem alfabética. */
+  tags: string[];
   overdue: boolean;
   createdAt: string;
 };

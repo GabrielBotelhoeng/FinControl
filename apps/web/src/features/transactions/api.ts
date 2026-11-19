@@ -40,6 +40,8 @@ export type TransactionFields = {
   categoryId: string | null;
   nature: 'fixed' | 'variable' | null;
   dueDate: string;
+  /** Sub-projeto 13 (T1). */
+  tags: string[];
 };
 
 export type NewTransaction = TransactionFields & {

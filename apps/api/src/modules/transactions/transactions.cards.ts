@@ -67,7 +67,7 @@ export function assertNotCardTransaction(isCard: boolean): void {
  * meses, e todas compartilham `installmentGroupId`. Sem `installments`, é uma única linha sem grupo.
  */
 export function buildCardPurchaseRows(
-  input: Pick<CreateTransactionInput, 'amount' | 'description' | 'accountId' | 'categoryId' | 'nature' | 'installments'>,
+  input: Pick<CreateTransactionInput, 'amount' | 'description' | 'accountId' | 'categoryId' | 'nature' | 'installments' | 'tags'>,
   card: { closingDay: number; dueDay: number },
   purchaseDate: DateOnly,
 ): NewTransaction[] {
@@ -82,7 +82,7 @@ export function buildCardPurchaseRows(
       type: 'expense', amount, description: input.description, accountId: input.accountId, destinationAccountId: null,
       categoryId: input.categoryId, nature: input.nature, status: 'paid', dueDate: date, paidDate: date,
       recurrenceId: null, occurrenceDate: null, invoiceMonth: addMonthsToYm(firstInvoiceMonth, k - 1),
-      installmentNumber: n > 1 ? k : null, installmentTotal: n > 1 ? n : null, installmentGroupId,
+      installmentNumber: n > 1 ? k : null, installmentTotal: n > 1 ? n : null, installmentGroupId, tags: input.tags,
     };
   });
 }

@@ -164,6 +164,23 @@ describe('Assistente com IA', () => {
     expect(desconhecida).toMatchObject({ is_error: true, content: 'Ferramenta desconhecida: apagar_tudo' });
   });
 
+  it('T9 (sub-projeto 13): buscar_lancamentos filtra por tag e mostra as tags; o prompt lista as tags da pessoa', async () => {
+    const user = await newUser();
+    await consent(user);
+    const account = await createAccount(app, user, { initialBalance: 100000 });
+    const food = await categoryId(app, user, 'Alimentação', 'expense');
+    const expense = (description: string, tags: string[]) =>
+      createTransaction(app, user, { type: 'expense', amount: 3000, description, accountId: account.id, nature: 'variable', categoryId: food, dueDate: '2026-11-05', tags });
+    await expense('Cerveja no mercado', ['bebida']);
+    await expense('Pão', []);
+    ai.script.push(toolUse({ name: 'buscar_lancamentos', input: { tag: '#Bebida' } }), text('Pronto.'));
+    expect((await ask(user)).status).toBe(200);
+    expect(ai.calls[0]!.system).toContain('Tags da pessoa: bebida.');
+    const data = JSON.parse(toolResults(ai.calls[1]!)[0]!.content);
+    expect(data).toMatchObject({ quantidade: 1, total_despesas: 30 });
+    expect(data.lancamentos[0]).toMatchObject({ descricao: 'Cerveja no mercado', tags: ['bebida'] });
+  });
+
   it('B12 (sub-projeto 11): saldos_e_dividas traz o patrimônio líquido e só os bens com valor', async () => {
     const user = await newUser();
     await consent(user);

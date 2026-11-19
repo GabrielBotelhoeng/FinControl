@@ -11,6 +11,8 @@ export type RecurrenceTemplate = {
   destinationAccountId: string | null;
   categoryId: string | null;
   nature: TransactionNature | null;
+  /** Sub-projeto 13 (T4): copiadas para cada ocorrência materializada. */
+  tags: string[];
 };
 
 export type RecurrenceRow = RecurrenceTemplate & {
@@ -40,6 +42,7 @@ const toRow = (r: RecurrenceRecord): RecurrenceRow => ({
   destinationAccountId: r.destinationAccountId,
   categoryId: r.categoryId,
   nature: r.nature,
+  tags: r.tags,
 });
 
 function toUpdateData(p: Partial<RecurrenceData>): Prisma.RecurrenceUncheckedUpdateInput {
@@ -68,6 +71,7 @@ export function createRecurrencesRepository(db: DbClient) {
           destinationAccountId: d.destinationAccountId,
           categoryId: d.categoryId,
           nature: d.nature,
+          tags: d.tags,
         },
       });
       return toRow(row);

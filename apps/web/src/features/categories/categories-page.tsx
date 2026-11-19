@@ -1,6 +1,7 @@
 import type { CategoryDTO, CategoryType } from '@fincontrol/shared';
 import { Pencil, Plus, Tags, Trash2 } from 'lucide-react';
 import { useState } from 'react';
+import { TagsSection } from '../tags/tags-section';
 import { Button } from '../../components/ui/button';
 import { PageHeader } from '../../components/ui/page-header';
 import { Panel } from '../../components/ui/panel';
@@ -70,6 +71,8 @@ export default function CategoriesPage() {
           </ul>
         </Panel>
       )}
+
+      <TagsSection />
 
       {editing && <CategoryForm open onOpenChange={(o) => !o && setEditing(null)} type={type} {...(editing === 'new' ? {} : { category: editing })} />}
       {deleting && <DeleteCategoryDialog category={deleting} siblings={list} onClose={() => setDeleting(null)} />}

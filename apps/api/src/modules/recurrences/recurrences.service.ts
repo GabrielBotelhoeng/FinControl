@@ -18,6 +18,7 @@ const templateOf = (t: RecurrenceTemplate): RecurrenceTemplate => ({
   destinationAccountId: t.destinationAccountId,
   categoryId: t.categoryId,
   nature: t.nature,
+  tags: t.tags,
 });
 
 export type RecurrencesServiceDeps = {
@@ -84,6 +85,7 @@ export function createRecurrencesService(deps: RecurrencesServiceDeps) {
       destinationAccountId: input.destinationAccountId !== undefined ? input.destinationAccountId : rec.destinationAccountId,
       categoryId: input.categoryId !== undefined ? input.categoryId : rec.categoryId,
       nature: input.nature !== undefined ? input.nature : rec.nature,
+      tags: input.tags ?? rec.tags,
     };
     await validateRefs(userId, template, {
       account: input.accountId !== undefined,

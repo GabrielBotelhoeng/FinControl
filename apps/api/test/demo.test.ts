@@ -92,6 +92,9 @@ describe('conta demo', () => {
     expect(netWorth.total).toBe(netWorth.accounts.total + 5350000 - netWorth.debts.total);
     expect(summary.body.netWorth).toBe(netWorth.total);
 
+    // Sub-projeto 13 (T10): "passeios" junta Restaurante (Alimentação, no cartão) com Cinema e Lazer (Lazer).
+    expect((await request(app).get('/api/v1/tags').set(visitor.auth)).body).toEqual([{ name: 'passeios', count: 42 }]);
+
     // Sub-projeto 5 (N11): a central mostra todos os tipos de aviso, com a vencida no topo.
     const notes = (await request(app).get('/api/v1/notifications').set(visitor.auth)).body;
     const kinds = new Set(notes.items.map((n: { kind: string }) => n.kind));

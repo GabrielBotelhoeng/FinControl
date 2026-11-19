@@ -14,3 +14,4 @@ export * from './debts';
 export * from './calendar';
 export * from './imports';
 export * from './assets';
+export * from './tags';
