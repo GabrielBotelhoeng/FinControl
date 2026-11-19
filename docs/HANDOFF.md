@@ -8,7 +8,13 @@ _Atualizado em 2026-11-19 (calendário e resumo do mês)._
 - **Entregue:** `GET /calendar` e `/calendario` (grade do mês, totais, pagar pelo calendário, faturas); `/resumo` (frases do mês a partir do relatório e do orçamento). Menu do computador, Perfil e link no "A pagar" do painel.
 - **Testes:** 2 novos na API (`calendar.test.ts`) e 6 na web; o de 360 px cobre `/calendario` e `/resumo`.
 
-## Sub-projeto 6: dívidas com credores (2026-11-18, branch feat/dividas)
+## Sub-projeto 7: plano de quitação — no ar desde 2026-11-19 (PR #26)
+
+- **Spec:** `docs/superpowers/specs/2026-11-19-fincontrol-sp7-plano-quitacao-design.md` (Q1–Q5). Sem migration.
+- **Entregue:** `/dividas/plano` (botão "Plano de quitação" em Dívidas) com avalanche, bola de neve e só o mínimo, a data de quitação, os juros, o gráfico e a ordem. Os juros e a parcela das dívidas em aberto ficam no navegador.
+- **Testes:** 7 novos no shared (`payoff.test.ts`) e 5 na web; o de 360 px cobre `/dividas/plano`.
+
+## Sub-projeto 6: dívidas com credores — no ar desde 2026-11-19 (PRs #24 e #25)
 
 - **Spec:** `docs/superpowers/specs/2026-11-18-fincontrol-sp6-dividas-design.md` (V1–V13), com as decisões tomadas pelo agente. Fecha a seção 03 da ideia original (credores, valor original × atualizado, juros e multas, acordo, pagamentos, histórico de negociações, progresso).
 - **Migrations:** `20261118221341_dividas` (tabelas `debts` e `debt_events`, coluna `transactions.debt_id`) e `20261118235500_dividas_checagens` (checagens da revisão final). **Antes do deploy da API, aplicar no Supabase.**
