@@ -3,7 +3,7 @@ import {
   type DebtDTO, type LoanDTO, type PayoffDebt, type PayoffResult, type PayoffStrategy,
 } from '@fincontrol/shared';
 import { ArrowLeft, Snowflake, TrendingDown, Turtle, type LucideIcon } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router';
 import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { Field, Input } from '../../components/ui/field';
@@ -13,6 +13,7 @@ import { Panel } from '../../components/ui/panel';
 import { EmptyState, ErrorState, ListSkeleton } from '../../components/ui/states';
 import { cn } from '../../lib/cn';
 import { formatBRL, formatMonthLabel, formatMonthShort } from '../../lib/format';
+import { useAuth } from '../auth/auth-context';
 import { useLoans } from '../loans/api';
 import { useDebts } from './api';
 
@@ -20,14 +21,16 @@ import { useDebts } from './api';
 type Overrides = Record<string, { rate: string; minimum: number | null }>;
 /** `budget` ausente = a pessoa ainda não mexeu (vale o mínimo); `null` = apagou o campo. */
 type Saved = { budget?: number | null; overrides: Overrides };
+/** Uma chave por pessoa: quem entrar depois no mesmo navegador não vê os juros e o valor de outra (CodeRabbit). */
 const STORAGE_KEY = 'fincontrol-plano-quitacao';
+const storageKey = (userId: string | undefined) => `${STORAGE_KEY}:${userId ?? 'sem-sessao'}`;
 
 const isCents = (v: unknown): v is number => typeof v === 'number' && Number.isInteger(v) && v >= 0;
 
 /** Lê e confere o formato: dado corrompido ou de outra versão é descartado, nunca derruba a página. */
-function load(): Saved {
+function load(key: string): Saved {
   try {
-    const raw: unknown = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? 'null');
+    const raw: unknown = JSON.parse(localStorage.getItem(key) ?? 'null');
     if (!raw || typeof raw !== 'object') return { overrides: {} };
     const r = raw as Record<string, unknown>;
     const overrides: Overrides = {};
@@ -45,9 +48,9 @@ function load(): Saved {
   }
 }
 
-function save(s: Saved) {
+function save(key: string, s: Saved) {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(s));
+    localStorage.setItem(key, JSON.stringify(s));
   } catch {
     // Só uma conveniência: sem armazenamento, o plano vale até sair da página.
   }
@@ -109,12 +112,12 @@ function StrategyCard({ result, best, selected, onSelect }: { result: PayoffResu
       </span>
       <span className="text-xs text-muted">{s.hint}</span>
       <span className="tabular font-display text-xl font-semibold">
-        {result.payoffMonth ? `Quita em ${formatMonthLabel(result.payoffMonth)}` : 'Não quita'}
+        {result.payoffMonth ? `Quita em ${formatMonthLabel(result.payoffMonth)}` : 'Não quita em 50 anos'}
       </span>
       <span className="tabular text-sm text-muted">
         {result.months !== null
           ? `${result.months} ${result.months === 1 ? 'mês' : 'meses'} · ${formatBRL(result.totalInterest)} de juros`
-          : 'Os juros crescem mais que o pagamento'}
+          : 'Com este valor, os juros crescem mais que o pagamento ou a quitação passa de 50 anos'}
       </span>
     </button>
   );
@@ -147,7 +150,7 @@ function BalanceChart({ results, start }: { results: PayoffResult[]; start: stri
         </ResponsiveContainer>
       </div>
       <figcaption className="sr-only">
-        {results.map((r) => `${STRATEGIES[r.strategy].label}: ${r.payoffMonth ? `quita em ${formatMonthLabel(r.payoffMonth)}` : 'não quita'}`).join('; ')}
+        {results.map((r) => `${STRATEGIES[r.strategy].label}: ${r.payoffMonth ? `quita em ${formatMonthLabel(r.payoffMonth)}` : 'não quita em 50 anos'}`).join('; ')}
       </figcaption>
     </figure>
   );
@@ -156,11 +159,14 @@ function BalanceChart({ results, start }: { results: PayoffResult[]; start: stri
 export default function PayoffPage() {
   const loans = useLoans();
   const debts = useDebts();
-  const [saved, setSaved] = useState<Saved>(load);
+  const key = storageKey(useAuth().user?.id);
+  const [saved, setSaved] = useState<Saved>(() => load(key));
+  // A sessão chega depois do 1º desenho: troca para os dados da pessoa quando ela aparece.
+  useEffect(() => setSaved(load(key)), [key]);
   const [selected, setSelected] = useState<PayoffStrategy>('avalanche');
   const update = (next: Saved) => {
     setSaved(next);
-    save(next);
+    save(key, next);
   };
   const current = monthOf(todayInSaoPaulo());
   // A parcela deste mês ainda em aberto faz parte do saldo: o plano começa neste mês (revisão final).
@@ -280,7 +286,7 @@ export default function PayoffPage() {
                     const min = results.find((r) => r.strategy === 'minimum')!;
                     if (best === 'minimum') return 'Pagar só as parcelas já é o caminho com menos juros com este valor.';
                     return min.months === null
-                      ? `Pagando só as parcelas, alguma dívida nunca acaba. Com ${STRATEGIES[best].label.toLowerCase()}, você quita tudo em ${formatMonthLabel(b.payoffMonth!)}.`
+                      ? `Pagando só as parcelas, alguma dívida não acaba em 50 anos. Com ${STRATEGIES[best].label.toLowerCase()}, você quita tudo em ${formatMonthLabel(b.payoffMonth!)}.`
                       : `Com ${STRATEGIES[best].label.toLowerCase()}, você economiza ${formatBRL(min.totalInterest - b.totalInterest)} em juros em relação a pagar só as parcelas.`;
                   })()}
                 </p>
@@ -303,7 +309,7 @@ export default function PayoffPage() {
                     {chosen.order.map((o, i) => (
                       <li key={o.id} className="flex flex-wrap items-center justify-between gap-2 text-sm">
                         <span className="min-w-0 truncate">{`${i + 1}. ${o.name}`}</span>
-                        <span className="tabular text-muted">{o.month === null ? 'não acaba' : `quitada em ${formatMonthLabel(addMonthsToYm(start, o.month - 1))}`}</span>
+                        <span className="tabular text-muted">{o.month === null ? 'não acaba em 50 anos' : `quitada em ${formatMonthLabel(addMonthsToYm(start, o.month - 1))}`}</span>
                       </li>
                     ))}
                   </ol>

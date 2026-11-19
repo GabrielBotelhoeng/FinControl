@@ -28,7 +28,7 @@ describe('PayoffPage', () => {
     expect(screen.getByRole('button', { name: /^Avalanche/ })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /^Bola de neve/ })).toBeInTheDocument();
     // Sem juros informados no cheque especial e sem parcela, só o mínimo não quita.
-    expect(screen.getByRole('button', { name: /^Só o mínimo.*Não quita.*Os juros crescem mais que o pagamento/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^Só o mínimo.*Não quita em 50 anos/ })).toBeInTheDocument();
   });
 
   it('com juros no cheque especial e valor maior, a avalanche ataca o cheque especial primeiro', async () => {
@@ -41,7 +41,7 @@ describe('PayoffPage', () => {
     const order = screen.getByRole('region', { name: 'Ordem de quitação' });
     const items = within(order).getAllByRole('listitem').map((li) => li.textContent);
     expect(items.findIndex((t) => t?.includes('Cheque especial'))).toBeLessThan(items.findIndex((t) => t?.includes('Empréstimo pessoal')));
-    expect(screen.getByText(/Pagando só as parcelas, alguma dívida nunca acaba/)).toBeInTheDocument();
+    expect(screen.getByText(/Pagando só as parcelas, alguma dívida não acaba em 50 anos/)).toBeInTheDocument();
   });
 
   it('valor abaixo das parcelas avisa e não simula', async () => {
@@ -56,11 +56,11 @@ describe('PayoffPage', () => {
   it('guarda os dados no navegador', async () => {
     renderPage();
     await userEvent.type(await screen.findByLabelText('Juros ao mês (%) de Cheque especial'), '5');
-    expect(JSON.parse(localStorage.getItem('fincontrol-plano-quitacao')!).overrides.d1.rate).toBe('5');
+    expect(JSON.parse(localStorage.getItem('fincontrol-plano-quitacao:u1')!).overrides.d1.rate).toBe('5');
   });
 
   it('dado corrompido no navegador é descartado sem quebrar a página', async () => {
-    localStorage.setItem('fincontrol-plano-quitacao', JSON.stringify({ budget: 'abc', overrides: { d1: { rate: 5, minimum: 'x' } } }));
+    localStorage.setItem('fincontrol-plano-quitacao:u1', JSON.stringify({ budget: 'abc', overrides: { d1: { rate: 5, minimum: 'x' } } }));
     renderPage();
     expect(await screen.findByLabelText('Juros ao mês (%) de Cheque especial')).toHaveValue('');
     expect(screen.getByLabelText('Quanto você pode pagar por mês para dívidas')).toHaveValue('300,00');
