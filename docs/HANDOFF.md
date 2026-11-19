@@ -1,6 +1,14 @@
 # HANDOFF — FinControl
 
-_Atualizado em 2026-11-19 (gastos que se repetem)._
+_Atualizado em 2026-11-19 (patrimônio líquido)._
+
+## Sub-projeto 11: patrimônio líquido (2026-11-19, branch feat/patrimonio)
+
+- **Spec:** `docs/superpowers/specs/2026-11-19-fincontrol-sp11-patrimonio-design.md` (B1–B14).
+- **Migration:** `20261119164547_patrimonio` (tabelas `assets` e `asset_valuations`, com RLS e a checagem do valor). **Antes do deploy da API, aplicar no Supabase** pelo comando do usuário.
+- **Regra:** contas não arquivadas e sem cartão + bens − dívidas (o cartão entra só como dívida, pela R5). O valor de um bem numa data é o do registro mais recente até ela; antes do primeiro, 0.
+- **Entregue:** `/assets` (bens com o histórico de valores), `GET /net-worth` (hoje e os 12 últimos meses), `netWorth` no resumo do painel, a página `/patrimonio` (menu do computador e Perfil) e a linha no painel, os bens e o patrimônio na ferramenta `saldos_e_dividas`, e na demo o "Carro" e a "Previdência privada". A política de privacidade passou a listar todos os dados guardados.
+- **Reaproveitado:** `balancesAt` (saldos de várias datas numa leitura, em `reports.repository.ts`) e as peças dos gráficos em `components/ui/chart.tsx`.
 
 ## Atalhos no ícone do app (2026-11-19, branch feat/atalhos-pwa)
 
