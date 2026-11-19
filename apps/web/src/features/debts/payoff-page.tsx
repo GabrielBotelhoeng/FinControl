@@ -144,7 +144,7 @@ function BalanceChart({ results, start }: { results: PayoffResult[]; start: stri
             />
             <Legend formatter={(name: string) => STRATEGIES[name as PayoffStrategy].label} />
             {results.map((r) => (
-              <Line key={r.strategy} dataKey={r.strategy} type="monotone" stroke={STRATEGIES[r.strategy].color} strokeWidth={2} dot={false} />
+              <Line key={r.strategy} dataKey={r.strategy} type="monotone" stroke={STRATEGIES[r.strategy].color} strokeWidth={2} dot={false} isAnimationActive={false} />
             ))}
           </LineChart>
         </ResponsiveContainer>

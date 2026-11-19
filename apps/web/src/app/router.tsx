@@ -14,6 +14,7 @@ const LoanDetailPage = lazy(() => import('../features/loans/loan-detail-page'));
 const DebtsPage = lazy(() => import('../features/debts/debts-page'));
 const PayoffPage = lazy(() => import('../features/debts/payoff-page'));
 const DebtDetailPage = lazy(() => import('../features/debts/debt-detail-page'));
+const ImportPage = lazy(() => import('../features/imports/import-page'));
 const CalendarPage = lazy(() => import('../features/calendar/calendar-page'));
 const PlanningPage = lazy(() => import('../features/planning/planning-page'));
 const SummaryPage = lazy(() => import('../features/summary/summary-page'));
@@ -41,6 +42,7 @@ export const router = createBrowserRouter([
     children: [
       { index: true, element: page(<DashboardPage />) },
       { path: 'lancamentos', element: page(<TransactionsPage />) },
+      { path: 'importar', element: page(<ImportPage />) },
       { path: 'contas', element: page(<AccountsPage />) },
       { path: 'cartoes/:id', element: page(<InvoicesPage />) },
       { path: 'emprestimos', element: page(<LoansPage />) },

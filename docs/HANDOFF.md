@@ -1,8 +1,14 @@
 # HANDOFF — FinControl
 
-_Atualizado em 2026-11-19 (calendário e resumo do mês)._
+_Atualizado em 2026-11-19 (importar extrato)._
 
-## Sub-projeto 8: calendário de contas e resumo do mês (2026-11-19, branch feat/calendario-resumo)
+## Sub-projeto 9: importar extrato (2026-11-19, branch feat/importar-extrato)
+
+- **Spec:** `docs/superpowers/specs/2026-11-19-fincontrol-sp9-importar-extrato-design.md` (I1–I9). Sem migration.
+- **Entregue:** `parseStatement` (OFX e CSV) em `packages/shared/src/statement.ts`, `POST /imports/preview` e `/imports/commit`, e a tela `/importar` (botão em Lançamentos). As categorias são sugeridas pelo histórico e por palavras-chave, e os repetidos começam desmarcados.
+- **Testes:** 24 no shared, 4 na API e 3 na web; o de 360 px cobre `/importar`.
+
+## Sub-projeto 8: calendário de contas e resumo do mês — no ar desde 2026-11-19 (PR #27)
 
 - **Spec:** `docs/superpowers/specs/2026-11-19-fincontrol-sp8-calendario-resumo-design.md` (K1–K4, M1–M3). Sem migration.
 - **Entregue:** `GET /calendar` e `/calendario` (grade do mês, totais, pagar pelo calendário, faturas); `/resumo` (frases do mês a partir do relatório e do orçamento). Menu do computador, Perfil e link no "A pagar" do painel.

@@ -10,6 +10,7 @@ import { dashboardRouter } from '../modules/dashboard/dashboard.routes';
 import { debtsRouter } from '../modules/debts/debts.routes';
 import { demoRouter } from '../modules/demo/demo.routes';
 import { goalsRouter } from '../modules/goals/goals.routes';
+import { importsRouter } from '../modules/imports/imports.routes';
 import { loansRouter } from '../modules/loans/loans.routes';
 import { reportsRouter } from '../modules/reports/reports.routes';
 import { notificationsRouter } from '../modules/notifications/notifications.routes';
@@ -29,6 +30,7 @@ export function registerRoutes(api: Router, c: Container, opts: { rateLimitEnabl
   api.use('/loans', loansRouter(c.loans));
   api.use('/debts', debtsRouter(c.debts));
   api.use('/calendar', calendarRouter(c.calendar));
+  api.use('/imports', importsRouter(c.imports, opts));
   api.use('/budgets', budgetsRouter(c.budgets));
   api.use('/planning', planningRouter(c.budgets));
   api.use('/goals', goalsRouter(c.goals));
