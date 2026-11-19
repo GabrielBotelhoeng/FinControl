@@ -1,4 +1,4 @@
-import { monthOf, todayInSaoPaulo, type MonthComparison, type TransactionDTO, type YearMonth } from '@fincontrol/shared';
+import { addMonthsToYm, monthOf, todayInSaoPaulo, type MonthComparison, type TransactionDTO, type YearMonth } from '@fincontrol/shared';
 import { ArrowDownRight, ArrowUpRight, CircleCheck, PieChart, Plus, Sparkles } from 'lucide-react';
 import { Link } from 'react-router';
 import { useState } from 'react';
@@ -132,7 +132,7 @@ export default function DashboardPage() {
                   {summary.data.overdueCount > 0 && ` · ${summary.data.overdueCount} vencido${summary.data.overdueCount === 1 ? '' : 's'}`}
                 </span>
               )}
-              <Link to={`/calendario?mes=${month}`} className="text-xs font-medium text-primary hover:underline">
+              <Link to={month <= addMonthsToYm(monthOf(today), 12) ? `/calendario?mes=${month}` : '/calendario'} className="text-xs font-medium text-primary hover:underline">
                 Calendário
               </Link>
             </span>

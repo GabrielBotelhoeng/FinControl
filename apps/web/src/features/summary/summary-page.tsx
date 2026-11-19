@@ -24,7 +24,7 @@ export default function SummaryPage() {
   const report = useReport(month, month);
   const budget = useBudgetMonth(month);
   // Espera o orçamento (ou a falha dele) para a tela não pular quando a frase do orçamento chega depois.
-  const insights = report.data && !budget.isPending ? monthInsights(month, report.data, budget.data ?? null) : null;
+  const insights = report.data && !budget.isPending ? monthInsights(month, report.data, budget.isError ? null : (budget.data ?? null)) : null;
   const previous = addMonthsToYm(current, -1);
 
   return (

@@ -47,7 +47,7 @@ describe('CalendarPage', () => {
     await userEvent.click(within(grid).getByRole('button', { name: /^05\// }));
     const list = screen.getByRole('region', { name: /^Contas de 05\// });
     expect(list).toHaveTextContent('Salário');
-    expect(within(list).getByRole('link', { name: 'Ver fatura' })).toHaveAttribute('href', '/cartoes/c1');
+    expect(within(list).getByRole('link', { name: 'Ver fatura' })).toHaveAttribute('href', `/cartoes/c1?fatura=${month}`);
     await userEvent.click(within(grid).getByRole('button', { name: /^03\// }));
     await userEvent.click(within(screen.getByRole('region', { name: /^Contas de 03\// })).getByRole('button', { name: 'Pagar' }));
     expect(client.post).toHaveBeenCalledWith('/transactions/t1/pay', {});

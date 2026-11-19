@@ -53,9 +53,11 @@ function ItemRow({ item }: { item: CalendarItemDTO }) {
         </span>
         <span className="flex items-center gap-3">
           <span className="tabular text-sm font-semibold">{formatBRL(paid ? item.amount : item.remaining)}</span>
-          <Link to={`/cartoes/${item.cardId}`} className="text-sm font-medium text-primary hover:underline">
-            Ver fatura
-          </Link>
+          {!item.future && (
+            <Link to={`/cartoes/${item.cardId}?fatura=${item.month}`} className="text-sm font-medium text-primary hover:underline">
+              Ver fatura
+            </Link>
+          )}
         </span>
       </li>
     );
@@ -91,12 +93,17 @@ function ItemRow({ item }: { item: CalendarItemDTO }) {
   );
 }
 
+/** `?mes=AAAA-MM` abre no mês do painel; uma mudança na URL recria a tela com o mês novo (CodeRabbit). */
 export default function CalendarPage() {
+  const asked = useSearchParams()[0].get('mes');
+  return <Calendar key={asked ?? ''} asked={asked} />;
+}
+
+function Calendar({ asked }: { asked: string | null }) {
   const today = todayInSaoPaulo();
-  // `?mes=AAAA-MM` abre no mês do painel (CodeRabbit); inválido ou ausente, o mês atual.
-  const [params] = useSearchParams();
-  const asked = params.get('mes');
-  const [month, setMonth] = useState<YearMonth>(asked && /^\d{4}-(0[1-9]|1[0-2])$/.test(asked) ? asked : monthOf(today));
+  const max = addMonthsToYm(monthOf(today), 12);
+  const valid = asked && /^\d{4}-(0[1-9]|1[0-2])$/.test(asked) && asked <= max ? asked : null;
+  const [month, setMonth] = useState<YearMonth>(valid ?? monthOf(today));
   const [picked, setPicked] = useState<string | null>(null);
   const calendar = useCalendar(month);
   const data = calendar.data;
@@ -117,7 +124,7 @@ export default function CalendarPage() {
         description="O que vence em cada dia do mês: contas, receitas e faturas do cartão."
         actions={
           <MonthPicker
-            max={addMonthsToYm(monthOf(today), 12)}
+            max={max}
             value={month}
             onChange={(v) => {
               setMonth(v);
