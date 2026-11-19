@@ -14,7 +14,9 @@ const LoanDetailPage = lazy(() => import('../features/loans/loan-detail-page'));
 const DebtsPage = lazy(() => import('../features/debts/debts-page'));
 const PayoffPage = lazy(() => import('../features/debts/payoff-page'));
 const DebtDetailPage = lazy(() => import('../features/debts/debt-detail-page'));
+const CalendarPage = lazy(() => import('../features/calendar/calendar-page'));
 const PlanningPage = lazy(() => import('../features/planning/planning-page'));
+const SummaryPage = lazy(() => import('../features/summary/summary-page'));
 const ReportsPage = lazy(() => import('../features/reports/reports-page'));
 const AssistantPage = lazy(() => import('../features/assistant/assistant-page'));
 const NotificationsPage = lazy(() => import('../features/notifications/notifications-page'));
@@ -46,8 +48,10 @@ export const router = createBrowserRouter([
       { path: 'dividas', element: page(<DebtsPage />) },
       { path: 'dividas/plano', element: page(<PayoffPage />) },
       { path: 'dividas/:id', element: page(<DebtDetailPage />) },
+      { path: 'calendario', element: page(<CalendarPage />) },
       { path: 'planejamento', element: page(<PlanningPage />) },
       { path: 'relatorios', element: page(<ReportsPage />) },
+      { path: 'resumo', element: page(<SummaryPage />) },
       { path: 'notificacoes', element: page(<NotificationsPage />) },
       { path: 'assistente', element: page(<AssistantPage />) },
       { path: 'categorias', element: page(<CategoriesPage />) },

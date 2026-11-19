@@ -1,4 +1,4 @@
-import { monthOf, todayInSaoPaulo, type MonthComparison, type TransactionDTO, type YearMonth } from '@fincontrol/shared';
+import { addMonthsToYm, monthOf, todayInSaoPaulo, type MonthComparison, type TransactionDTO, type YearMonth } from '@fincontrol/shared';
 import { ArrowDownRight, ArrowUpRight, CircleCheck, PieChart, Plus, Sparkles } from 'lucide-react';
 import { Link } from 'react-router';
 import { useState } from 'react';
@@ -125,12 +125,17 @@ export default function DashboardPage() {
         <Panel className="flex flex-col">
           <div className="flex items-baseline justify-between px-5 pt-5 sm:px-6 sm:pt-6">
             <h2 className="font-display text-lg font-semibold tracking-tight">A pagar</h2>
-            {summary.data && (
-              <span className="text-xs text-muted">
-                {summary.data.pendingCount} pendente{summary.data.pendingCount === 1 ? '' : 's'}
-                {summary.data.overdueCount > 0 && ` · ${summary.data.overdueCount} vencido${summary.data.overdueCount === 1 ? '' : 's'}`}
-              </span>
-            )}
+            <span className="flex flex-wrap items-baseline justify-end gap-x-3 gap-y-1">
+              {summary.data && (
+                <span className="text-xs text-muted">
+                  {summary.data.pendingCount} pendente{summary.data.pendingCount === 1 ? '' : 's'}
+                  {summary.data.overdueCount > 0 && ` · ${summary.data.overdueCount} vencido${summary.data.overdueCount === 1 ? '' : 's'}`}
+                </span>
+              )}
+              <Link to={month <= addMonthsToYm(monthOf(today), 12) ? `/calendario?mes=${month}` : '/calendario'} className="text-xs font-medium text-primary hover:underline">
+                Calendário
+              </Link>
+            </span>
           </div>
           {summary.data && summary.data.upcoming.length === 0 && (
             <div className="flex flex-1 items-center gap-3 px-6 py-8 text-sm text-muted">

@@ -45,6 +45,15 @@ function renderPage(client = api()) {
 }
 
 describe('InvoicesPage', () => {
+  it('vinda do calendário (?fatura=), destaca a fatura pedida e abre os lançamentos dela', async () => {
+    const client = api({ 'GET /cards/c1/invoices/2026-10': { ...invoiceList[2], transactions: [] } });
+    renderApp(<InvoicesPage />, { route: '/cartoes/c1?fatura=2026-10', path: '/cartoes/:id', api: client });
+    const target = await screen.findByLabelText('Fatura de out/2026');
+    expect(target.className).toContain('border-primary');
+    expect(screen.getByLabelText('Fatura de dez/2026').className).not.toContain('border-primary');
+    expect(client.get).toHaveBeenCalledWith('/cards/c1/invoices/2026-10');
+  });
+
   it('mostra o nome do cartão e o resumo do limite', async () => {
     renderPage();
     expect(await screen.findByRole('heading', { name: /Cartão principal/ })).toBeInTheDocument();

@@ -73,6 +73,16 @@ export function createCardsService(deps: CardsServiceDeps) {
       return months.map((m) => toInvoiceDTO(card, m, totalsByMonth.get(m) ?? { amount: 0, paid: 0 })).reverse();
     },
 
+    /**
+     * Uma fatura de qualquer mês, inclusive depois da aberta (parcelas futuras), com `future` quando ainda não abriu.
+     * Usada pelo calendário (sub-projeto 8, K2), que mostra o vencimento das parcelas já lançadas.
+     */
+    async invoiceOfMonth(userId: string, cardId: string, month: YearMonth): Promise<InvoiceDTO & { future: boolean }> {
+      const card = await getOwnedCard(userId, cardId);
+      const open = invoiceFor(today(), card.closingDay, card.dueDay).invoiceMonth;
+      return { ...toInvoiceDTO(card, month, await accountsRepo.invoiceTotals(userId, cardId, month)), future: month > open };
+    },
+
     /** `transactions`: despesas do cartão com esse mês e os pagamentos dessa fatura (decisão do controlador). */
     async getInvoice(userId: string, cardId: string, month: YearMonth): Promise<InvoiceDetailDTO> {
       const card = await getOwnedCard(userId, cardId);

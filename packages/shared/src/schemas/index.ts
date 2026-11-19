@@ -11,3 +11,4 @@ export * from './reports';
 export * from './notifications';
 export * from './assistant';
 export * from './debts';
+export * from './calendar';

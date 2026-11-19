@@ -1,7 +1,7 @@
 import type { InvoiceDTO, TransactionDTO, YearMonth } from '@fincontrol/shared';
 import { AlertTriangle, CheckCircle2, Clock, CircleSlash, CreditCard, type LucideIcon } from 'lucide-react';
-import { useState } from 'react';
-import { useParams } from 'react-router';
+import { useEffect, useRef, useState } from 'react';
+import { useParams, useSearchParams } from 'react-router';
 import { Button } from '../../components/ui/button';
 import { PageHeader } from '../../components/ui/page-header';
 import { Panel } from '../../components/ui/panel';
@@ -66,9 +66,15 @@ function InvoiceCard({ cardId, invoice, highlight, onPay }: InvoiceCardProps) {
   const [showTransactions, setShowTransactions] = useState(Boolean(highlight));
   const status = STATUS[invoice.status];
   const remaining = invoice.amount - invoice.paid;
+  const ref = useRef<HTMLDivElement>(null);
+  // Vinda do calendário (`?fatura=`): a fatura em destaque aparece na tela, mesmo no histórico.
+  useEffect(() => {
+    if (highlight) ref.current?.scrollIntoView?.({ block: 'center' });
+  }, [highlight]);
 
   return (
-    <Panel className={cn('p-5', highlight && 'border-primary')}>
+    <div ref={ref}>
+    <Panel aria-label={`Fatura de ${formatMonthShort(invoice.month)}`} className={cn('p-5', highlight && 'border-primary')}>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="font-display text-lg font-semibold tracking-tight">{formatMonthShort(invoice.month)}</p>
@@ -103,11 +109,13 @@ function InvoiceCard({ cardId, invoice, highlight, onPay }: InvoiceCardProps) {
         </div>
       )}
     </Panel>
+    </div>
   );
 }
 
 export default function InvoicesPage() {
   const { id = '' } = useParams();
+  const target = useSearchParams()[0].get('fatura');
   const accounts = useAccounts(true);
   const invoices = useCardInvoices(id);
   const [paying, setPaying] = useState<InvoiceDTO | null>(null);
@@ -151,7 +159,8 @@ export default function InvoicesPage() {
 
           {openInvoice && (
             <section aria-label="Fatura aberta" className="mb-6">
-              <InvoiceCard cardId={id} invoice={openInvoice} highlight onPay={setPaying} />
+              {/* A chave muda com `?fatura=`: o cartão é recriado e abre os lançamentos da fatura nova. */}
+              <InvoiceCard key={`${openInvoice.month}:${target}`} cardId={id} invoice={openInvoice} highlight={!target || target === openInvoice.month} onPay={setPaying} />
             </section>
           )}
 
@@ -160,7 +169,7 @@ export default function InvoicesPage() {
               <h2 className="mb-3 font-display text-lg font-semibold tracking-tight">Fechadas e histórico</h2>
               <div className="grid gap-4">
                 {otherInvoices.map((invoice) => (
-                  <InvoiceCard key={invoice.month} cardId={id} invoice={invoice} onPay={setPaying} />
+                  <InvoiceCard key={`${invoice.month}:${target}`} cardId={id} invoice={invoice} highlight={target === invoice.month} onPay={setPaying} />
                 ))}
               </div>
             </section>
