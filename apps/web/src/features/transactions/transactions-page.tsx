@@ -1,6 +1,6 @@
 import { endOfMonth, monthOf, startOfMonth, todayInSaoPaulo, type TransactionDTO, type TransactionType, type YearMonth } from '@fincontrol/shared';
 import { ArrowLeftRight, FileUp, Plus, Search } from 'lucide-react';
-import { useDeferredValue, useMemo, useState } from 'react';
+import { useDeferredValue, useMemo, useState, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router';
 import { Button } from '../../components/ui/button';
 import { Input, Select } from '../../components/ui/field';
@@ -31,6 +31,13 @@ export default function TransactionsPage() {
   const q = useDeferredValue(search.trim());
   // `?novo=1` (atalho do ícone do app) já abre o formulário de novo lançamento.
   const [editing, setEditing] = useState<TransactionDTO | 'new' | null>(params.get('novo') === '1' ? 'new' : null);
+  // O `?novo=1` sai da URL assim que é usado: voltar no histórico não reabre o formulário, e nada muda a URL depois (CodeRabbit).
+  useEffect(() => {
+    if (!params.has('novo')) return;
+    const next = new URLSearchParams(params);
+    next.delete('novo');
+    setParams(next, { replace: true });
+  }, [params, setParams]);
 
   const filters = useMemo(
     () => ({
@@ -159,16 +166,7 @@ export default function TransactionsPage() {
       {editing && (
         <TransactionForm
           open
-          onOpenChange={(o) => {
-            if (o) return;
-            setEditing(null);
-            // Tira o `?novo=1` do atalho: voltar no histórico não reabre o formulário sozinho (CodeRabbit).
-            if (params.has('novo')) {
-              const next = new URLSearchParams(params);
-              next.delete('novo');
-              setParams(next, { replace: true });
-            }
-          }}
+          onOpenChange={(o) => !o && setEditing(null)}
           {...(editing === 'new' ? {} : { transaction: editing })}
         />
       )}
