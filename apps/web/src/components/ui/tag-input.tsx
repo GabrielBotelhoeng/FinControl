@@ -26,16 +26,24 @@ export function TagInput({ value, onChange, draft: controlledDraft, onDraftChang
   const setDraft = onDraftChange ?? setOwnDraft;
   const [error, setError] = useState<string | null>(null);
   const listId = useId();
+  const errorId = useId();
   const full = value.length >= MAX_TAGS;
+  // Quando o `Field` em volta já mostra um erro (ao salvar), o aviso daqui não se repete embaixo dele.
+  const ownError = error !== null && !inputProps['aria-invalid'];
 
   function add(raw: string) {
-    setDraft('');
-    if (!raw.trim()) return;
+    if (!raw.trim()) {
+      setDraft('');
+      return;
+    }
     const parsed = tagSchema.safeParse(raw);
     if (!parsed.success) {
+      // O texto fica no campo, para a pessoa corrigir em vez de digitar de novo.
+      setDraft(raw);
       setError(parsed.error.issues[0]?.message ?? 'Tag inválida');
       return;
     }
+    setDraft('');
     setError(null);
     if (full || value.includes(parsed.data)) return;
     onChange([...value, parsed.data].sort(compareTags));
@@ -62,6 +70,8 @@ export function TagInput({ value, onChange, draft: controlledDraft, onDraftChang
       )}
       <input
         {...inputProps}
+        aria-invalid={inputProps['aria-invalid'] || ownError || undefined}
+        aria-describedby={[inputProps['aria-describedby'], ownError && errorId].filter(Boolean).join(' ') || undefined}
         type="text"
         list={listId}
         autoComplete="off"
@@ -72,7 +82,10 @@ export function TagInput({ value, onChange, draft: controlledDraft, onDraftChang
         onChange={(e) => {
           const v = e.target.value;
           if (v.endsWith(',')) add(v.slice(0, -1));
-          else setDraft(v);
+          else {
+            setDraft(v);
+            setError(null);
+          }
         }}
         onKeyDown={(e) => {
           if (e.key === 'Enter') {
@@ -91,7 +104,11 @@ export function TagInput({ value, onChange, draft: controlledDraft, onDraftChang
             <option key={s} value={s} />
           ))}
       </datalist>
-      {error && <p className="text-xs font-medium text-expense">{error}</p>}
+      {ownError && (
+        <p id={errorId} className="text-xs font-medium text-expense">
+          {error}
+        </p>
+      )}
     </div>
   );
 }

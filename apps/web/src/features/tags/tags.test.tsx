@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from '@testing-library/react';
+import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
 import { describe, expect, it } from 'vitest';
@@ -41,6 +41,36 @@ describe('tags (sub-projeto 13)', () => {
     expect(screen.getByRole('list', { name: 'Tags escolhidas' })).toHaveTextContent('#bebida');
     await userEvent.type(input, 'bar/balada{Enter}');
     expect(screen.getByText('Use só letras, números, espaço, hífen ou sublinhado')).toBeInTheDocument();
+    // O texto inválido fica no campo para a pessoa corrigir, e o aviso some quando ela edita.
+    expect(input).toHaveValue('bar/balada');
+    await userEvent.type(input, '{Backspace}'.repeat(7));
+    expect(screen.queryByText('Use só letras, números, espaço, hífen ou sublinhado')).not.toBeInTheDocument();
+    await userEvent.type(input, '{Enter}');
+    expect(screen.getByRole('list', { name: 'Tags escolhidas' })).toHaveTextContent('#bar#bebida');
+    expect(input).toHaveValue('');
+  });
+
+  it('Lançamentos: o filtro por tag sem resultado pede para limpar os filtros, e o seletor fica enquanto a tag estiver escolhida (T5)', async () => {
+    let tagRows = [{ name: 'bebida', count: 1 }];
+    const client = fakeApi({
+      'GET /transactions': (_p: string, _b: unknown, query: unknown) => ({ items: (query as { tag?: string }).tag ? [] : [tx], nextCursor: null }),
+      'GET /accounts': [account],
+      'GET /categories': [category],
+      'GET /tags': () => tagRows,
+    });
+    const { queryClient } = renderApp(<TransactionsPage />, { api: client, route: '/lancamentos', path: '/lancamentos' });
+    await screen.findByRole('listitem', { name: 'Cerveja' });
+    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Tag' }), 'bebida');
+    expect(await screen.findByText('Nada encontrado com esses filtros')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Lançar agora' })).not.toBeInTheDocument();
+
+    // A tag saiu do último lançamento (por exemplo, numa edição): o seletor continua, com ela escolhida.
+    tagRows = [];
+    await act(() => queryClient.invalidateQueries({ queryKey: ['tags'] }));
+    expect(screen.getByRole('combobox', { name: 'Tag' })).toHaveValue('bebida');
+    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Tag' }), '');
+    expect(await screen.findByRole('listitem', { name: 'Cerveja' })).toBeInTheDocument();
+    expect(screen.queryByRole('combobox', { name: 'Tag' })).not.toBeInTheDocument();
   });
 
   it('Lançamentos: a linha mostra as tags, o filtro manda a tag e o novo lançamento envia as tags (T5, T7, T8)', async () => {
@@ -86,5 +116,24 @@ describe('tags (sub-projeto 13)', () => {
     expect(bebida).toHaveTextContent('os lançamentos continuam');
     await userEvent.click(within(bebida).getByRole('button', { name: 'Confirmar' }));
     expect(client.del).toHaveBeenCalledWith('/tags/bebida');
+  });
+
+  it('Categorias → Tags: nome inválido avisa sem chamar a API, e "Cancelar" volta ao nome atual (T2, T6)', async () => {
+    const client = fakeApi({ 'GET /tags': [{ name: 'cerva', count: 1 }] });
+    renderApp(<TagsSection />, { api: client });
+    const cerva = await screen.findByRole('listitem', { name: '#cerva' });
+    await userEvent.click(within(cerva).getByRole('button', { name: 'Renomear' }));
+    const name = within(cerva).getByRole('textbox', { name: 'Novo nome da tag cerva' });
+    await userEvent.clear(name);
+    await userEvent.type(name, 'bar/balada');
+    await userEvent.click(within(cerva).getByRole('button', { name: 'Salvar' }));
+    expect(within(cerva).getByText('Use só letras, números, espaço, hífen ou sublinhado')).toBeInTheDocument();
+    expect(name).toHaveAttribute('aria-invalid', 'true');
+    expect(client.patch).not.toHaveBeenCalled();
+
+    await userEvent.click(within(cerva).getByRole('button', { name: 'Cancelar' }));
+    await userEvent.click(within(cerva).getByRole('button', { name: 'Renomear' }));
+    expect(within(cerva).getByRole('textbox', { name: 'Novo nome da tag cerva' })).toHaveValue('cerva');
+    expect(within(cerva).queryByText('Use só letras, números, espaço, hífen ou sublinhado')).not.toBeInTheDocument();
   });
 });

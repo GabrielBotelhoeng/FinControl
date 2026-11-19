@@ -1,6 +1,6 @@
-import type { TagDTO } from '@fincontrol/shared';
+import { tagSchema, type TagDTO } from '@fincontrol/shared';
 import { Hash } from 'lucide-react';
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/field';
@@ -13,10 +13,24 @@ function TagItem({ tag }: { tag: TagDTO }) {
   const remove = useDeleteTag();
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(tag.name);
+  const [error, setError] = useState<string | null>(null);
   const [confirming, setConfirming] = useState(false);
+  const errorId = useId();
+
+  function startEditing() {
+    setName(tag.name);
+    setError(null);
+    setEditing(true);
+  }
 
   async function save(e: React.FormEvent) {
     e.preventDefault();
+    // T2 conferida aqui, com a mensagem certa: a API só diria "Um ou mais campos são inválidos".
+    const parsed = tagSchema.safeParse(name);
+    if (!parsed.success) {
+      setError(parsed.error.issues[0]?.message ?? 'Tag inválida');
+      return;
+    }
     try {
       const saved = await rename.mutateAsync({ from: tag.name, to: name });
       toast.success(saved.name === tag.name ? 'Nada mudou.' : `Tag renomeada para #${saved.name}.`);
@@ -39,7 +53,19 @@ function TagItem({ tag }: { tag: TagDTO }) {
     <li aria-label={`#${tag.name}`} className="grid gap-2 px-5 py-3">
       {editing ? (
         <form onSubmit={save} className="flex flex-wrap items-center gap-2">
-          <Input aria-label={`Novo nome da tag ${tag.name}`} value={name} onChange={(e) => setName(e.target.value)} maxLength={30} className="min-w-0 flex-1" autoFocus />
+          <Input
+            aria-label={`Novo nome da tag ${tag.name}`}
+            aria-invalid={error ? true : undefined}
+            aria-describedby={error ? errorId : undefined}
+            value={name}
+            onChange={(e) => {
+              setName(e.target.value);
+              setError(null);
+            }}
+            maxLength={30}
+            className="min-w-0 flex-1"
+            autoFocus
+          />
           <Button type="submit" size="sm" loading={rename.isPending}>
             Salvar
           </Button>
@@ -63,7 +89,7 @@ function TagItem({ tag }: { tag: TagDTO }) {
               </>
             ) : (
               <>
-                <Button size="sm" variant="ghost" onClick={() => setEditing(true)}>
+                <Button size="sm" variant="ghost" onClick={startEditing}>
                   Renomear
                 </Button>
                 <Button size="sm" variant="ghost" className="text-expense" onClick={() => setConfirming(true)}>
@@ -73,6 +99,11 @@ function TagItem({ tag }: { tag: TagDTO }) {
             )}
           </span>
         </div>
+      )}
+      {editing && error && (
+        <p id={errorId} className="text-xs font-medium text-expense">
+          {error}
+        </p>
       )}
       {confirming && <p className="text-xs text-muted">A tag sai dos lançamentos e das recorrências; os lançamentos continuam.</p>}
     </li>
