@@ -40,6 +40,17 @@ describe('DashboardPage', () => {
     expect(await screen.findByRole('link', { name: 'Perguntar ao assistente' })).toHaveAttribute('href', '/assistente');
   });
 
+  it('B9 (sub-projeto 11): a linha do patrimônio líquido leva à página dele; sem o número (API antiga), some', async () => {
+    const { unmount } = renderApp(<DashboardPage />, { api: fakeApi(routes({ 'GET /dashboard/summary': { ...summary, netWorth: 5350000 } })) });
+    const line = await screen.findByText(/Patrimônio líquido:/);
+    expect(line).toHaveTextContent(/R\$\s*53\.500,00/);
+    expect(within(line).getByRole('link', { name: 'Ver patrimônio' })).toHaveAttribute('href', '/patrimonio');
+    unmount();
+    renderApp(<DashboardPage />, { api: fakeApi(routes()) });
+    await screen.findByLabelText('Saldo total');
+    expect(screen.queryByText(/Patrimônio líquido:/)).not.toBeInTheDocument();
+  });
+
   it('mostra o saldo herói, a previsão, a comparação e "—" sem mês anterior', async () => {
     renderApp(<DashboardPage />, { api: fakeApi(routes()) });
     expect(await screen.findByLabelText('Saldo total')).toHaveTextContent(/R\$\s*12\.480,50/);
