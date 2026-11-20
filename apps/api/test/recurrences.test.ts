@@ -137,6 +137,45 @@ describe('recorrências', () => {
     ]);
   });
 
+  it('remarcar duas vezes continua sem o mês pago adiantado em dobro (revisão final)', async () => {
+    const user = await newUser();
+    await series(user);
+    const dec = (await range(user, '2026-12-01', '2026-12-31'))[0]!;
+    await request(app).post(`/api/v1/transactions/${dec.id}/pay`).set(user.auth).send({ paidDate: '2026-11-11' });
+    const nov = (await range(user, '2026-11-01', '2026-11-30'))[0]!;
+    await request(app).patch(`/api/v1/transactions/${nov.id}?scope=future`).set(user.auth).send({ dueDate: '2026-11-15' });
+    const nov2 = (await range(user, '2026-11-01', '2026-11-30'))[0]!;
+    expect((await request(app).patch(`/api/v1/transactions/${nov2.id}?scope=future`).set(user.auth).send({ dueDate: '2026-11-20' })).status).toBe(200);
+    expect((await range(user, '2026-11-01', '2027-01-31')).map((i) => [i.dueDate, i.status])).toEqual([
+      ['2026-11-20', 'pending'],
+      ['2026-12-10', 'paid'],
+      ['2027-01-20', 'pending'],
+    ]);
+  });
+
+  it('trocar a frequência não apaga ocorrências da série nova (revisão final)', async () => {
+    const user = await newUser();
+    await series(user);
+    const dec = (await range(user, '2026-12-01', '2026-12-31'))[0]!;
+    await request(app).post(`/api/v1/transactions/${dec.id}/pay`).set(user.auth).send({ paidDate: '2026-11-11' });
+    const nov = (await range(user, '2026-11-01', '2026-11-30'))[0]!;
+    const res = await request(app).patch(`/api/v1/transactions/${nov.id}?scope=future`).set(user.auth)
+      .send({ recurrence: { frequency: 'yearly', endDate: null } });
+    expect(res.status).toBe(200);
+    expect((await range(user, '2026-11-01', '2027-11-30')).map((i) => i.dueDate)).toEqual(['2026-11-10', '2026-12-10', '2027-11-10']);
+  });
+
+  it('a ocorrência anterior excluída não impede mover para o mês dela (revisão final)', async () => {
+    const user = await newUser();
+    await series(user);
+    const oct = (await range(user, '2026-10-01', '2026-10-31'))[0]!;
+    await request(app).delete(`/api/v1/transactions/${oct.id}`).set(user.auth);
+    const nov = (await range(user, '2026-11-01', '2026-11-30'))[0]!;
+    const res = await request(app).patch(`/api/v1/transactions/${nov.id}?scope=future`).set(user.auth).send({ dueDate: '2026-10-05' });
+    expect(res.status).toBe(200);
+    expect((await range(user, '2026-09-01', '2026-12-31')).map((i) => i.dueDate)).toEqual(['2026-09-10', '2026-10-05', '2026-11-05', '2026-12-05']);
+  });
+
   it('mover "esta e as próximas" para antes da ocorrência anterior dá 422 e não altera nada (M1)', async () => {
     const user = await newUser();
     await series(user);

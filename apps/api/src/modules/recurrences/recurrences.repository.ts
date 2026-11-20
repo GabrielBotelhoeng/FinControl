@@ -150,6 +150,16 @@ export function createRecurrencesRepository(db: DbClient) {
       return rows.flatMap((r) => (r.occurrenceDate ? [toDateOnly(r.occurrenceDate)] : []));
     },
 
+    /** Data da última ocorrência existente (paga ou pendente) antes de `date`; excluídas não contam. */
+    async lastOccurrenceBefore(userId: string, recurrenceId: string, date: DateOnly): Promise<DateOnly | null> {
+      const row = await db.transaction.findFirst({
+        where: { userId, recurrenceId, occurrenceDate: { lt: fromDateOnly(date) } },
+        select: { occurrenceDate: true },
+        orderBy: { occurrenceDate: 'desc' },
+      });
+      return row?.occurrenceDate ? toDateOnly(row.occurrenceDate) : null;
+    },
+
     countTransactions(userId: string, recurrenceId: string): Promise<number> {
       return db.transaction.count({ where: { userId, recurrenceId } });
     },

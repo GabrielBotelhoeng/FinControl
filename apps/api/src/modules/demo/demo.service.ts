@@ -127,7 +127,7 @@ export function createDemoService(deps: DemoServiceDeps) {
     async cleanup(): Promise<{ deleted: number }> {
       const cutoff = new Date(deps.clock().getTime() - DEMO_TTL_MS);
       const ids = await deps.repo.staleDemoProfileIds(cutoff, CLEANUP_BATCH);
-      for (const id of ids) await deps.profile.deleteAccount(id);
+      for (const id of ids) await deps.profile.deleteAccount(id, { remember: false });
       return { deleted: ids.length };
     },
   };

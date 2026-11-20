@@ -94,6 +94,14 @@ describe('provisionamento e /me', () => {
     expect(authAdmin.deleted).toEqual([user.id]);
   });
 
+  it('se a exclusão no Auth falha, a pessoa ainda consegue voltar (revisão final)', async () => {
+    const user = await newUser();
+    await request(app).get('/api/v1/me').set(user.auth);
+    authAdmin.failNext = true;
+    expect((await request(app).delete('/api/v1/me').set(user.auth)).status).toBe(500);
+    expect((await request(app).get('/api/v1/me').set(user.auth)).status).toBe(200);
+  });
+
   it('depois de excluir a conta, o token antigo não recria o perfil (auditoria final, LGPD)', async () => {
     const user = await newUser();
     await request(app).get('/api/v1/me').set(user.auth);

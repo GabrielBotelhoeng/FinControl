@@ -2,8 +2,8 @@ import {
   addDays, endOfMonth, maxDate, minDate, monthOf, todayInSaoPaulo,
   type DateOnly, type Frequency, type UpdateTransactionInput,
 } from '@fincontrol/shared';
-import { MAX_OCCURRENCES, nthOccurrence, occurrenceDates } from '../../domain/recurrence';
-import { NotFoundError, UnprocessableError } from '../../http/errors';
+import { nthOccurrence, occurrenceDates } from '../../domain/recurrence';
+import { ConflictError, NotFoundError, UnprocessableError } from '../../http/errors';
 import type { ValidateRefs } from '../transactions/transactions.refs';
 import type { NewTransaction, TransactionRow, TransactionsRepository } from '../transactions/transactions.repository';
 import type { RecurrenceRow, RecurrencesRepository, RecurrenceTemplate } from './recurrences.repository';
@@ -34,14 +34,14 @@ export type RecurrencesServiceDeps = Repos & {
   inTransaction?: <T>(fn: (scoped: Repos) => Promise<T>) => Promise<T>;
 };
 
-/** Posição de `date` no calendário da série (0 = `startDate`); -1 se não for uma ocorrência dela. */
-function indexOf(frequency: Frequency, startDate: DateOnly, date: DateOnly): number {
-  for (let k = 0; k < MAX_OCCURRENCES; k++) {
-    const d = nthOccurrence(frequency, startDate, k);
-    if (d === date) return k;
-    if (d > date) return -1;
-  }
-  return -1;
+/**
+ * Quantos períodos da série (semanas, meses ou anos) `date` está depois de `from`. Conta pelo período, não pela data
+ * exata: uma paga que já veio de outra série (com a data antiga) ainda cai no mês certo (revisão final).
+ */
+function periodsBetween(frequency: Frequency, from: DateOnly, date: DateOnly): number {
+  if (frequency === 'weekly') return Math.floor((Date.parse(date) - Date.parse(from)) / (7 * 86_400_000));
+  const months = (Number(date.slice(0, 4)) - Number(from.slice(0, 4))) * 12 + Number(date.slice(5, 7)) - Number(from.slice(5, 7));
+  return frequency === 'monthly' ? months : Math.floor(months / 12);
 }
 
 const brDate = (d: DateOnly) => d.split('-').reverse().join('/');
@@ -62,9 +62,10 @@ export function createRecurrencesService(deps: RecurrencesServiceDeps) {
     return materializeWith({ repo, transactions }, userId, until);
   }
 
-  async function materializeWith({ repo, transactions }: Repos, userId: string, until: DateOnly): Promise<void> {
+  /** `onlyId`: dentro da transação de uma edição, só a série editada (as outras ficam para a próxima leitura). */
+  async function materializeWith({ repo, transactions }: Repos, userId: string, until: DateOnly, onlyId?: string): Promise<void> {
     const limit = minDate(until, addDays(today(), HORIZON_DAYS));
-    const recs = await repo.listForMaterialization(userId, limit);
+    const recs = (await repo.listForMaterialization(userId, limit)).filter((r) => !onlyId || r.id === onlyId);
     if (recs.length === 0) return;
     const skips = await repo.skipsFor(recs.map((r) => r.id));
     const rows: NewTransaction[] = [];
@@ -102,11 +103,22 @@ export function createRecurrencesService(deps: RecurrencesServiceDeps) {
     return inTransaction((scoped) => updateFutureWith(scoped, userId, tx, input));
   }
 
-  async function updateFutureWith(scoped: Repos, userId: string, tx: TransactionRow, input: UpdateTransactionInput): Promise<TransactionRow> {
+  /**
+   * Trava a série e relê o lançamento dentro da transação: uma edição ao mesmo tempo pode ter mudado a série dele
+   * (revisão final). Nesse caso, 409 para a pessoa recarregar.
+   */
+  async function lockFresh({ repo, transactions }: Repos, userId: string, stale: TransactionRow): Promise<{ tx: TransactionRow; rec: RecurrenceRow }> {
+    if (!stale.recurrenceId) throw new NotFoundError('Recorrência');
+    await repo.lock(userId, stale.recurrenceId);
+    const tx = await transactions.findById(userId, stale.id);
+    if (!tx) throw new NotFoundError('Lançamento');
+    if (tx.recurrenceId !== stale.recurrenceId) throw new ConflictError('Este lançamento acabou de mudar. Recarregue a página e tente de novo.');
+    return { tx, rec: await getOwned(repo, userId, stale.recurrenceId) };
+  }
+
+  async function updateFutureWith(scoped: Repos, userId: string, stale: TransactionRow, input: UpdateTransactionInput): Promise<TransactionRow> {
     const { repo, transactions } = scoped;
-    if (!tx.recurrenceId) throw new NotFoundError('Recorrência');
-    await repo.lock(userId, tx.recurrenceId);
-    const rec = await getOwned(repo, userId, tx.recurrenceId);
+    const { tx, rec } = await lockFresh(scoped, userId, stale);
     const pivot = tx.occurrenceDate ?? tx.dueDate;
     const template: RecurrenceTemplate = {
       type: rec.type,
@@ -140,11 +152,10 @@ export function createRecurrencesService(deps: RecurrencesServiceDeps) {
       }
     }
     // M1: a série antiga termina na véspera do pivô; começar a nova antes da ocorrência anterior deixaria dois
-    // lançamentos no mesmo período.
-    const pivotIndex = indexOf(rec.frequency, rec.startDate, pivot);
-    if (reschedule && pivotIndex > 0) {
-      const previous = nthOccurrence(rec.frequency, rec.startDate, pivotIndex - 1);
-      if (newStart <= previous) {
+    // lançamentos no mesmo período. Uma anterior excluída ("só esta") não ocupa nada (revisão final).
+    if (reschedule) {
+      const previous = await repo.lastOccurrenceBefore(userId, rec.id, pivot);
+      if (previous && newStart <= previous) {
         throw new UnprocessableError(`A nova data precisa ser depois de ${brDate(previous)}, a ocorrência anterior desta recorrência.`);
       }
     }
@@ -160,11 +171,12 @@ export function createRecurrencesService(deps: RecurrencesServiceDeps) {
       const oldEnd = addDays(pivot, -1);
       await repo.update(userId, rec.id, { endDate: oldEnd });
       await repo.deletePendingFrom(userId, rec.id, pivot);
-      // M1: cada paga levada para a série nova ocupa a vaga dela no calendário novo (mesma posição contada a partir
-      // do pivô). Sem o pulo, um mês pago adiantado ganharia uma segunda ocorrência, pendente, na data nova.
-      if (pivotIndex >= 0) {
+      // M1: cada paga levada para a série nova ocupa a vaga do período dela (mesmo mês, semana ou ano, contado a
+      // partir do pivô). Sem o pulo, um mês pago adiantado ganharia uma segunda ocorrência, pendente, na data nova.
+      // Com a frequência trocada não há correspondência entre os períodos: nada é pulado (revisão final).
+      if (frequency === rec.frequency) {
         for (const date of await repo.paidOccurrencesFrom(userId, rec.id, addDays(pivot, 1))) {
-          const k = indexOf(rec.frequency, rec.startDate, date) - pivotIndex;
+          const k = periodsBetween(frequency, pivot, date);
           if (k > 0) await repo.addSkip(created.id, nthOccurrence(frequency, newStart, k));
         }
       }
@@ -182,18 +194,18 @@ export function createRecurrencesService(deps: RecurrencesServiceDeps) {
         ...(followsDue ? { paidDate: newStart } : {}),
       });
     }
-    await materializeWith(scoped, userId, maxDate(endOfMonth(monthOf(newStart)), endOfMonth(monthOf(today()))));
+    // Só a série editada: materializar as outras aqui poderia travar com uma leitura ao mesmo tempo (revisão final).
+    await materializeWith(scoped, userId, maxDate(endOfMonth(monthOf(newStart)), endOfMonth(monthOf(today()))), targetId);
 
     const result = await transactions.findByOccurrence(userId, targetId, newStart);
     if (!result) throw new NotFoundError('Lançamento');
     return result;
   }
 
-  function removeFuture(userId: string, tx: TransactionRow): Promise<void> {
-    return inTransaction(async ({ repo, transactions }) => {
-      if (!tx.recurrenceId) throw new NotFoundError('Recorrência');
-      await repo.lock(userId, tx.recurrenceId);
-      const rec = await getOwned(repo, userId, tx.recurrenceId);
+  function removeFuture(userId: string, stale: TransactionRow): Promise<void> {
+    return inTransaction(async (scoped) => {
+      const { repo, transactions } = scoped;
+      const { tx, rec } = await lockFresh(scoped, userId, stale);
       const pivot = tx.occurrenceDate ?? tx.dueDate;
       await transactions.delete(userId, tx.id);
       await repo.deletePendingFrom(userId, rec.id, pivot);

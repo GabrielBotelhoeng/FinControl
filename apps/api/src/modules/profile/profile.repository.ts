@@ -17,11 +17,15 @@ export function createProfileRepository(db: Db) {
      * Apaga o perfil (cascata para todos os dados) e guarda o id em `deleted_users`, na mesma transação: um token
      * antigo, ainda válido, não recria o perfil depois (auditoria final, LGPD).
      */
-    async delete(userId: string) {
+    async delete(userId: string, remember = true) {
       await db.$transaction([
-        db.deletedUser.createMany({ data: [{ id: userId }], skipDuplicates: true }),
+        ...(remember ? [db.deletedUser.createMany({ data: [{ id: userId }], skipDuplicates: true })] : []),
         db.profile.deleteMany({ where: { id: userId } }),
       ]);
+    },
+    /** Desfaz a marca de `delete` quando a exclusão no Auth falha: a pessoa ainda existe e precisa poder voltar. */
+    async forgetDeleted(userId: string) {
+      await db.deletedUser.deleteMany({ where: { id: userId } });
     },
   };
 }
