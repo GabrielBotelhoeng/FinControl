@@ -1,8 +1,15 @@
 # HANDOFF — FinControl
 
-_Atualizado em 2026-11-20 (visual claro e colorido)._
+_Atualizado em 2026-11-20 (auditoria final)._
 
-## Sub-projeto 16: visual claro e colorido (2026-11-20, branch feat/visual-claro)
+## Auditoria final (2026-11-20, branch fix/auditoria-final)
+
+- **Relatório:** `docs/auditoria-final-2026-11-20.md` (quatro agentes: testes e E2E, valores e duplicações, banco, segurança). Nada crítico.
+- **Migration:** `20261120120000_auditoria_final` (`deleted_users`, RLS e `REVOKE` na `_prisma_migrations`, sete índices de chaves estrangeiras). Aplicar em produção **antes do merge** com o comando do sub-projeto 11.
+- **Corrigido:** data de pagamento de "Já está pago", mês duplicado e transação nas recorrências, crédito entre faturas, exclusão de conta (LGPD), cabeçalhos de segurança do site (CSP), limite do assistente, parcelas mínimas, calendário em 11 meses, valores com 4 casas no CSV, conta pagadora de cartão, variáveis da Vercel no bundle, XLSX.
+- **Testes:** 219 no shared, 380 na API e 262 na web, além de 19 E2E.
+
+## Sub-projeto 16: visual claro e colorido — no ar desde 2026-11-20 (PR #37)
 
 - **Spec:** `docs/superpowers/specs/2026-11-20-fincontrol-sp16-visual-claro-design.md` (L1–L14) e o `DESIGN.md` reescrito ("Feira de manhã"). Sem migration.
 - **Entregue:** o claro como padrão (o escuro continua no Perfil) com o verde-limão da marca e cores de apoio; o saldo num cartão limão e os cartões coloridos do painel; ícones de traço em quadrados da cor da categoria ou da conta (`IconTile`); a barra flutuante do celular com o "+" e a folha "Mais"; formulários em folha que sobe de baixo no celular; o valor grande e o tipo colorido no lançamento; o logo novo (o "F" com a seta de crescimento, a partir de uma referência do usuário), que também é o ícone do app; a entrada sem a arte dourada; o PDF e a planilha no verde da marca.
