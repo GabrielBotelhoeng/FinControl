@@ -40,7 +40,7 @@ export function CategoryForm({ open, onOpenChange, type, category }: Props) {
         </Field>
         <fieldset>
           <legend className="mb-2 text-sm font-medium">Ícone</legend>
-          <div role="radiogroup" aria-label="Ícone" className="grid grid-cols-6 gap-2 sm:grid-cols-8">
+          <div role="radiogroup" aria-label="Ícone" className="grid grid-cols-6 gap-2 sm:grid-cols-9">
             {Object.entries(CATEGORY_ICONS).map(([key, Icon]) => (
               <button
                 key={key}
@@ -49,9 +49,12 @@ export function CategoryForm({ open, onOpenChange, type, category }: Props) {
                 aria-checked={icon === key}
                 aria-label={key}
                 onClick={() => setIcon(key)}
-                className={cn('grid h-10 place-items-center rounded-[var(--radius-control)] border transition-colors', icon === key ? 'border-primary bg-primary-soft text-text' : 'border-border text-muted hover:text-text')}
+                className={cn(
+                  'grid h-10 place-items-center rounded-[var(--radius-control)] transition-colors',
+                  icon === key ? 'bg-brand text-brand-fg ring-2 ring-inset ring-brand-fg/50' : 'bg-surface-2 text-muted hover:text-text',
+                )}
               >
-                <Icon aria-hidden className="h-[18px] w-[18px]" strokeWidth={1.75} />
+                <Icon aria-hidden className="h-[18px] w-[18px]" strokeWidth={2} />
               </button>
             ))}
           </div>

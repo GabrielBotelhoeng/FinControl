@@ -1,6 +1,8 @@
 import type { FinancialHealthDTO } from '@fincontrol/shared';
-import { AlertTriangle, CheckCircle2, CircleSlash, type LucideIcon } from 'lucide-react';
-import { Panel } from '../../components/ui/panel';
+import { AlertTriangle, CheckCircle2, CircleSlash, PiggyBank, Scale, ShieldCheck, type LucideIcon } from 'lucide-react';
+import { IconTile } from '../../components/ui/icon-tile';
+import { cn } from '../../lib/cn';
+import { PALETTE } from '../../lib/palette';
 import { formatBRL } from '../../lib/format';
 
 type Status = { label: string; tone: 'good' | 'warning' | 'critical'; icon: LucideIcon };
@@ -37,11 +39,13 @@ function commitmentStatus(rate: number): Status {
   return { label: 'Alto', tone: 'critical', icon: CircleSlash };
 }
 
-function Tile({ label, value, status, goal, detail }: { label: string; value: string; status: Status | null; goal: string; detail: string }) {
+/** Cartão pastel com o ícone do indicador (sub-projeto 16, L3): a cor é só decoração, o status tem ícone e texto. */
+function Tile({ label, value, status, goal, detail, icon, accent, tone }: { label: string; value: string; status: Status | null; goal: string; detail: string; icon: LucideIcon; accent: string; tone: string }) {
   const Icon = status?.icon;
   return (
-    <Panel role="group" aria-label={label} className="flex min-w-0 flex-col gap-2 p-5">
-      <span className="text-sm text-muted">{label}</span>
+    <section role="group" aria-label={label} className={cn('relative flex min-w-0 flex-col gap-2 rounded-[var(--radius-panel)] p-5', tone)}>
+      <IconTile icon={icon} color={accent} className="absolute right-4 top-4" />
+      <span className="pr-12 text-sm font-medium text-muted">{label}</span>
       <span data-metric-value className="tabular font-display text-3xl font-bold tracking-tight text-text">
         {value}
       </span>
@@ -56,7 +60,7 @@ function Tile({ label, value, status, goal, detail }: { label: string; value: st
         <br />
         {detail}
       </span>
-    </Panel>
+    </section>
   );
 }
 
@@ -66,6 +70,9 @@ export function HealthTiles({ health }: { health: FinancialHealthDTO }) {
     <div className="grid gap-4 sm:grid-cols-3">
       <Tile
         label="Taxa de poupança"
+        icon={PiggyBank}
+        accent={PALETTE.sky}
+        tone="bg-sky-soft"
         value={savingsRate === null ? '—' : percent.format(savingsRate)}
         status={savingsRate === null ? null : savingsStatus(savingsRate)}
         goal="Meta: guardar 20% da renda (mínimo recomendado: 10%)."
@@ -73,6 +80,9 @@ export function HealthTiles({ health }: { health: FinancialHealthDTO }) {
       />
       <Tile
         label="Reserva de emergência"
+        icon={ShieldCheck}
+        accent={PALETTE.grape}
+        tone="bg-grape-soft"
         value={reserveMonths === null ? '—' : `${decimal.format(reserveMonths)} ${reserveMonths >= 2 ? 'meses' : 'mês'}`}
         status={reserveMonths === null ? null : reserveStatus(reserveMonths)}
         goal="Meta: 3 a 6 meses do seu gasto médio."
@@ -84,6 +94,9 @@ export function HealthTiles({ health }: { health: FinancialHealthDTO }) {
       />
       <Tile
         label="Comprometimento de renda"
+        icon={Scale}
+        accent={PALETTE.tangerine}
+        tone="bg-tangerine-soft"
         value={debtCommitment === null ? '—' : percent.format(debtCommitment)}
         status={debtCommitment === null ? null : commitmentStatus(debtCommitment)}
         goal="Meta: até 30% da renda."

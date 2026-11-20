@@ -83,7 +83,7 @@ function TagItem({ tag }: { tag: TagDTO }) {
           <span className="flex items-center gap-1">
             {confirming ? (
               <>
-                <Button size="sm" className="bg-expense text-white" loading={remove.isPending} onClick={confirmDelete}>
+                <Button size="sm" variant="danger" loading={remove.isPending} onClick={confirmDelete}>
                   Confirmar
                 </Button>
                 <Button size="sm" variant="ghost" onClick={() => setConfirming(false)}>

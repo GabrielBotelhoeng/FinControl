@@ -12,9 +12,10 @@ const WIDTH = PAGE[0] - MARGIN * 2;
 const BOTTOM = 56;
 
 const hex = (h: string): RGB => rgb(parseInt(h.slice(1, 3), 16) / 255, parseInt(h.slice(3, 5), 16) / 255, parseInt(h.slice(5, 7), 16) / 255);
+// As cores do tema claro do app (sub-projeto 16, L13): verde-oliva da marca e o limão claro no lugar do dourado.
 const C = {
-  text: hex('#10121A'), muted: hex('#5A6072'), border: hex('#E0E1E8'), soft: hex('#EFEFF4'),
-  primary: hex('#8A5A00'), primarySoft: hex('#F7EDD8'), income: hex('#0A8754'), expense: hex('#D23752'), debt: hex('#7C3AED'),
+  text: hex('#14170F'), muted: hex('#5F6657'), border: hex('#E2E5D8'), soft: hex('#EEF0E7'),
+  primary: hex('#3F6212'), primarySoft: hex('#EAF5C8'), income: hex('#07794A'), expense: hex('#C62E49'), debt: hex('#7C3AED'),
 };
 
 const MONTHS = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];

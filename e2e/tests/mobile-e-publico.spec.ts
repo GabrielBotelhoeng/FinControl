@@ -59,6 +59,33 @@ test.describe('tela de 360 px', () => {
   });
 });
 
+test.describe('barra do celular a 360 px (sub-projeto 16, L6)', () => {
+  test.use({ viewport: { width: 360, height: 780 } });
+
+  test('o "+" abre o novo lançamento em qualquer tela e o "Mais" leva às outras telas', async ({ page }) => {
+    await enterDemo(page);
+    const bar = page.getByRole('navigation', { name: 'Principal (celular)' });
+    // Os rótulos cabem nas cinco posições, sem cortar nem passar da tela.
+    const labels = await bar.evaluate((nav) =>
+      [...nav.querySelectorAll('a, button')].map((el) => ({ text: el.textContent, cut: el.scrollWidth > el.clientWidth + 1, right: el.getBoundingClientRect().right })),
+    );
+    expect(labels.filter((l) => l.cut || l.right > 360)).toEqual([]);
+
+    await page.goto('/contas');
+    await bar.getByRole('button', { name: 'Novo lançamento' }).click();
+    const form = page.getByRole('dialog', { name: 'Novo lançamento' });
+    await expect(form).toBeVisible();
+    await form.getByRole('button', { name: 'Fechar' }).click();
+    await expect(form).toBeHidden();
+
+    await bar.getByRole('button', { name: 'Mais', exact: true }).click();
+    const more = page.getByRole('dialog', { name: 'Mais' });
+    await more.getByRole('link', { name: 'Dívidas' }).click();
+    await expect(page).toHaveURL('/dividas');
+    await expect(more).toBeHidden();
+  });
+});
+
 test('a política de privacidade é pública e está ligada na tela de entrada', async ({ page }) => {
   await page.goto('/entrar');
   await page.getByRole('link', { name: 'Política de privacidade' }).first().click();

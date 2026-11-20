@@ -1,14 +1,12 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <defs>
-    <radialGradient id="glow" cx="70%" cy="22%" r="70%">
-      <stop offset="0" stop-color="#E8B04B" stop-opacity=".55"/>
-      <stop offset="1" stop-color="#E8B04B" stop-opacity="0"/>
-    </radialGradient>
-  </defs>
-  <rect width="512" height="512" rx="112" fill="#07080C"/>
-  <rect width="512" height="512" rx="112" fill="url(#glow)"/>
-  <!-- F estilizado: haste em peso fino + barras em peso forte (o contraste da marca) -->
-  <rect x="156" y="120" width="34" height="272" rx="17" fill="#EEF0F6"/>
-  <rect x="156" y="120" width="200" height="64" rx="32" fill="#E8B04B"/>
-  <rect x="156" y="236" width="148" height="56" rx="28" fill="#E8B04B"/>
+  <!-- Sub-projeto 16 (L9): o "F" de barras inclinadas e a seta de crescimento em limão, sobre o quase-preto da marca. -->
+  <rect width="512" height="512" rx="112" fill="#14170F"/>
+  <path fill="#F4F6EE" d="M128 384 L128 206 Q128 140 194 140 L412 140 L370 204 L226 204 Q200 204 200 230 L200 244 L322 244 L286 300 L200 300 L200 384 Q200 402 182 402 L146 402 Q128 402 128 384 Z"/>
+  <g fill="#C8F24B">
+    <rect x="250" y="362" width="28" height="40" rx="7"/>
+    <rect x="294" y="342" width="28" height="60" rx="7"/>
+    <rect x="338" y="304" width="28" height="98" rx="7"/>
+  </g>
+  <path d="M214 352 Q316 334 372 262" fill="none" stroke="#C8F24B" stroke-width="20" stroke-linecap="round"/>
+  <path fill="#C8F24B" d="M402 224 L395 281 L348 245 Z"/>
 </svg>

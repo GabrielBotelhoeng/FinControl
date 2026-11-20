@@ -12,6 +12,7 @@ import { EmptyState, ErrorState, Skeleton } from '../../components/ui/states';
 import { useApi } from '../../lib/api-context';
 import { cn } from '../../lib/cn';
 import { formatBRL, formatDate, formatMonthShort } from '../../lib/format';
+import { IconTile } from '../../components/ui/icon-tile';
 import { iconFor } from '../categories/icons';
 import { exportFilename, saveFile, useReport, type ExportKind } from './api';
 import { PERIOD_OPTIONS, periodRange, type PeriodMode } from './period';
@@ -80,7 +81,8 @@ function Summary({ report }: { report: ReportDTO }) {
 
 function CategoryList({ title, rows, kind }: { title: string; rows: ReportCategoryDTO[]; kind: 'income' | 'expense' }) {
   return (
-    <Panel className="grid content-start gap-4 p-5 sm:p-6">
+    // min-w-0 nos filhos: o nome longo corta com "…" em vez de alargar o painel além da tela a 360 px.
+    <Panel className="grid content-start gap-4 p-5 sm:p-6 [&>*]:min-w-0">
       <div>
         <h2 className="font-display text-lg font-semibold tracking-tight">{title}</h2>
         <p className="text-xs text-muted">Participação no período e variação contra o período anterior.</p>
@@ -90,12 +92,11 @@ function CategoryList({ title, rows, kind }: { title: string; rows: ReportCatego
       ) : (
         <ul aria-label={title} className="grid gap-3">
           {rows.map((r) => {
-            const Icon = iconFor(r.icon);
             return (
-              <li key={r.categoryId} aria-label={r.name} className="grid gap-1.5">
+              <li key={r.categoryId} aria-label={r.name} className="grid min-w-0 gap-1.5 [&>*]:min-w-0">
                 <div className="flex items-center justify-between gap-3 text-sm">
-                  <span className="inline-flex min-w-0 items-center gap-2">
-                    <Icon aria-hidden className="h-4 w-4 shrink-0" style={{ color: r.color }} strokeWidth={1.75} />
+                  <span className="inline-flex min-w-0 items-center gap-2.5">
+                    <IconTile icon={iconFor(r.icon)} color={r.color} size="sm" />
                     <span className="truncate">{r.name}</span>
                   </span>
                   <span className="tabular shrink-0 font-semibold">{formatBRL(r.total)}</span>

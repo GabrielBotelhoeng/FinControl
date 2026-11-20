@@ -145,7 +145,7 @@ export function AssetDialog({ assetId, title, onOpenChange }: { assetId: string;
                   Excluir o bem e todo o histórico? Ele sai também dos meses passados do gráfico. Se você vendeu, prefira “Vendi ou perdi este bem”.
                 </span>
                 <div className="flex flex-wrap gap-2">
-                  <Button size="sm" className="bg-expense text-white" loading={removeAsset.isPending} onClick={deleteAsset}>
+                  <Button size="sm" variant="danger" loading={removeAsset.isPending} onClick={deleteAsset}>
                     Confirmar exclusão
                   </Button>
                   <Button size="sm" variant="ghost" onClick={() => setConfirming(false)}>

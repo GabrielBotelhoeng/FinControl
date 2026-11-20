@@ -123,7 +123,7 @@ export function GoalDialog({ goalId, title, onOpenChange }: { goalId: string; ti
             {confirming ? (
               <div className="flex flex-wrap items-center gap-2 text-sm">
                 <span>Excluir a meta e os depósitos dela?</span>
-                <Button size="sm" className="bg-expense text-white" loading={removeGoal.isPending} onClick={deleteGoal}>
+                <Button size="sm" variant="danger" loading={removeGoal.isPending} onClick={deleteGoal}>
                   Confirmar exclusão
                 </Button>
                 <Button size="sm" variant="ghost" onClick={() => setConfirming(false)}>

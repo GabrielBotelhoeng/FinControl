@@ -1,63 +1,64 @@
 # FinControl — DESIGN
 
-## Mundo visual: "Aurora no cofre"
+## Mundo visual: "Feira de manhã"
 
-O app é um cofre escuro e silencioso, onde o dinheiro brilha. A referência de linguagem é o portfólio corahub.com.br: fundo quase preto, um **glow radial** de cor e headlines que alternam **peso fino e extra-negrito**. A identidade é própria, com **dourado** no lugar do laranja da marca deles: é o ouro do cofre, quente como a referência e sem cair no clichê roxo/azul de "UI de IA" (proibido pela skill design-taste-frontend).
+O app é claro e alegre como uma feira de manhã: fundo quase branco, um **verde-limão** que marca o que importa e cores de fruta em pontos certos. O dinheiro continua sério (verde só para receita, vermelho só para despesa); a alegria fica na moldura. Sub-projeto 16 (`docs/superpowers/specs/2026-11-20-fincontrol-sp16-visual-claro-design.md`).
 
-- **Cena de uso:** pessoa conferindo as contas no celular, à noite, ou no notebook durante o dia. Por isso o **escuro é o padrão**; o claro fica disponível no perfil.
-- **Âncora de diferenciação:** o **saldo como herói**. O número é enorme, com "R$" e os centavos em peso fino e os reais em extra-negrito, sobre uma aurora dourada que respira atrás dele. Esse é o elemento que se reconhece sem o logo.
-- **DFII:** impacto 4, encaixe 5, viabilidade 5, performance 4, risco de consistência 2, o que dá **16**. Na escala até 15 do skill, fica em "executar por completo".
+- **Cena de uso:** pessoa lançando um gasto no celular, na fila do mercado, ou conferindo o mês no notebook. Por isso o **claro é o padrão** e o celular vem primeiro; o escuro continua no Perfil.
+- **Âncora de diferenciação:** o **saldo num cartão verde-limão**, com "R$" e centavos em peso fino e os reais em extra-negrito, e a moeda tangerina no canto.
+- **Logo:** o "F" de barras inclinadas com a seta de crescimento e três barrinhas em limão, num quadrado quase-preto (`LogoMark`, igual ao `public/icon.svg`). Ao lado, "Fin" na cor do texto e "Control" no verde da marca. Na entrada, o lema "Planeje · Controle · Realize".
 
 ## Tipografia
 
-- **Display — Outfit Variable** (100–900): usada nos títulos, no saldo herói e nos valores em destaque. Faz o contraste entre peso 200 e peso 800 ("Seu dinheiro, **sob controle**.").
+- **Display — Outfit Variable** (100–900): títulos, o saldo, os valores em destaque e o logo. Faz o contraste entre peso 200 e 800 ("Seus **lançamentos**").
 - **Texto e UI — Manrope Variable**: rótulos, listas e formulários. Os números sempre em `tabular-nums`.
-- **Escala:** 12 / 14 / 16 / 20 / 28 / 40 / 64 (o 64 só no saldo herói e no título da entrada). Tracking mínimo de -0.03em nos displays.
+- **Escala:** 12 / 14 / 16 / 20 / 28 / 40 / 64. Tracking mínimo de -0.03em nos displays.
 
 ## Cor (CSS variables em `apps/web/src/styles/index.css`)
 
-| Token | Escuro (padrão) | Claro |
+| Token | Claro (padrão) | Escuro |
 |---|---|---|
-| `--background` | `#07080C` | `#F6F6F9` |
-| `--surface` | `#0F121A` | `#FFFFFF` |
-| `--surface-2` | `#161A24` | `#EFEFF4` |
-| `--border` | `#232838` | `#E0E1E8` |
-| `--text` | `#EEF0F6` | `#10121A` |
-| `--text-muted` | `#9AA1B5` | `#5A6072` |
-| `--primary` | `#E8B04B` | `#8A5A00` |
-| `--primary-fg` | `#1A1305` | `#FFFFFF` |
-| `--primary-soft` | `#2A2111` | `#F7EDD8` |
-| `--glow` | `rgba(232,176,75,0.26)` | `rgba(200,140,30,0.18)` |
-| `--income` | `#3DD68C` | `#0A8754` |
-| `--income-soft` | `#0E2A1E` | `#E1F4EA` |
-| `--expense` | `#FF6B81` | `#D23752` |
-| `--expense-soft` | `#2E1219` | `#FBE6EA` |
-| `--warning` | `#FF6B81` (= despesa) | `#D23752` |
+| `--background` | `#F5F6F0` | `#0B0D09` |
+| `--surface` | `#FFFFFF` | `#14170F` |
+| `--surface-2` | `#EEF0E7` | `#1C2016` |
+| `--border` | `#E2E5D8` | `#2A2F22` |
+| `--text` | `#14170F` | `#EEF1E6` |
+| `--text-muted` | `#5F6657` | `#9AA290` |
+| `--primary` (links, ícones, foco, barras) | `#3D7A00` | `#C8F24B` |
+| `--primary-soft` | `#EAF5C8` | `#26301A` |
+| `--brand` / `--brand-fg` (preenchimento limão) | `#C8F24B` / `#14170F` | iguais |
+| `--income` / `--income-soft` | `#07794A` / `#E1F4EA` | `#3DD68C` / `#0E2A1E` |
+| `--expense` / `--expense-soft` | `#C62E49` / `#FBE6EA` | `#FF6B81` / `#2E1219` |
+
+**Cores de apoio** (`apps/web/src/lib/palette.ts`, iguais nos dois temas): tangerina `#FF8A3D`, uva `#7C5CFF`, céu `#38BDF8`, banana `#FFD43B`, rosa `#F472B6`, turquesa `#2DD4BF`, índigo `#6366F1` e ardósia `#64748B`. Os fundos pastel (`bg-sky-soft`, `bg-grape-soft`, `bg-tangerine-soft`, `bg-banana-soft`) são a cor misturada à superfície, então funcionam nos dois temas.
 
 Regras de cor:
-- **Uma cor dominante:** o dourado (`--primary`), sobre neutros frios quase pretos. O "vencido" usa a cor de despesa, não um terceiro acento.
-- **Verde e vermelho só em valores de receita e despesa.** Nunca como decoração.
-- **Gradientes só no glow de fundo**, como aurora radial desfocada. Nada de texto em gradiente, nada de vidro decorativo.
+- **Limão é preenchimento, nunca texto** sobre claro (contraste 1,3:1). Texto sobre limão é sempre `--brand-fg`. Para texto e ícone de destaque, `--primary`.
+- **Verde e vermelho só em receita e despesa** (valores, cartões do mês, o tipo no formulário). O "vencido" usa a cor de despesa.
+- **Cores de apoio só em decoração**: quadrados de ícone, a moeda do cartão do saldo, os cartões dos indicadores e os brilhos da entrada. Nunca como o único sinal de um estado: status sempre com ícone e texto.
 
 ## Forma e profundidade
 
-- **Botões:** em pílula (`rounded-full`). O primário é preenchido; o secundário tem contorno de 1px em `--border` e preenche no hover.
-- **Superfícies:**
-  - Raio de 20 px nos painéis e de 12 px nos controles.
-  - No escuro, a profundidade vem da borda e de uma luz interna (`inset 0 1px 0 rgba(255,255,255,.04)`); no claro, de sombra com deslocamento e blur suave.
-  - Nada de cards aninhados.
-- **Ícones:** Lucide, traço de 1.75.
+- **Botões:** em pílula (`rounded-full`). O primário é limão com texto escuro; o secundário tem contorno de 1px em `--border`.
+- **Superfícies:** raio de 20 px nos painéis, 28 px nos cartões de destaque e nas folhas do celular, e 12 px nos controles. No claro, a profundidade vem de uma sombra suave; no escuro, da borda e de uma luz interna. Nada de cards aninhados.
+- **Ícones:** Lucide, traço de 1.75 (2 dentro dos quadrados). Categoria, conta, bem e os atalhos do "Mais" usam o **`IconTile`**: um quadrado arredondado preenchido com a cor, com o traço branco ou escuro, o que contrastar mais. Nada de ilustrações 3D ("cara de IA", decisão do usuário).
+
+## Celular primeiro
+
+- **Barra flutuante** embaixo: Painel, Lançamentos, o "+" limão (novo lançamento em qualquer tela), Contas e Mais. "Mais" abre a folha com as outras telas.
+- **Formulários em folha** que sobe de baixo, com alça, até 92% da altura. No computador, diálogo no centro.
+- Toda tela é conferida a 360 px sem rolagem horizontal (`e2e/tests/mobile-e-publico.spec.ts`).
 
 ## Movimento
 
-- **Um momento autoral por tela:** a aurora atrás do saldo pulsa lentamente (8 s, `opacity` e `scale`), e os números do resumo entram com contagem curta (400 ms, ease-out exponencial).
+- **Folha subindo** (260 ms) e fundo escurecendo (200 ms); o "+" afunda um pouco ao tocar.
 - **Hover sutil** em pílulas e linhas de lista.
 - **Tudo desligado** com `prefers-reduced-motion`.
 
 ## Superfícies do navegador
 
-A seleção de texto usa `--primary-soft` com `--text`. O caret é `--primary`. A scrollbar é fina, com o thumb em `--border`. O anel de foco tem 2px em `--primary`, com offset de 2px sobre `--background`.
+A seleção de texto usa `--primary-soft` com `--text`. O caret e o anel de foco (2px, offset de 2px) usam `--primary`. A scrollbar é fina, com o thumb em `--border`. A `theme-color` é o fundo do tema (`#F5F6F0` ou `#0B0D09`), e o ícone do app é o `LogoMark`.
 
 ## Copy
 
-O tom é direto e encorajador, em segunda pessoa ("Você gastou 12% a menos que em outubro"). Os botões nomeiam a ação ("Lançar despesa", "Marcar como pago"), e os erros dizem o problema e o que fazer.
+O tom é direto e encorajador, em segunda pessoa ("Você gastou 12% a menos que em outubro"). Os botões nomeiam a ação ("Salvar lançamento", "Marcar como pago"), e os erros dizem o problema e o que fazer.

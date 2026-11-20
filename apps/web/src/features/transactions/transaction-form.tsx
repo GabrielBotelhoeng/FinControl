@@ -25,6 +25,13 @@ const TYPE_OPTIONS: { value: TransactionType; label: string }[] = [
   { value: 'transfer', label: 'Transferência' },
 ];
 
+/** O tipo escolhido com a cor dele (sub-projeto 16, L8): evita lançar uma despesa como receita. */
+const TYPE_TONES: Record<TransactionType, string> = {
+  expense: 'bg-expense-soft text-expense shadow-panel',
+  income: 'bg-income-soft text-income shadow-panel',
+  transfer: 'bg-brand text-brand-fg shadow-panel',
+};
+
 const FREQUENCIES: { value: Frequency; label: string }[] = [
   { value: 'monthly', label: 'Todo mês' },
   { value: 'weekly', label: 'Toda semana' },
@@ -165,11 +172,12 @@ export function TransactionForm({ open, onOpenChange, transaction, defaultType =
                 setCategoryId('');
               }}
               options={TYPE_OPTIONS}
+              tones={TYPE_TONES}
               className="w-full [&>button]:flex-1"
             />
           )}
           <Field label="Valor" error={errors.amount}>
-            <MoneyInput value={amount} onChange={setAmount} autoFocus={!editing} />
+            <MoneyInput size="lg" value={amount} onChange={setAmount} autoFocus={!editing} />
           </Field>
           <Field label="Descrição" error={errors.description}>
             <Input value={description} onChange={(e) => setDescription(e.target.value)} maxLength={120} placeholder={isTransfer ? 'Ex.: Reserva de emergência' : 'Ex.: Mercado do mês'} />

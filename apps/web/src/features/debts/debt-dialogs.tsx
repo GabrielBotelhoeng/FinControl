@@ -327,7 +327,7 @@ function ConfirmDialog(props: { title: string; text: string; confirm: string; lo
         <Button variant="ghost" onClick={props.onClose} disabled={props.loading}>
           Voltar
         </Button>
-        <Button className="bg-expense text-white" loading={props.loading} onClick={props.onConfirm}>
+        <Button variant="danger" loading={props.loading} onClick={props.onConfirm}>
           {props.confirm}
         </Button>
       </div>

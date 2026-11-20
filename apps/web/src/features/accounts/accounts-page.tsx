@@ -1,9 +1,10 @@
 import type { AccountDTO } from '@fincontrol/shared';
-import { Archive, ArchiveRestore, ArrowLeftRight, ArrowRight, Landmark, PiggyBank, Pencil, Plus, TrendingUp, Wallet, type LucideIcon } from 'lucide-react';
+import { Archive, ArchiveRestore, ArrowLeftRight, ArrowRight, Pencil, Plus, Wallet } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router';
 import { toast } from 'sonner';
 import { Button } from '../../components/ui/button';
+import { IconTile } from '../../components/ui/icon-tile';
 import { HeroAmount } from '../../components/ui/money';
 import { PageHeader } from '../../components/ui/page-header';
 import { Panel } from '../../components/ui/panel';
@@ -12,10 +13,9 @@ import { cn } from '../../lib/cn';
 import { formatBRL } from '../../lib/format';
 import { AccountForm } from './account-form';
 import { accountTypeLabel, useAccounts, useArchiveAccount } from './api';
+import { accountIcon } from './icons';
 import { TransferForm } from './transfer-form';
 
-// Record<string, ...> (não Record<AccountType, ...>): cobre tipos ainda sem ícone dedicado (ex.: credit_card, Tarefa 10) com o fallback abaixo.
-const TYPE_ICON: Record<string, LucideIcon> = { checking: Landmark, savings: PiggyBank, wallet: Wallet, investment: TrendingUp };
 
 /** Limite usado e disponível e a fatura aberta do cartão (spec §6); só quando a conta é um cartão (AccountDTO.card). */
 function CardSummary({ account }: { account: AccountDTO }) {
@@ -45,15 +45,12 @@ function CardSummary({ account }: { account: AccountDTO }) {
 
 function AccountItem({ account, onEdit }: { account: AccountDTO; onEdit: () => void }) {
   const archive = useArchiveAccount();
-  const Icon = TYPE_ICON[account.type] ?? Wallet;
   const archived = account.archivedAt !== null;
   return (
     <Panel aria-label={account.name} role="article" className={cn('flex flex-col gap-6 p-6', archived && 'opacity-60')}>
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-3">
-          <span className="grid h-11 w-11 place-items-center rounded-full" style={{ backgroundColor: `${account.color}22`, color: account.color }}>
-            <Icon aria-hidden className="h-5 w-5" strokeWidth={1.75} />
-          </span>
+          <IconTile icon={accountIcon(account.type)} color={account.color} size="lg" />
           <div>
             <h2 className="font-semibold">{account.name}</h2>
             <p className="text-xs text-muted">

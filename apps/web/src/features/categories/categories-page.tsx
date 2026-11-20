@@ -10,6 +10,7 @@ import { EmptyState, ErrorState, ListSkeleton } from '../../components/ui/states
 import { useCategories } from './api';
 import { CategoryForm } from './category-form';
 import { DeleteCategoryDialog } from './delete-category-dialog';
+import { IconTile } from '../../components/ui/icon-tile';
 import { iconFor } from './icons';
 import { SubcategoryForm } from './subcategory-form';
 
@@ -58,14 +59,11 @@ export default function CategoriesPage() {
         <Panel>
           <ul className="divide-y divide-border">
             {roots.map((c) => {
-              const Icon = iconFor(c.icon);
               const children = childrenOf(c.id);
               return (
                 <li key={c.id}>
                   <div className="flex items-center gap-4 px-5 py-3.5">
-                    <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full" style={{ backgroundColor: `${c.color}22`, color: c.color }}>
-                      <Icon aria-hidden className="h-[18px] w-[18px]" strokeWidth={1.75} />
-                    </span>
+                    <IconTile icon={iconFor(c.icon)} color={c.color} />
                     <span className="min-w-0 flex-1 font-medium">{c.name}</span>
                     <Button variant="ghost" size="icon" aria-label={`Nova subcategoria em ${c.name}`} onClick={() => setEditingSub({ parent: c })}>
                       <Plus aria-hidden className="h-4 w-4" strokeWidth={1.75} />
