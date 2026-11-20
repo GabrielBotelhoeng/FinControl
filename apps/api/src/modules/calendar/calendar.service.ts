@@ -17,7 +17,8 @@ export type CalendarServiceDeps = {
   clock: () => Date;
 };
 
-export const CALENDAR_MAX_MONTHS_AHEAD = 12;
+/** Auditoria final (B3): 11, como o orçamento; as recorrências só existem até hoje + 366 dias (o 12º mês sairia incompleto). */
+export const CALENDAR_MAX_MONTHS_AHEAD = 11;
 
 /** Calendário de contas (sub-projeto 8, K1–K3): o que vence em cada dia do mês. */
 export function createCalendarService(deps: CalendarServiceDeps) {

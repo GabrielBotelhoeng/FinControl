@@ -169,6 +169,10 @@ export function createAccountsService(deps: AccountsServiceDeps) {
       if (await repo.isReferenced(userId, id)) {
         throw new ConflictError('A conta possui lançamentos. Arquive-a em vez de excluir.');
       }
+      // Auditoria final: sem isto, o cartão ficava sem conta pagadora e toda edição dele dava 422.
+      if (await repo.paysACard(userId, id)) {
+        throw new ConflictError('Esta conta paga a fatura de um cartão. Escolha outra conta pagadora no cartão antes de excluir.');
+      }
       await repo.delete(userId, id);
     },
 
