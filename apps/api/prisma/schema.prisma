@@ -140,6 +140,7 @@ model Account {
   loans                   Loan[]
 
   @@index([userId])
+  @@index([paymentAccountId])
   @@map("accounts")
 }
 
@@ -196,6 +197,8 @@ model Recurrence {
   skips                RecurrenceSkip[]
 
   @@index([userId])
+  @@index([accountId])
+  @@index([categoryId])
   @@map("recurrences")
 }
 
@@ -253,6 +256,8 @@ model Transaction {
   @@index([accountId, invoiceMonth])
   @@index([loanId])
   @@index([debtId])
+  @@index([categoryId])
+  @@index([destinationAccountId])
   @@map("transactions")
 }
 
@@ -283,6 +288,7 @@ model Loan {
   transactions           Transaction[]
 
   @@index([userId])
+  @@index([accountId])
   @@map("loans")
 }
 
@@ -320,6 +326,7 @@ model Budget {
   category    Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
 
   @@unique([userId, categoryId])
+  @@index([categoryId])
   @@map("budgets")
 }
 
@@ -489,4 +496,13 @@ model AssetValuation {
 
   @@index([assetId])
   @@map("asset_valuations")
+}
+
+/// Auditoria final (LGPD): ids de contas excluídas. Um token antigo, ainda válido, não recria o perfil.
+/// Guarda só o id (um UUID que o Supabase nunca reaproveita), sem nenhum dado pessoal.
+model DeletedUser {
+  id        String   @id @db.Uuid
+  deletedAt DateTime @default(now()) @map("deleted_at") @db.Timestamptz
+
+  @@map("deleted_users")
 }

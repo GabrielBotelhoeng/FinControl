@@ -93,4 +93,16 @@ describe('provisionamento e /me', () => {
     expect(await testDb.category.count({ where: { userId: other.id } })).toBe(15);
     expect(authAdmin.deleted).toEqual([user.id]);
   });
+
+  it('depois de excluir a conta, o token antigo não recria o perfil (auditoria final, LGPD)', async () => {
+    const user = await newUser();
+    await request(app).get('/api/v1/me').set(user.auth);
+    expect((await request(app).delete('/api/v1/me').set(user.auth)).status).toBe(204);
+
+    // Outra aba aberta com o mesmo token, que ainda não expirou.
+    const late = await request(app).get('/api/v1/accounts').set(user.auth);
+    expect(late.status).toBe(401);
+    expect(await testDb.profile.count({ where: { id: user.id } })).toBe(0);
+    expect(await testDb.category.count({ where: { userId: user.id } })).toBe(0);
+  });
 });

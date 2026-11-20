@@ -13,8 +13,15 @@ export function createProfileRepository(db: Db) {
     async setAiConsent(userId: string, at: Date | null) {
       await db.profile.update({ where: { id: userId }, data: { aiConsentAt: at } });
     },
+    /**
+     * Apaga o perfil (cascata para todos os dados) e guarda o id em `deleted_users`, na mesma transação: um token
+     * antigo, ainda válido, não recria o perfil depois (auditoria final, LGPD).
+     */
     async delete(userId: string) {
-      await db.profile.deleteMany({ where: { id: userId } });
+      await db.$transaction([
+        db.deletedUser.createMany({ data: [{ id: userId }], skipDuplicates: true }),
+        db.profile.deleteMany({ where: { id: userId } }),
+      ]);
     },
   };
 }

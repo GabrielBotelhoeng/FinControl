@@ -1,4 +1,5 @@
 import type { Db } from '../../infra/prisma';
+import { UnauthorizedError } from '../../http/errors';
 import { isUniqueViolation } from '../../infra/prisma-errors';
 import type { AuthClaims } from '../../infra/token-verifier';
 import { DEFAULT_CATEGORIES } from './default-categories';
@@ -19,6 +20,8 @@ export function createProvisioner(db: Db): Provisioner {
       if (known.has(claims.userId)) return;
       const existing = await db.profile.findUnique({ where: { id: claims.userId }, select: { id: true } });
       if (!existing) {
+        // Auditoria final (LGPD): conta excluída não volta a existir com o token que ainda não expirou.
+        if (await db.deletedUser.findUnique({ where: { id: claims.userId }, select: { id: true } })) throw new UnauthorizedError();
         try {
           await db.$transaction([
             db.profile.create({ data: { id: claims.userId, name: displayName(claims), isDemo: claims.isAnonymous } }),
