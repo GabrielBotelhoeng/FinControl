@@ -45,6 +45,8 @@ export type DemoTransaction = {
   loanKey?: DemoLoanKey;
   /** Sub-projeto 13 (T10); ausente nos lançamentos sem tag. */
   tags?: string[];
+  /** Sub-projeto 15 (U11): a subcategoria de `categoryName`; ausente no lançamento direto na categoria. */
+  subcategoryName?: string;
 };
 export type DemoLoanKey = 'vehicle';
 export type DemoLoan = {
@@ -88,6 +90,8 @@ export type DemoPlan = {
   budgets: DemoBudget[];
   goals: DemoGoal[];
   assets: DemoAsset[];
+  /** Sub-projeto 15 (U11): as subcategorias criadas em cada categoria padrão. */
+  subcategories: { categoryName: string; names: string[] }[];
   /** Descrição da recorrência cuja ocorrência vencida mais recente fica sem pagar. */
   overdueDescription: string;
 };
@@ -110,6 +114,11 @@ const CARD = { name: 'Cartão principal', color: '#7c3aed', creditLimit: 800000,
  * o filtro de Lançamentos e a seção Tags de Categorias terem o que mostrar.
  */
 const OUTINGS = ['passeios'];
+
+/** Sub-projeto 15 (U11): Alimentação detalhada; cada lançamento da demo com um destes nomes vai para a subcategoria dele. */
+const FOOD_SUBCATEGORIES = ['Mercado', 'Restaurante', 'Delivery'];
+const foodSubcategory = (categoryName: string, description: string) =>
+  categoryName === 'Alimentação' && FOOD_SUBCATEGORIES.includes(description) ? { subcategoryName: description } : {};
 
 /** Compras do cartão por fatura, nas categorias padrão "Alimentação", "Compras" e "Lazer" (decisão do controlador). */
 const CARD_PURCHASES: ReadonlyArray<{ count: number; min: number; max: number; description: string; categoryName: string; tags?: string[] }> = [
@@ -180,6 +189,7 @@ export function buildDemoData(today: DateOnly, seed = 42): DemoPlan {
           type: 'expense', amount: cents(min, max), description, accountKey: 'checking', destinationAccountKey: null,
           categoryName, nature: 'variable', status: 'paid', dueDate: d, paidDate: d,
           invoiceMonth: null, installmentGroupId: null, installmentNumber: null, installmentTotal: null, ...(tags ? { tags } : {}),
+          ...foodSubcategory(categoryName, description),
         });
       }
     };
@@ -245,6 +255,7 @@ export function buildDemoData(today: DateOnly, seed = 42): DemoPlan {
           type: 'expense', amount, description: p.description, accountKey: 'card', destinationAccountKey: null,
           categoryName: p.categoryName, nature: 'variable', status: 'paid', dueDate: date, paidDate: date,
           invoiceMonth, installmentGroupId: null, installmentNumber: null, installmentTotal: null, ...(p.tags ? { tags: p.tags } : {}),
+          ...foodSubcategory(p.categoryName, p.description),
         });
         addToInvoice(invoiceMonth, amount);
       }
@@ -378,5 +389,8 @@ export function buildDemoData(today: DateOnly, seed = 42): DemoPlan {
     },
   ];
 
-  return { accounts, recurrences, transactions, loans, debts, budgets, goals, assets, overdueDescription: 'Internet' };
+  return {
+    accounts, recurrences, transactions, loans, debts, budgets, goals, assets,
+    subcategories: [{ categoryName: 'Alimentação', names: FOOD_SUBCATEGORIES }], overdueDescription: 'Internet',
+  };
 }

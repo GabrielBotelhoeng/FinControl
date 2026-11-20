@@ -23,7 +23,16 @@ export const reportQuerySchema = z
 
 export type ReportQuery = z.output<typeof reportQuerySchema>;
 
-/** Linha de categoria. `share` é a fração do total do período; `change` é `null` sem valor anterior (R3). */
+/**
+ * Detalhe de uma categoria (sub-projeto 15, U7): uma subcategoria, ou o que foi lançado direto na categoria
+ * (`categoryId` nulo, "Sem subcategoria").
+ */
+export type ReportSubcategoryDTO = { categoryId: string | null; name: string; total: number; previous: number; change: number | null };
+
+/**
+ * Linha de categoria principal, com as subcategorias somadas nela (sub-projeto 15, U5). `share` é a fração do total do
+ * período; `change` é `null` sem valor anterior (R3). `subcategories` fica vazia quando nenhuma subcategoria teve valor.
+ */
 export type ReportCategoryDTO = {
   categoryId: string;
   name: string;
@@ -33,6 +42,7 @@ export type ReportCategoryDTO = {
   share: number;
   previous: number;
   change: number | null;
+  subcategories: ReportSubcategoryDTO[];
 };
 
 /**

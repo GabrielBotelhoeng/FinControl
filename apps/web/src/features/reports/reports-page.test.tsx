@@ -16,11 +16,11 @@ const reportFixture = (over: Partial<ReportDTO> = {}): ReportDTO => ({
   period: { from: '2026-11', to: '2026-11', months: 1, previousFrom: '2026-10', previousTo: '2026-10' },
   totals: { income: 500000, expense: 300000, net: 200000, savingsRate: 0.4, previousIncome: 400000, previousExpense: 200000, incomeChange: 0.25, expenseChange: 0.5 },
   expenseByCategory: [
-    { categoryId: 'food', name: 'Alimentação', icon: 'utensils', color: '#f97316', total: 200000, share: 2 / 3, previous: 50000, change: 3 },
-    { categoryId: 'fun', name: 'Lazer', icon: 'party-popper', color: '#ec4899', total: 100000, share: 1 / 3, previous: 0, change: null },
-    { categoryId: 'home', name: 'Moradia', icon: 'house', color: '#22c55e', total: 0, share: 0, previous: 150000, change: -1 },
+    { categoryId: 'food', name: 'Alimentação', icon: 'utensils', color: '#f97316', total: 200000, share: 2 / 3, previous: 50000, change: 3, subcategories: [] },
+    { categoryId: 'fun', name: 'Lazer', icon: 'party-popper', color: '#ec4899', total: 100000, share: 1 / 3, previous: 0, change: null, subcategories: [] },
+    { categoryId: 'home', name: 'Moradia', icon: 'house', color: '#22c55e', total: 0, share: 0, previous: 150000, change: -1, subcategories: [] },
   ],
-  incomeByCategory: [{ categoryId: 'salary', name: 'Salário', icon: 'wallet', color: '#16a34a', total: 500000, share: 1, previous: 400000, change: 0.25 }],
+  incomeByCategory: [{ categoryId: 'salary', name: 'Salário', icon: 'wallet', color: '#16a34a', total: 500000, share: 1, previous: 400000, change: 0.25, subcategories: [] }],
   expenseByTag: [],
   monthly: months.map((month) => ({ month, income: 400000, expense: 200000, net: 200000 })),
   debts: months.map((month, i) => ({ month, cards: 10000 * i, loans: 2500000 - 10000 * i, others: 0, total: 2500000 })),
@@ -89,6 +89,22 @@ describe('ReportsPage', () => {
     expect(screen.queryByRole('heading', { name: 'Gastos por tag' })).not.toBeInTheDocument();
   });
 
+  it('U7 (sub-projeto 15): o detalhe por subcategoria aparece embaixo da categoria, com o total e a variação', async () => {
+    const report = reportFixture();
+    report.expenseByCategory[0] = {
+      ...report.expenseByCategory[0]!,
+      subcategories: [
+        { categoryId: 'rest', name: 'Restaurante', total: 150000, previous: 10000, change: 14 },
+        { categoryId: null, name: 'Sem subcategoria', total: 50000, previous: 40000, change: 0.25 },
+      ],
+    };
+    renderApp(<ReportsPage />, { api: api(report) });
+    const subs = await screen.findByRole('list', { name: 'Subcategorias de Alimentação' });
+    expect(within(subs).getByRole('listitem', { name: 'Restaurante' })).toHaveTextContent(/R\$\s*1\.500,00.*\+1\.400%/);
+    expect(within(subs).getByRole('listitem', { name: 'Sem subcategoria' })).toHaveTextContent('+25%');
+    expect(screen.queryByRole('list', { name: 'Subcategorias de Lazer' })).not.toBeInTheDocument();
+  });
+
   it('os atalhos "Ano" e "12 meses" pedem o período certo, sem passar do mês atual', async () => {
     const client = api();
     const user = userEvent.setup();
@@ -121,7 +137,7 @@ describe('ReportsPage', () => {
   it('sem pagamentos agora, mas com gastos antes, a comparação continua visível', async () => {
     const onlyBefore = reportFixture({
       totals: { income: 0, expense: 0, net: 0, savingsRate: null, previousIncome: 0, previousExpense: 150000, incomeChange: null, expenseChange: -1 },
-      expenseByCategory: [{ categoryId: 'home', name: 'Moradia', icon: 'house', color: '#22c55e', total: 0, share: 0, previous: 150000, change: -1 }],
+      expenseByCategory: [{ categoryId: 'home', name: 'Moradia', icon: 'house', color: '#22c55e', total: 0, share: 0, previous: 150000, change: -1, subcategories: [] }],
       incomeByCategory: [],
       topExpenses: [],
     });

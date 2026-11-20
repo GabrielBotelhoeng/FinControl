@@ -85,25 +85,25 @@ export async function renderReportXlsx(d: XlsxData, generatedAt: Date): Promise<
 
   // ---------- Lançamentos (Tabela do Excel, E3) ----------
   const lanc = wb.addWorksheet('Lançamentos', { views: [{ state: 'frozen', ySplit: 1 }] });
-  const widths = [12, 10, 10, 34, 14, 22, 20, 10, 18, 18, 10, 14];
+  const widths = [12, 10, 10, 34, 14, 22, 20, 20, 10, 18, 18, 10, 14];
   lanc.columns = widths.map((width) => ({ width }));
   lanc.addTable({
     name: 'Lancamentos',
     ref: 'A1',
     headerRow: true,
     style: { theme: 'TableStyleMedium2', showRowStripes: true },
-    // Sub-projeto 14 (H7): as tags ao lado da categoria, para o filtro de texto ("contém bebida") da Tabela.
-    columns: ['Data', 'Mês', 'Dia da semana', 'Descrição', 'Tipo', 'Categoria', 'Tags', 'Natureza', 'Conta', 'Conta de destino', 'Situação', 'Valor'].map((name) => ({ name, filterButton: true })),
+    // Sub-projetos 14 (H7) e 15 (U8): a subcategoria e as tags ao lado da categoria (a principal), para os filtros da Tabela.
+    columns: ['Data', 'Mês', 'Dia da semana', 'Descrição', 'Tipo', 'Categoria', 'Subcategoria', 'Tags', 'Natureza', 'Conta', 'Conta de destino', 'Situação', 'Valor'].map((name) => ({ name, filterButton: true })),
     rows: d.rows.length
       ? d.rows.map((r) => [
-          asDate(r.date), r.date.slice(0, 7), weekday(r.date), safeText(r.description), TYPE[r.type], safeText(r.category ?? ''), safeText(r.tags.join(', ')),
+          asDate(r.date), r.date.slice(0, 7), weekday(r.date), safeText(r.description), TYPE[r.type], safeText(r.category ?? ''), safeText(r.subcategory ?? ''), safeText(r.tags.join(', ')),
           r.nature ? NATURE[r.nature] : '',
           safeText(r.account), safeText(r.destination ?? ''), STATUS[r.status], reais(r.type === 'expense' ? -r.amount : r.amount),
         ])
-      : [['', '', '', 'Nenhum lançamento no período', '', '', '', '', '', '', '', 0]],
+      : [['', '', '', 'Nenhum lançamento no período', '', '', '', '', '', '', '', '', 0]],
   });
   lanc.getColumn(1).numFmt = DATE;
-  lanc.getColumn(12).numFmt = MONEY;
+  lanc.getColumn(13).numFmt = MONEY;
 
   // ---------- Por categoria (variação em fórmula + antes e agora, E4 e E6) ----------
   const cat = sheet(wb, 'Por categoria', [

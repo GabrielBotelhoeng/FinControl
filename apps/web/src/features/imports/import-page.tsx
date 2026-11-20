@@ -16,6 +16,7 @@ import { cn } from '../../lib/cn';
 import { formatBRL, formatDate } from '../../lib/format';
 import { useAccounts, useFinanceMutation } from '../accounts/api';
 import { useCategories } from '../categories/api';
+import { categoryOptions } from '../categories/tree';
 
 type Row = ImportPreviewRowDTO & { include: boolean };
 
@@ -41,7 +42,8 @@ type RowItemProps = { row: Row; index: number; categories: CategoryDTO[]; onChan
 
 /** `memo` com callback estável: marcar uma linha não redesenha as outras 999 (revisão final). */
 const RowItem = memo(function RowItem({ row, index, categories, onChange }: RowItemProps) {
-  const options = categories.filter((c) => c.type === row.type);
+  // Sub-projeto 15 (U4): a sugestão pode ser uma subcategoria (pelo histórico).
+  const options = categoryOptions(categories, row.type);
   const income = row.type === 'income';
   return (
     <li className={cn('grid gap-3 py-4 sm:grid-cols-[auto_minmax(0,1fr)_12rem_14rem] sm:items-center', !row.include && 'opacity-60')}>
@@ -76,7 +78,7 @@ const RowItem = memo(function RowItem({ row, index, categories, onChange }: RowI
           {!row.categoryId && <option value="">Escolha…</option>}
           {options.map((c) => (
             <option key={c.id} value={c.id}>
-              {c.name}
+              {c.label}
             </option>
           ))}
         </Select>

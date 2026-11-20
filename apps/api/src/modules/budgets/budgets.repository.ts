@@ -1,9 +1,13 @@
 import { endOfMonth, startOfMonth, type YearMonth } from '@fincontrol/shared';
 import { fromDateOnly } from '../../infra/date-mapping';
 import type { Db } from '../../infra/prisma';
+import { foldIntoParents, subcategoryParents } from '../categories/rollup';
 
 export type BudgetRow = { categoryId: string; limit: number };
-/** Despesas do mês por categoria, separadas em pagas e pendentes (P2: pelo vencimento, que no cartão é a data da compra). */
+/**
+ * Despesas do mês por categoria, separadas em pagas e pendentes (P2: pelo vencimento, que no cartão é a data da compra).
+ * As subcategorias somam na categoria principal (sub-projeto 15, U6).
+ */
 export type CategorySpend = Map<string, { paid: number; pending: number }>;
 
 const monthRange = (m: YearMonth) => ({ gte: fromDateOnly(startOfMonth(m)), lte: fromDateOnly(endOfMonth(m)) });
@@ -39,10 +43,10 @@ export function createBudgetsRepository(db: Db) {
         entry[g.status] += Number(g._sum.amount ?? 0n);
         out.set(g.categoryId!, entry);
       }
-      return out;
+      return foldIntoParents(out, await subcategoryParents(db, userId), (a, b) => ({ paid: a.paid + b.paid, pending: a.pending + b.pending }));
     },
 
-    /** Gasto pago por categoria em cada mês pedido (base da sugestão, P4). */
+    /** Gasto pago por categoria em cada mês pedido (base da sugestão, P4), com as subcategorias na principal (U6). */
     async paidExpenseByCategory(userId: string, months: YearMonth[]): Promise<Map<string, number[]>> {
       const perMonth = await Promise.all(
         months.map((m) =>
@@ -61,7 +65,7 @@ export function createBudgetsRepository(db: Db) {
           out.set(g.categoryId!, values);
         }
       });
-      return out;
+      return foldIntoParents(out, await subcategoryParents(db, userId), (a, b) => a.map((v, i) => v + b[i]!));
     },
 
     /** Receitas e despesas do mês (pagas e pendentes) por vencimento. Transferências ficam de fora. */

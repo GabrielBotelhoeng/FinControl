@@ -1,8 +1,11 @@
 import { toCsv, type YearMonth } from '@fincontrol/shared';
 import type { CsvRow } from './reports.repository';
 
-/** Sub-projeto 14 (H6): "Tags" no fim, para as colunas antigas não mudarem de lugar. */
-const HEADER = ['Data', 'Descrição', 'Tipo', 'Categoria', 'Conta', 'Conta de destino', 'Situação', 'Valor', 'Tags'];
+/**
+ * Sub-projetos 14 (H6) e 15 (U8): "Tags" e "Subcategoria" no fim, para as colunas antigas não mudarem de lugar.
+ * "Categoria" é a principal.
+ */
+const HEADER = ['Data', 'Descrição', 'Tipo', 'Categoria', 'Conta', 'Conta de destino', 'Situação', 'Valor', 'Tags', 'Subcategoria'];
 const TYPE_LABEL = { income: 'Receita', expense: 'Despesa', transfer: 'Transferência' } as const;
 const STATUS_LABEL = { paid: 'Paga', pending: 'Pendente' } as const;
 
@@ -14,7 +17,7 @@ export function transactionsCsv(rows: CsvRow[]): string {
     HEADER,
     rows.map((r) => [
       brDate(r.date), r.description, TYPE_LABEL[r.type], r.category ?? '', r.account, r.destination ?? '',
-      STATUS_LABEL[r.status], r.type === 'expense' ? -r.amount : r.amount, r.tags.join(', '),
+      STATUS_LABEL[r.status], r.type === 'expense' ? -r.amount : r.amount, r.tags.join(', '), r.subcategory ?? '',
     ]),
   );
 }

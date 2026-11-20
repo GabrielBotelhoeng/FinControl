@@ -95,6 +95,16 @@ export function createDemoRepository(db: DbClient) {
       });
     },
 
+    /** Sub-projeto 15 (U11): as subcategorias da demo, com o tipo, o ícone e a cor da categoria (U2). Devolve nome → id. */
+    async createSubcategories(userId: string, parent: { id: string; type: 'income' | 'expense'; icon: string; color: string }, names: string[]): Promise<Map<string, string>> {
+      const ids = new Map<string, string>();
+      for (const name of names) {
+        const row = await db.category.create({ data: { userId, name, type: parent.type, icon: parent.icon, color: parent.color, parentId: parent.id }, select: { id: true } });
+        ids.set(name, row.id);
+      }
+      return ids;
+    },
+
     async createBudget(userId: string, categoryId: string, limit: number): Promise<void> {
       await db.budget.create({ data: { userId, categoryId, limitAmount: BigInt(limit) } });
     },

@@ -1,10 +1,17 @@
 # HANDOFF — FinControl
 
-_Atualizado em 2026-11-19 (tags nos relatórios)._
+_Atualizado em 2026-11-19 (subcategorias)._
 
-## Sub-projeto 14: tags nos relatórios, no PDF, no CSV e no Excel (2026-11-19, branch feat/tags-relatorios)
+## Sub-projeto 15: subcategorias (2026-11-19, branch feat/subcategorias)
 
-- **Spec:** `docs/superpowers/specs/2026-11-19-fincontrol-sp14-tags-relatorios-design.md` (H1–H8). Sem migration.
+- **Spec:** `docs/superpowers/specs/2026-11-19-fincontrol-sp15-subcategorias-design.md` (U1–U11).
+- **Migration:** `20261119233139_subcategorias` (`categories.parent_id`, sem cascata, com índice e a checagem de não ser a própria principal). **Antes do deploy da API, aplicar no Supabase** com o comando do sub-projeto 11 (pelo usuário: o classificador bloqueia o agente).
+- **Entregue:** `POST /categories/:id/subcategories`; renomear (só o nome) e excluir com o destino dos lançamentos (a categoria leva as subcategorias); o filtro `categoryId` inclui as subcategorias; `rollup.ts` (`subcategoryParents` e `foldIntoParents`) soma a subcategoria na principal no orçamento (limite só na principal), no gráfico do painel, nos relatórios (com `subcategories`, o detalhe), no PDF e na planilha; "Categoria" no CSV e no Excel é a principal, com a coluna "Subcategoria"; o assistente lista e busca as subcategorias; o calendário e as maiores despesas mostram "Categoria › Subcategoria"; na web, a árvore em Categorias, o seletor (`categoryOptions`), o rótulo na linha e o detalhe no relatório; na demo, Alimentação com Mercado, Restaurante e Delivery.
+- **Testes:** 216 no shared, 372 na API e 254 na web, além de 18 E2E (novo: `e2e/tests/subcategorias.spec.ts`). Revisão do CodeRabbit na seção 5 da spec.
+
+## Sub-projeto 14: tags nos relatórios, no PDF, no CSV e no Excel — no ar desde 2026-11-19 (PR #35)
+
+- **Spec:** `docs/superpowers/specs/2026-11-19-fincontrol-sp14-tags-relatorios-design.md` (H1–H8). Sem migration. Conferido em produção pela demo (tela, CSV, Excel, PDF e 360 px).
 - **Entregue:** `expenseByTag` no relatório (despesas pagas por tag, com quantidade, participação, período anterior e variação; um lançamento com duas tags conta nas duas), o painel "Gastos por tag" em Relatórios (só com tags), a seção no PDF, a coluna "Tags" no fim do CSV e depois de "Categoria" no Excel, e a aba "Por tag" na planilha. Em Categorias, a contagem de cada tag foi para baixo do nome (a 360 px, "42 lançamentos" quebrava em duas linhas).
 - **Testes:** 213 no shared, 358 na API e 247 na web, além de 17 E2E (o dos relatórios da demo confere "#passeios" e a coluna do CSV).
 

@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { buildTestApp } from './helpers/app';
 import { newUser } from './helpers/auth';
 import { resetDb } from './helpers/db';
-import { categoryId, createAccount, createTransaction } from './helpers/factories';
+import { categoryId, createAccount, createSubcategory, createTransaction } from './helpers/factories';
 
 // Hoje nos testes é 2026-11-11 (FIXED_NOW).
 const { app } = buildTestApp();
@@ -37,6 +37,16 @@ describe('calendário de contas', () => {
     expect(invoices).toEqual([expect.objectContaining({ cardName: 'Cartão', remaining: 40000, amount: 40000 })]);
     expect(res.body.days.flatMap((d: { items: { description?: string }[] }) => d.items).some((i: { description?: string }) => i.description === 'Tênis' || i.description === 'Dezembro')).toBe(false);
     expect(res.body.totals).toEqual({ toPay: 12000 + 5000 + 40000, paid: 0, toReceive: 0, received: 300000 });
+  });
+
+  it('U4 (sub-projeto 15): o lançamento numa subcategoria mostra "Categoria › Subcategoria"', async () => {
+    const user = await newUser();
+    const checking = await createAccount(app, user, { name: 'Corrente' });
+    const market = await createSubcategory(app, user, await categoryId(app, user, 'Alimentação', 'expense'), 'Mercado');
+    await createTransaction(app, user, { type: 'expense', amount: 1500, description: 'Compras', accountId: checking.id, categoryId: market, nature: 'variable', dueDate: '2026-11-10' });
+    const res = await request(app).get('/api/v1/calendar?month=2026-11').set(user.auth);
+    const items = res.body.days.find((d: { date: string }) => d.date === '2026-11-10').items;
+    expect(items).toEqual([expect.objectContaining({ description: 'Compras', category: 'Alimentação › Mercado' })]);
   });
 
   it('mostra a fatura futura com as parcelas já lançadas (CodeRabbit)', async () => {

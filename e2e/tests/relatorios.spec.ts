@@ -26,7 +26,7 @@ test('relatórios da demo: resumo, categorias, tags, dívidas e os downloads em 
   const csv = await csvDownload;
   expect(csv.suggestedFilename()).toMatch(/^fincontrol-lancamentos-\d{4}-\d{2}_\d{4}-\d{2}\.csv$/);
   const text = await readFile((await csv.path())!, 'utf-8');
-  expect(text.startsWith('\uFEFFData;Descrição;Tipo;Categoria;Conta;Conta de destino;Situação;Valor;Tags\r\n')).toBe(true);
+  expect(text.startsWith('\uFEFFData;Descrição;Tipo;Categoria;Conta;Conta de destino;Situação;Valor;Tags;Subcategoria\r\n')).toBe(true);
   expect(text.split('\r\n').length).toBeGreaterThan(20);
 
   const xlsxDownload = page.waitForEvent('download');

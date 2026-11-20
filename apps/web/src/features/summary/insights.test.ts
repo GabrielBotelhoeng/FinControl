@@ -2,7 +2,7 @@ import type { BudgetMonthDTO, ReportDTO } from '@fincontrol/shared';
 import { describe, expect, it } from 'vitest';
 import { monthInsights } from './insights';
 
-const cat = (name: string, total: number, previous: number) => ({ categoryId: name, name, icon: 'tag', color: '#000', total, share: 0, previous, change: previous ? (total - previous) / previous : null });
+const cat = (name: string, total: number, previous: number) => ({ categoryId: name, name, icon: 'tag', color: '#000', total, share: 0, previous, change: previous ? (total - previous) / previous : null, subcategories: [] });
 
 const report = (over: Partial<ReportDTO> = {}): ReportDTO => ({
   period: { from: '2026-10', to: '2026-10', months: 1, previousFrom: '2026-09', previousTo: '2026-09' },

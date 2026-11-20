@@ -21,6 +21,13 @@ export async function categoryId(app: Express, user: TestUser, name: string, typ
   return found.id;
 }
 
+/** Sub-projeto 15: cria a subcategoria e devolve o id. */
+export async function createSubcategory(app: Express, user: TestUser, parentId: string, name: string): Promise<string> {
+  const res = await request(app).post(`/api/v1/categories/${parentId}/subcategories`).set(user.auth).send({ name });
+  expect(res.status, JSON.stringify(res.body)).toBe(201);
+  return (res.body as { id: string }).id;
+}
+
 export async function createTransaction(app: Express, user: TestUser, body: Record<string, unknown>) {
   const res = await request(app).post('/api/v1/transactions').set(user.auth).send(body);
   expect(res.status, JSON.stringify(res.body)).toBe(201);

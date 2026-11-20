@@ -135,7 +135,14 @@ export function createAssistantService(deps: AssistantServiceDeps) {
       if (used.total >= DAILY_LIMIT_TOTAL) throw new AppError(503, 'Limite do dia', 'O assistente atingiu o limite de uso de hoje. Ele volta amanhã.');
 
       const [categories, tagRows] = await Promise.all([deps.categoriesRepo.list(claims.userId), deps.tags.list(claims.userId)]);
-      const names = (type: string) => categories.filter((c) => c.type === type).map((c) => c.name);
+      // Sub-projeto 15 (U10): cada categoria com as subcategorias dela, como em "Alimentação (Mercado, Restaurante)".
+      const names = (type: string) =>
+        categories
+          .filter((c) => c.type === type && c.parentId === null)
+          .map((c) => {
+            const children = categories.filter((x) => x.parentId === c.id).map((x) => x.name);
+            return children.length > 0 ? `${c.name} (${children.join(', ')})` : c.name;
+          });
       const tags = [...tagRows].sort((a, b) => b.count - a.count).slice(0, PROMPT_TAGS).map((t) => t.name).sort(compareTags);
       // Só o primeiro nome vai para a Anthropic (como dizem o aceite e a política de privacidade).
       const firstName = profile.name.trim().split(/\s+/)[0] || 'a pessoa';

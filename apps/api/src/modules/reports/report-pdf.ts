@@ -150,10 +150,15 @@ export async function renderReportPdf(report: ReportDTO, generatedAt: Date): Pro
   y -= 64;
 
   // ---------- Categorias e tags ----------
-  type ShareRow = Pick<ReportCategoryDTO, 'name' | 'total' | 'share' | 'previous' | 'change'>;
+  type ShareRow = Pick<ReportCategoryDTO, 'name' | 'total' | 'share' | 'previous' | 'change'> & { subcategories?: ReportCategoryDTO['subcategories'] };
   const shares = (label: string, rows: ShareRow[], color: RGB, o: { column?: string; note?: string } = {}) => {
     heading(label, o.note ?? 'Participação no período e variação contra o período anterior.');
     if (rows.length === 0) return empty('Nada pago no período.');
+    // Sub-projeto 15 (U7): o detalhe por subcategoria vem logo abaixo da categoria, em cinza e sem barra.
+    const lines = rows.flatMap((r) => [
+      { cells: [r.name, '', formatBRL(r.total), percent.format(r.share), formatBRL(r.previous), change(r.change)], share: r.share as number | null },
+      ...(r.subcategories ?? []).map((s) => ({ cells: [`   › ${s.name}`, '', formatBRL(s.total), '', formatBRL(s.previous), change(s.change)], share: null })),
+    ]);
     const columns: Column[] = [
       { label: o.column ?? 'Categoria', width: 145 }, { label: '', width: 95 }, { label: 'Total', width: 80, align: 'right' },
       { label: 'Part.', width: 42, align: 'right' }, { label: 'Anterior', width: 80, align: 'right' }, { label: 'Var.', width: WIDTH - 442, align: 'right' },
@@ -162,10 +167,12 @@ export async function renderReportPdf(report: ReportDTO, generatedAt: Date): Pro
     const barWidth = 85;
     table(
       columns,
-      rows.map((r) => [r.name, '', formatBRL(r.total), percent.format(r.share), formatBRL(r.previous), change(r.change)]),
+      lines.map((l) => l.cells),
       {
+        colors: lines.map((l) => (l.share === null ? l.cells.map(() => C.muted) : [])),
         onRow: (i, top) => {
-          const share = rows[i]!.share;
+          const share = lines[i]!.share;
+          if (share === null) return;
           page.drawRectangle({ x: barX, y: top - 11, width: barWidth, height: 7, color: C.soft });
           if (share > 0) page.drawRectangle({ x: barX, y: top - 11, width: Math.max(barWidth * share, 1.5), height: 7, color });
         },

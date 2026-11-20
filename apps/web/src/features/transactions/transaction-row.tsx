@@ -1,4 +1,4 @@
-import type { AccountDTO, CategoryDTO, TransactionDTO } from '@fincontrol/shared';
+import { categoryPath, type AccountDTO, type CategoryDTO, type TransactionDTO } from '@fincontrol/shared';
 import { ArrowLeftRight, Check, Repeat } from 'lucide-react';
 import { toast } from 'sonner';
 import { SignedAmount } from '../../components/ui/money';
@@ -10,11 +10,13 @@ type Props = {
   tx: TransactionDTO;
   account?: AccountDTO | undefined;
   category?: CategoryDTO | undefined;
+  /** A categoria principal, quando o lançamento está numa subcategoria (sub-projeto 15, U4). */
+  parent?: CategoryDTO | undefined;
   destination?: AccountDTO | undefined;
   onEdit: () => void;
 };
 
-export function TransactionRow({ tx, account, category, destination, onEdit }: Props) {
+export function TransactionRow({ tx, account, category, parent, destination, onEdit }: Props) {
   const pay = usePayToggle();
   const paid = tx.status === 'paid';
   // Lançamento de cartão (decisão R19): sempre pago (spec C4) — a API recusa pagar/desfazer (422) — e por
@@ -22,7 +24,8 @@ export function TransactionRow({ tx, account, category, destination, onEdit }: P
   const isCardTransaction = account?.type === 'credit_card';
   const Icon = tx.type === 'transfer' ? ArrowLeftRight : iconFor(category?.icon ?? '');
   const tint = tx.type === 'transfer' ? 'var(--primary)' : (category?.color ?? 'var(--text-muted)');
-  const base = tx.type === 'transfer' ? `${account?.name ?? 'Conta'} → ${destination?.name ?? 'Conta'}` : [category?.name, account?.name].filter(Boolean).join(' · ');
+  const categoryName = category ? categoryPath(category.name, parent?.name) : undefined;
+  const base = tx.type === 'transfer' ? `${account?.name ?? 'Conta'} → ${destination?.name ?? 'Conta'}` : [categoryName, account?.name].filter(Boolean).join(' · ');
   // Sub-projeto 13 (T8): as tags na mesma linha, que corta com "…" quando não cabe. Durante o deploy, a API antiga
   // ainda não manda o campo.
   const meta = [base, (tx.tags ?? []).map((t) => `#${t}`).join(' ')].filter(Boolean).join(' · ');

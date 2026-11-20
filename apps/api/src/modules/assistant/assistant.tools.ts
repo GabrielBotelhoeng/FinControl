@@ -1,5 +1,5 @@
 import {
-  addMonthsToYm, ASSET_KIND_LABELS, dateOnlySchema, DEBT_KIND_LABELS, tagSchema, DEBT_STATUS_LABELS, endOfMonth, monthOf, startOfMonth, todayInSaoPaulo, yearMonthSchema,
+  addMonthsToYm, ASSET_KIND_LABELS, categoryLabel, dateOnlySchema, DEBT_KIND_LABELS, tagSchema, DEBT_STATUS_LABELS, endOfMonth, monthOf, startOfMonth, todayInSaoPaulo, yearMonthSchema,
   type GoalStatus, type ListTransactionsQuery, type TransactionDTO, type TransactionStatus, type TransactionType,
 } from '@fincontrol/shared';
 import { z } from 'zod';
@@ -144,7 +144,9 @@ export function createAssistantTools(deps: AssistantToolsDeps) {
     const from = f.de ?? startOfMonth(addMonthsToYm(monthOf(to), -2));
     if (from > to) throw new ToolInputError('A data inicial vem depois da final.');
     const categories = await deps.categoriesRepo.list(userId);
-    const names = new Map(categories.map((c) => [c.id, c.name]));
+    // Sub-projeto 15 (U10): "Alimentação › Restaurante"; buscar pela categoria inclui as subcategorias (filtro da lista).
+    const byId = new Map(categories.map((c) => [c.id, c]));
+    const names = new Map(categories.map((c) => [c.id, categoryLabel(c, byId)]));
     let categoryId: string | undefined;
     if (f.categoria) {
       const type = f.tipo === 'despesa' ? 'expense' : f.tipo === 'receita' ? 'income' : undefined;

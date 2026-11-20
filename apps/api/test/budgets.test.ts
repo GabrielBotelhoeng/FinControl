@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { buildTestApp } from './helpers/app';
 import { newUser, type TestUser } from './helpers/auth';
 import { resetDb } from './helpers/db';
-import { categoryId, createAccount, createTransaction } from './helpers/factories';
+import { categoryId, createAccount, createSubcategory, createTransaction } from './helpers/factories';
 
 const { app } = buildTestApp();
 
@@ -29,6 +29,23 @@ const itemOf = (body: { items: { categoryId: string }[] }, id: string) => body.i
 
 describe('orçamento por categoria', () => {
   beforeEach(resetDb);
+
+  it('U5 e U6 (sub-projeto 15): o gasto das subcategorias conta no limite da categoria; a subcategoria não tem limite', async () => {
+    const { user, checking, food } = await scenario();
+    const restaurant = await createSubcategory(app, user, food, 'Restaurante');
+    await setLimit(user, food, 50000);
+    await expense(user, checking.id, food, 20000, '2026-11-05');
+    await expense(user, checking.id, restaurant, 25000, '2026-11-06');
+    // Outubro na subcategoria entra na sugestão da categoria.
+    await expense(user, checking.id, restaurant, 30000, '2026-10-06');
+    const body = await month(user);
+    expect(itemOf(body, food)).toMatchObject({ paid: 45000, committed: 45000, status: 'near', suggested: 30000 });
+    expect(body.items.some((i: { categoryId: string }) => i.categoryId === restaurant)).toBe(false);
+    expect(body.categoriesWithoutBudget.some((c: { name: string }) => c.name === 'Restaurante')).toBe(false);
+    expect((await setLimit(user, restaurant, 10000)).status).toBe(422);
+    // O resumo do painel soma do mesmo jeito.
+    expect((await request(app).get('/api/v1/dashboard/summary?month=2026-11').set(user.auth)).body.budget).toMatchObject({ committed: 45000, nearCount: 1 });
+  });
 
   it('critério 1: pagas + pendentes do mês = 90%, "perto do limite"; critério 2: mais R$ 100 estoura', async () => {
     const { user, checking, food } = await scenario();

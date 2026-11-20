@@ -13,8 +13,12 @@ export const updateCategorySchema = z
   .refine(nonEmpty, NON_EMPTY_MESSAGE);
 export const listCategoriesQuerySchema = z.object({ type: categoryTypeSchema.optional() });
 export const deleteCategoryQuerySchema = z.object({ reassignTo: idSchema.optional() });
+/** Sub-projeto 15 (U2): a subcategoria só tem nome; o tipo, o ícone e a cor vêm da categoria. */
+export const createSubcategorySchema = z.object({ name: nameSchema });
 
 export type CreateCategoryInput = z.output<typeof createCategorySchema>;
 export type UpdateCategoryInput = z.output<typeof updateCategorySchema>;
+export type CreateSubcategoryInput = z.output<typeof createSubcategorySchema>;
 
-export type CategoryDTO = { id: string; name: string; type: CategoryType; icon: string; color: string };
+/** `parentId` é a categoria de uma subcategoria (sub-projeto 15, U1); nulo nas categorias principais. */
+export type CategoryDTO = { id: string; name: string; type: CategoryType; icon: string; color: string; parentId: string | null };

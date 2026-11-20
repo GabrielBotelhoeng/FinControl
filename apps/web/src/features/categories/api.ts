@@ -17,6 +17,14 @@ export function useSaveCategory() {
   );
 }
 
+/** Sub-projeto 15: cria na categoria `parentId` ou renomeia (só o nome: o ícone e a cor vêm da categoria, U2). */
+export function useSaveSubcategory() {
+  const api = useApi();
+  return useFinanceMutation(({ id, parentId, name }: { id?: string; parentId: string; name: string }) =>
+    id ? api.patch<CategoryDTO>(`/categories/${id}`, { name }) : api.post<CategoryDTO>(`/categories/${parentId}/subcategories`, { name }),
+  );
+}
+
 export function useDeleteCategory() {
   const api = useApi();
   return useFinanceMutation(({ id, reassignTo }: { id: string; reassignTo?: string }) =>

@@ -6,7 +6,7 @@ import { MAX_TOOL_ROUNDS } from '../src/modules/assistant/assistant.service';
 import { buildTestApp } from './helpers/app';
 import { newUser, type TestUser } from './helpers/auth';
 import { resetDb, testDb } from './helpers/db';
-import { categoryId, createAccount, createTransaction } from './helpers/factories';
+import { categoryId, createAccount, createSubcategory, createTransaction } from './helpers/factories';
 
 type Step = AiResponse | Error;
 
@@ -179,6 +179,26 @@ describe('Assistente com IA', () => {
     const data = JSON.parse(toolResults(ai.calls[1]!)[0]!.content);
     expect(data).toMatchObject({ quantidade: 1, total_despesas: 30 });
     expect(data.lancamentos[0]).toMatchObject({ descricao: 'Cerveja no mercado', tags: ['bebida'] });
+  });
+
+  it('U10 (sub-projeto 15): o prompt lista as subcategorias; buscar pela categoria inclui as subcategorias e mostra o caminho', async () => {
+    const user = await newUser();
+    await consent(user);
+    const account = await createAccount(app, user, { initialBalance: 100000 });
+    const food = await categoryId(app, user, 'Alimentação', 'expense');
+    const restaurant = await createSubcategory(app, user, food, 'Restaurante');
+    await createSubcategory(app, user, food, 'Mercado');
+    const expense = (description: string, category: string) =>
+      createTransaction(app, user, { type: 'expense', amount: 3000, description, accountId: account.id, nature: 'variable', categoryId: category, dueDate: '2026-11-05' });
+    await expense('Pizza', restaurant);
+    await expense('Feira', food);
+    ai.script.push(toolUse({ name: 'buscar_lancamentos', input: { categoria: 'alimentação' } }), toolUse({ name: 'buscar_lancamentos', input: { categoria: 'Restaurante' } }), text('Pronto.'));
+    expect((await ask(user)).status).toBe(200);
+    expect(ai.calls[0]!.system).toContain('Alimentação (Mercado, Restaurante)');
+    const all = JSON.parse(toolResults(ai.calls[1]!)[0]!.content);
+    expect(all.quantidade).toBe(2);
+    expect(all.lancamentos).toEqual(expect.arrayContaining([expect.objectContaining({ descricao: 'Pizza', categoria: 'Alimentação › Restaurante' })]));
+    expect(JSON.parse(toolResults(ai.calls[2]!)[0]!.content)).toMatchObject({ quantidade: 1, lancamentos: [{ descricao: 'Pizza' }] });
   });
 
   it('B12 (sub-projeto 11): saldos_e_dividas traz o patrimônio líquido e só os bens com valor', async () => {
