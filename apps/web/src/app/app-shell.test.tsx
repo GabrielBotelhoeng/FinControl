@@ -87,6 +87,29 @@ describe('AppShell', () => {
     expect(screen.queryByRole('dialog', { name: 'Mais' })).not.toBeInTheDocument();
   });
 
+  it('voltar no navegador fecha o formulário do "+", como fechava o diálogo de cada página (revisão)', async () => {
+    renderApp(
+      <>
+        <AppShell />
+        <HistoryProbe />
+      </>,
+      { route: '/contas', path: '/*' },
+    );
+    const mobile = await screen.findByRole('navigation', { name: 'Principal (celular)' });
+    await userEvent.click(within(mobile).getByRole('link', { name: 'Painel' }));
+    await userEvent.click(within(mobile).getByRole('button', { name: 'Novo lançamento' }));
+    expect(await screen.findByRole('dialog', { name: 'Novo lançamento' })).toBeInTheDocument();
+    act(() => go(-1));
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Novo lançamento' })).not.toBeInTheDocument());
+  });
+
+  it('o "Mais" diz ao leitor de tela que está aberto e que a tela atual é dele', async () => {
+    renderApp(<AppShell />, { route: '/dividas', path: '/*' });
+    const more = await screen.findByRole('button', { name: 'Mais' });
+    expect(more).toHaveAttribute('aria-current', 'true');
+    expect(more).toHaveAttribute('aria-expanded', 'false');
+  });
+
   it('o "+" da barra abre o novo lançamento em qualquer tela', async () => {
     renderApp(<AppShell />, { route: '/contas', path: '/*' });
     await userEvent.click(await screen.findByRole('button', { name: 'Novo lançamento' }));

@@ -67,12 +67,14 @@ export function AppShell() {
   const { pathname } = useLocation();
   const [moreOpen, setMoreOpen] = useState(false);
   const [newTransaction, setNewTransaction] = useState(false);
-  // Trocar de tela (inclusive pelo voltar e avançar do navegador) fecha a folha "Mais". O ajuste é feito durante a
-  // renderização, guardando a última tela, para não reabrir a folha ao voltar para a tela onde ela foi aberta (CodeRabbit).
+  // Trocar de tela (inclusive pelo voltar e avançar do navegador) fecha a folha "Mais" e o formulário do "+", como
+  // fechavam os diálogos de cada página. O ajuste é feito durante a renderização, guardando a última tela, para não
+  // reabrir a folha ao voltar para a tela onde ela foi aberta (CodeRabbit).
   const [shownPath, setShownPath] = useState(pathname);
   if (pathname !== shownPath) {
     setShownPath(pathname);
     setMoreOpen(false);
+    setNewTransaction(false);
   }
 
   return (
@@ -143,7 +145,14 @@ export function AppShell() {
               {label}
             </NavLink>
           ))}
-          <button type="button" aria-haspopup="dialog" onClick={() => setMoreOpen(true)} className={tabClass(isInMore(pathname))}>
+          <button
+            type="button"
+            aria-haspopup="dialog"
+            aria-expanded={moreOpen}
+            aria-current={isInMore(pathname) ? 'true' : undefined}
+            onClick={() => setMoreOpen(true)}
+            className={tabClass(isInMore(pathname))}
+          >
             <LayoutGrid aria-hidden className="h-5 w-5" strokeWidth={1.75} />
             Mais
           </button>

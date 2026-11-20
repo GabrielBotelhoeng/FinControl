@@ -51,7 +51,7 @@ export function CategoryForm({ open, onOpenChange, type, category }: Props) {
                 onClick={() => setIcon(key)}
                 className={cn(
                   'grid h-10 place-items-center rounded-[var(--radius-control)] transition-colors',
-                  icon === key ? 'bg-brand text-brand-fg' : 'bg-surface-2 text-muted hover:text-text',
+                  icon === key ? 'bg-brand text-brand-fg ring-2 ring-inset ring-brand-fg/50' : 'bg-surface-2 text-muted hover:text-text',
                 )}
               >
                 <Icon aria-hidden className="h-[18px] w-[18px]" strokeWidth={2} />

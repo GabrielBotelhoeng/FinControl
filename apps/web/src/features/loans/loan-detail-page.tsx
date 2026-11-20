@@ -92,7 +92,7 @@ function DeleteDialog({ loan, onOpenChange, onDeleting }: DeleteDialogProps) {
         <Button variant="ghost" onClick={() => onOpenChange(false)}>
           Cancelar
         </Button>
-        <Button className="bg-expense text-white" loading={remove.isPending} onClick={confirm}>
+        <Button variant="danger" loading={remove.isPending} onClick={confirm}>
           Excluir
         </Button>
       </div>

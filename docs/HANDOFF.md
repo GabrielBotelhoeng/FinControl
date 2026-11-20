@@ -7,7 +7,8 @@ _Atualizado em 2026-11-20 (visual claro e colorido)._
 - **Spec:** `docs/superpowers/specs/2026-11-20-fincontrol-sp16-visual-claro-design.md` (L1–L14) e o `DESIGN.md` reescrito ("Feira de manhã"). Sem migration.
 - **Entregue:** o claro como padrão (o escuro continua no Perfil) com o verde-limão da marca e cores de apoio; o saldo num cartão limão e os cartões coloridos do painel; ícones de traço em quadrados da cor da categoria ou da conta (`IconTile`); a barra flutuante do celular com o "+" e a folha "Mais"; formulários em folha que sobe de baixo no celular; o valor grande e o tipo colorido no lançamento; o logo novo (o "F" com a seta de crescimento, a partir de uma referência do usuário), que também é o ícone do app; a entrada sem a arte dourada; o PDF e a planilha no verde da marca.
 - **Pedidos no meio do caminho:** a pesquisa de paletas e ideias no navegador do usuário, o logo "nessa pegada" e a troca das ilustrações 3D, que ficaram com "cara de IA" (seção 6 da spec).
-- **Testes:** 259 na web e 372 na API, além de 19 E2E (novo: a barra do celular a 360 px). As imagens do README foram refeitas.
+- **Testes:** 262 na web e 372 na API, além de 19 E2E (novo: a barra do celular a 360 px). As imagens do README foram refeitas.
+- **Revisão final:** revisor novo e CodeRabbit (seção 7 da spec): a folha "Mais" que reabria no voltar e avançar, contornos no "pago" e no ícone escolhido, o foco no cartão limão e o lema da entrada no escuro.
 
 ## Sub-projeto 15: subcategorias — no ar desde 2026-11-20 (PR #36)
 

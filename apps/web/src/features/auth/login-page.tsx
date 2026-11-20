@@ -160,7 +160,7 @@ export function LoginPage() {
     <div className="relative isolate min-h-dvh overflow-hidden">
       {/* Brilhos coloridos de fundo (L3): limão, tangerina e uva, bem desfocados. */}
       <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
-        <span className="absolute -right-24 -top-28 h-80 w-80 rounded-full bg-brand/70 blur-3xl" />
+        <span className="absolute -right-24 -top-28 h-80 w-80 rounded-full bg-brand/70 blur-3xl [html[data-theme=dark]_&]:bg-brand/20" />
         <span className="absolute -left-24 top-1/3 h-64 w-64 rounded-full bg-tangerine/25 blur-3xl" />
         <span className="absolute -bottom-20 right-1/4 h-64 w-64 rounded-full bg-grape/20 blur-3xl" />
       </div>

@@ -7,15 +7,15 @@ import { renderApp } from '../../test/render';
 import ProfilePage from './profile-page';
 
 const prefs = { bills: true, invoices: true, budget: true, goals: true, billDays: 3 };
-const profile = { id: 'u1', name: 'Ana Lúcia', email: 'ana@exemplo.com', isDemo: false, theme: 'dark', notificationPrefs: prefs };
+const profile = { id: 'u1', name: 'Ana Lúcia', email: 'ana@exemplo.com', isDemo: false, theme: 'light', notificationPrefs: prefs };
 
 describe('ProfilePage', () => {
   it('trocar o tema aplica na hora e salva no perfil', async () => {
     const api = fakeApi({ 'GET /me': profile, 'PATCH /me': (_p: string, body: unknown) => ({ ...profile, ...(body as object) }) });
     renderApp(<ProfilePage />, { api });
-    await userEvent.click(await screen.findByRole('radio', { name: 'Claro' }));
-    expect(document.documentElement.dataset.theme).toBe('light');
-    expect(api.patch).toHaveBeenCalledWith('/me', { theme: 'light' });
+    await userEvent.click(await screen.findByRole('radio', { name: 'Escuro' }));
+    expect(document.documentElement.dataset.theme).toBe('dark');
+    expect(api.patch).toHaveBeenCalledWith('/me', { theme: 'dark' });
   });
 
   it('excluir conta exige digitar EXCLUIR, chama DELETE /me e sai', async () => {

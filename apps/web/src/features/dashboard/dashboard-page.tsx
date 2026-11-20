@@ -77,7 +77,7 @@ function BalanceCard({ summary }: { summary: DashboardSummaryDTO }) {
           <p>
             Patrimônio líquido: <span className="tabular font-bold">{formatBRL(summary.netWorth)}</span>
             {' · '}
-            <Link to="/patrimonio" className="font-semibold underline decoration-2 underline-offset-2 hover:decoration-brand-fg/50">
+            <Link to="/patrimonio" className="font-semibold underline decoration-2 underline-offset-2 hover:decoration-brand-fg/50 focus-visible:outline-brand-fg">
               Ver patrimônio
             </Link>
           </p>

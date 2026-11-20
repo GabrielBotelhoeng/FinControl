@@ -62,7 +62,7 @@ Contraste conferido (texto ≥ 4,5:1): tinta sobre limão 14:1; verde-folha de 4
 - Barra do celular: Painel, Lançamentos e Contas, o "+" e o "Mais"; o "+" abre "Novo lançamento" em qualquer tela; o "Mais" lista as outras telas e fecha ao escolher uma, e fica marcado nelas.
 - `IconTile`: traço branco nas cores escuras e escuro nas claras; as categorias padrão, os tipos de conta e de bem têm ícone próprio.
 - E2E: a 360 px, os rótulos da barra cabem, o "+" abre o formulário e o "Mais" leva a Dívidas; nenhuma página passa da borda.
-- Contagem: 259 testes na web e 372 na API, além de 19 E2E (novo: o da barra do celular, em `mobile-e-publico.spec.ts`). As imagens do README foram refeitas.
+- Contagem: 262 testes na web e 372 na API, além de 19 E2E (novo: o da barra do celular, em `mobile-e-publico.spec.ts`). As imagens do README foram refeitas.
 
 ## 5. Fora deste sub-projeto
 
@@ -74,3 +74,14 @@ Contraste conferido (texto ≥ 4,5:1): tinta sobre limão 14:1; verde-folha de 4
 - **Pesquisa no navegador dele** (paletas, ideias e skills): no Coolors, as paletas com limão mais curtidas ("Vibrant Spring Delight" e "Mossy Stone Serenity") confirmaram o limão com tangerina, uva e azul sobre um quase-branco esverdeado; no Dribbble, os apps de finanças claros usam cartões coloridos lado a lado e indicadores em tons pastel (entraram em L4). Skills: a de controlar o mouse é a "computer use" (só no app Claude para computador) ou o clawdcursor (código aberto; não instalado, porque controla o computador inteiro e depende do ok do usuário).
 - **Logo "nessa pegada"** (imagem de referência com o "F", a seta e as barras): L9.
 - **"Esses ícones não tá muito cara de IA?"** sobre as ilustrações 3D: trocadas pelos ícones de traço em quadrados coloridos (L5).
+
+## 7. Revisão final (revisor novo e CodeRabbit)
+
+- **Corrigidos, com teste quando cabe:**
+  - a folha "Mais" reabria ao voltar e avançar no navegador (CodeRabbit). Agora a troca de tela a fecha, e fecha também o formulário do "+", como fechavam os diálogos de cada página;
+  - o "Mais" ganhou `aria-expanded` e `aria-current` nas telas da folha;
+  - o "pago" do lançamento e o ícone escolhido na categoria dependiam só do limão (1,3:1 contra o branco) e ganharam um contorno escuro;
+  - o foco do teclado no link "Ver patrimônio" sumia no cartão limão no tema escuro;
+  - o brilho limão da entrada apagava o lema no escuro, no celular, e ficou mais fraco nesse tema;
+  - os testes de troca de tema passavam por acaso (trocavam para o claro, que já é o padrão) e passaram a trocar para o escuro.
+- **Ajustado junto:** os botões de excluir usam a variante "danger" do `Button`, em vez de trocar a cor por classe (sem tailwind-merge, a cor certa dependia da ordem das classes no CSS). Em Perfil → Aparência, "Claro" aparece primeiro.

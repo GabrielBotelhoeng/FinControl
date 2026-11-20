@@ -28,10 +28,12 @@ describe('ThemeProvider', () => {
   });
 
   it('aplica e persiste o tema escolhido', () => {
+    localStorage.removeItem('fincontrol-theme');
     render(<ThemeProvider><Probe /></ThemeProvider>);
-    act(() => api.setTheme('light'));
-    expect(document.documentElement.dataset.theme).toBe('light');
-    expect(localStorage.getItem('fincontrol-theme')).toBe('light');
+    act(() => api.setTheme('dark'));
+    expect(document.documentElement.dataset.theme).toBe('dark');
+    expect(localStorage.getItem('fincontrol-theme')).toBe('dark');
+    localStorage.removeItem('fincontrol-theme');
   });
 
   it('resolve "system" pelo prefers-color-scheme', () => {

@@ -58,7 +58,7 @@ export function TransactionRow({ tx, account, category, parent, destination, onE
           onClick={() => pay.mutate({ id: tx.id, paid: !paid }, { onError: (e) => toast.error(e.message) })}
           className={cn(
             'grid h-9 w-9 shrink-0 place-items-center rounded-full border transition-colors',
-            paid ? 'border-transparent bg-brand text-brand-fg' : 'border-border text-muted hover:border-primary hover:text-primary',
+            paid ? 'border-brand-fg/50 bg-brand text-brand-fg' : 'border-border text-muted hover:border-primary hover:text-primary',
           )}
         >
           <Check aria-hidden className="h-4 w-4" strokeWidth={2.25} />

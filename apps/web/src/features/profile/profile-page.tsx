@@ -66,8 +66,8 @@ export default function ProfilePage() {
                 value={theme}
                 onChange={changeTheme}
                 options={[
-                  { value: 'dark', label: 'Escuro' },
                   { value: 'light', label: 'Claro' },
+                  { value: 'dark', label: 'Escuro' },
                   { value: 'system', label: 'Sistema' },
                 ]}
               />
