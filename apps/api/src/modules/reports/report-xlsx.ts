@@ -22,8 +22,9 @@ export type XlsxData = {
 const MONEY = '"R$" #,##0.00;[Red]-"R$" #,##0.00';
 const PERCENT = '0%;[Red]-0%';
 const DATE = 'dd/mm/yyyy';
-const GOLD = 'FF8A5A00';
-const SOFT = 'FFF7EDD8';
+// Verde-oliva da marca (cabeçalhos, com texto branco a 7:1) e limão claro nas abas (sub-projeto 16, L13).
+const BRAND = 'FF3F6212';
+const SOFT = 'FFEAF5C8';
 const MONTHS = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
 const WEEKDAYS = ['domingo', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado'];
 const TYPE = { income: 'Receita', expense: 'Despesa', transfer: 'Transferência' } as const;
@@ -43,13 +44,13 @@ function sheet(wb: ExcelJS.Workbook, name: string, cols: Col[], note?: string) {
   const ws = wb.addWorksheet(name, { views: [{ state: 'frozen', ySplit: note ? 3 : 1 }] });
   ws.columns = cols.map((c) => ({ width: c.width, style: c.fmt ? { numFmt: c.fmt } : {} }));
   if (note) {
-    ws.addRow([note]).font = { italic: true, color: { argb: 'FF5A6072' } };
+    ws.addRow([note]).font = { italic: true, color: { argb: 'FF5F6657' } };
     ws.addRow([]);
   }
   const header = ws.addRow(cols.map((c) => c.header));
   header.font = { bold: true, color: { argb: 'FFFFFFFF' } };
   header.eachCell((c) => {
-    c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: GOLD } };
+    c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: BRAND } };
   });
   return ws;
 }
@@ -81,7 +82,7 @@ export async function renderReportXlsx(d: XlsxData, generatedAt: Date): Promise<
   rate.getCell(2).numFmt = PERCENT;
   resumo.addRow([]);
   const tagSheet = report.expenseByTag.length > 0 ? 'Por tag, ' : '';
-  resumo.addRow([`Abas: Lançamentos (tabela com filtros), Por categoria, ${tagSheet}Mensal, Onde o dinheiro vai, Dia da semana, Pequenos gastos, Fixos e variáveis, Dívidas e Saldos.`]).font = { color: { argb: 'FF5A6072' } };
+  resumo.addRow([`Abas: Lançamentos (tabela com filtros), Por categoria, ${tagSheet}Mensal, Onde o dinheiro vai, Dia da semana, Pequenos gastos, Fixos e variáveis, Dívidas e Saldos.`]).font = { color: { argb: 'FF5F6657' } };
 
   // ---------- Lançamentos (Tabela do Excel, E3) ----------
   const lanc = wb.addWorksheet('Lançamentos', { views: [{ state: 'frozen', ySplit: 1 }] });
@@ -210,7 +211,7 @@ export async function renderReportXlsx(d: XlsxData, generatedAt: Date): Promise<
   for (const ws of wb.worksheets) {
     if (ws.name === 'Lançamentos') continue;
     ws.getRow(1).getCell(1).alignment = { wrapText: false };
-    ws.properties.tabColor = { argb: ws.name === 'Resumo' ? GOLD : SOFT };
+    ws.properties.tabColor = { argb: ws.name === 'Resumo' ? BRAND : SOFT };
   }
   return Buffer.from(await wb.xlsx.writeBuffer());
 }
