@@ -7,6 +7,7 @@ import { Panel } from '../../components/ui/panel';
 import { ErrorState, ListSkeleton } from '../../components/ui/states';
 import { cn } from '../../lib/cn';
 import { formatBRL } from '../../lib/format';
+import { IconTile } from '../../components/ui/icon-tile';
 import { iconFor } from '../categories/icons';
 import { useBudgetMonth } from './api';
 import { BudgetForm } from './budget-form';
@@ -21,12 +22,11 @@ export const BUDGET_STATUS: Record<BudgetStatus, { label: string; icon: LucideIc
 
 function BudgetItem({ item, onEdit }: { item: BudgetItemDTO; onEdit: () => void }) {
   const status = BUDGET_STATUS[item.status];
-  const Icon = iconFor(item.icon);
   return (
     <Panel role="article" aria-label={item.name} className="grid gap-3 p-5">
       <div className="flex items-center justify-between gap-3">
-        <span className="inline-flex min-w-0 items-center gap-2 font-semibold">
-          <Icon aria-hidden className="h-4 w-4 shrink-0" style={{ color: item.color }} strokeWidth={1.75} />
+        <span className="inline-flex min-w-0 items-center gap-2.5 font-semibold">
+          <IconTile icon={iconFor(item.icon)} color={item.color} size="sm" />
           <span className="truncate">{item.name}</span>
         </span>
         <Button size="sm" variant="ghost" onClick={onEdit}>
@@ -57,11 +57,10 @@ function BudgetItem({ item, onEdit }: { item: BudgetItemDTO; onEdit: () => void 
 }
 
 function NoBudgetItem({ category, onSet }: { category: BudgetCategoryDTO; onSet: () => void }) {
-  const Icon = iconFor(category.icon);
   return (
     <Panel role="article" aria-label={category.name} className="flex items-center justify-between gap-3 p-4">
-      <span className="inline-flex min-w-0 items-center gap-2 text-sm">
-        <Icon aria-hidden className="h-4 w-4 shrink-0" style={{ color: category.color }} strokeWidth={1.75} />
+      <span className="inline-flex min-w-0 items-center gap-2.5 text-sm">
+        <IconTile icon={iconFor(category.icon)} color={category.color} size="sm" />
         <span className="truncate">{category.name}</span>
       </span>
       <Button size="sm" variant="secondary" onClick={onSet}>

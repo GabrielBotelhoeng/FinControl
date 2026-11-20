@@ -77,10 +77,13 @@ export default function TransactionsPage() {
         bold="lançamentos"
         actions={
           <div className="flex flex-wrap gap-2">
-            <Button onClick={() => setEditing('new')}>
-              <Plus aria-hidden className="h-4 w-4" strokeWidth={2} />
-              Novo lançamento
-            </Button>
+            {/* No celular, o "+" da barra faz isso em qualquer tela (sub-projeto 16, L12). */}
+            <div className="hidden md:block">
+              <Button onClick={() => setEditing('new')}>
+                <Plus aria-hidden className="h-4 w-4" strokeWidth={2} />
+                Novo lançamento
+              </Button>
+            </div>
             <Link
               to="/importar"
               className="inline-flex h-11 items-center gap-2 rounded-full border border-border px-5 text-sm font-medium hover:border-muted"

@@ -3,6 +3,8 @@ import { ArrowLeftRight, Check, Repeat } from 'lucide-react';
 import { toast } from 'sonner';
 import { SignedAmount } from '../../components/ui/money';
 import { cn } from '../../lib/cn';
+import { IconTile } from '../../components/ui/icon-tile';
+import { PALETTE } from '../../lib/palette';
 import { iconFor } from '../categories/icons';
 import { usePayToggle } from './api';
 
@@ -23,7 +25,7 @@ export function TransactionRow({ tx, account, category, parent, destination, onE
   // isso não mostra o botão. A conta de origem é que define isso (mesmo critério de assertNotCardTransaction).
   const isCardTransaction = account?.type === 'credit_card';
   const Icon = tx.type === 'transfer' ? ArrowLeftRight : iconFor(category?.icon ?? '');
-  const tint = tx.type === 'transfer' ? 'var(--primary)' : (category?.color ?? 'var(--text-muted)');
+  const tint = tx.type === 'transfer' ? PALETTE.sky : (category?.color ?? PALETTE.slate);
   const categoryName = category ? categoryPath(category.name, parent?.name) : undefined;
   const base = tx.type === 'transfer' ? `${account?.name ?? 'Conta'} → ${destination?.name ?? 'Conta'}` : [categoryName, account?.name].filter(Boolean).join(' · ');
   // Sub-projeto 13 (T8): as tags na mesma linha, que corta com "…" quando não cabe. Durante o deploy, a API antiga
@@ -32,9 +34,7 @@ export function TransactionRow({ tx, account, category, parent, destination, onE
 
   return (
     <li aria-label={tx.description} className="group flex items-center gap-3 px-4 py-3 sm:gap-4 sm:px-5">
-      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full" style={{ backgroundColor: `color-mix(in srgb, ${tint} 16%, transparent)`, color: tint }}>
-        <Icon aria-hidden className="h-[18px] w-[18px]" strokeWidth={1.75} />
-      </span>
+      <IconTile icon={Icon} color={tint} />
       <button type="button" onClick={onEdit} aria-label={`Editar ${tx.description}`} className="min-w-0 flex-1 text-left">
         <span className="flex items-center gap-2">
           <span className="truncate font-medium">{tx.description}</span>
@@ -58,7 +58,7 @@ export function TransactionRow({ tx, account, category, parent, destination, onE
           onClick={() => pay.mutate({ id: tx.id, paid: !paid }, { onError: (e) => toast.error(e.message) })}
           className={cn(
             'grid h-9 w-9 shrink-0 place-items-center rounded-full border transition-colors',
-            paid ? 'border-transparent bg-primary text-primary-fg' : 'border-border text-muted hover:border-primary hover:text-primary',
+            paid ? 'border-transparent bg-brand text-brand-fg' : 'border-border text-muted hover:border-primary hover:text-primary',
           )}
         >
           <Check aria-hidden className="h-4 w-4" strokeWidth={2.25} />

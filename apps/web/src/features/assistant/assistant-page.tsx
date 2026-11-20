@@ -60,7 +60,7 @@ function Bubble({ message }: { message: AssistantMessage }) {
       <div
         className={cn(
           'max-w-[85%] whitespace-pre-wrap break-words rounded-[var(--radius-panel)] px-4 py-3 text-sm',
-          mine ? 'bg-primary text-primary-foreground' : 'border border-border bg-surface-2',
+          mine ? 'bg-primary text-primary-fg' : 'border border-border bg-surface-2',
         )}
       >
         <span className="sr-only">{mine ? 'Você: ' : 'Assistente: '}</span>

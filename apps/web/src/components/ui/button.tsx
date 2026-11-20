@@ -6,7 +6,8 @@ type Variant = 'primary' | 'secondary' | 'ghost' | 'danger';
 type Size = 'sm' | 'md' | 'lg' | 'icon';
 
 const variants: Record<Variant, string> = {
-  primary: 'bg-primary text-primary-fg hover:brightness-110',
+  // Limão com tinta escura nos dois temas (sub-projeto 16, L2).
+  primary: 'bg-brand text-brand-fg hover:brightness-[0.96]',
   secondary: 'border border-border bg-transparent text-text hover:bg-surface-2',
   ghost: 'bg-transparent text-muted hover:bg-surface-2 hover:text-text',
   danger: 'bg-expense text-white hover:brightness-110',

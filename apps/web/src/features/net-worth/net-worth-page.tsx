@@ -11,6 +11,7 @@ import { formatBRL, formatDate, formatMonthShort } from '../../lib/format';
 import { useNetWorth } from './api';
 import { AssetDialog } from './asset-dialog';
 import { AssetForm } from './asset-form';
+import { IconTile } from '../../components/ui/icon-tile';
 import { ASSET_KIND_ICON } from './asset-kind';
 import { NetWorthChart } from './net-worth-chart';
 
@@ -75,15 +76,12 @@ function Composition({ data }: { data: NetWorthDTO }) {
 }
 
 function AssetItem({ asset, onOpen }: { asset: AssetDTO; onOpen: () => void }) {
-  const Icon = ASSET_KIND_ICON[asset.kind];
   const change = asset.value - asset.firstValue;
   return (
     <Panel role="article" aria-label={asset.name} className="flex flex-col gap-3 p-5">
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-center gap-3">
-          <span aria-hidden className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-surface-2 text-muted">
-            <Icon className="h-5 w-5" strokeWidth={1.75} />
-          </span>
+          <IconTile icon={ASSET_KIND_ICON[asset.kind].icon} color={ASSET_KIND_ICON[asset.kind].color} />
           <div className="min-w-0">
             {/* Quebra em vez de cortar: a 360 px, "Previdência privada" virava "Previdênci…". */}
             <p className="break-words font-display text-lg font-semibold leading-snug tracking-tight">{asset.name}</p>

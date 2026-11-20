@@ -1,6 +1,7 @@
 import { ArrowLeft } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { Link } from 'react-router';
+import { Logo } from '../../components/ui/logo';
 import { Panel } from '../../components/ui/panel';
 
 export const CONTACT = 'botelhog45@gmail.com';
@@ -46,10 +47,7 @@ export function LegalPage({ title, meta, intro, children }: { title: string; met
           Voltar para o FinControl
         </Link>
         <header className="flex flex-col gap-3">
-          <p className="font-display text-lg tracking-tight">
-            <span className="font-extralight">Fin</span>
-            <span className="font-extrabold">Control</span>
-          </p>
+          <Logo />
           <h1 className="font-display text-[clamp(2rem,5vw,3rem)] font-extrabold leading-tight tracking-[-0.02em]">{title}</h1>
           <p className="text-sm text-muted">{meta}</p>
         </header>

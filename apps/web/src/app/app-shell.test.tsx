@@ -1,4 +1,4 @@
-import { screen, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import { fakeApi, fakeGateway, signedIn } from '../test/fakes';
@@ -29,33 +29,44 @@ describe('AppShell', () => {
     expect(gateway.signOut).toHaveBeenCalled();
   });
 
-  it('"Empréstimos" está nas duas navegações e aponta para /emprestimos', async () => {
+  it('no celular, a barra tem Painel, Lançamentos, Contas, o "+" e o "Mais" (sub-projeto 16, L6)', async () => {
     renderApp(<AppShell />, { path: '/*' });
-    const links = await screen.findAllByRole('link', { name: 'Empréstimos' });
-    expect(links).toHaveLength(2);
-    links.forEach((l) => expect(l).toHaveAttribute('href', '/emprestimos'));
+    const mobile = await screen.findByRole('navigation', { name: 'Principal (celular)' });
+    expect(within(mobile).getAllByRole('link').map((l) => l.getAttribute('href'))).toEqual(['/', '/lancamentos', '/contas']);
+    expect(within(mobile).getByRole('button', { name: 'Novo lançamento' })).toBeInTheDocument();
+    expect(within(mobile).getByRole('button', { name: 'Mais' })).toBeInTheDocument();
   });
 
-  it('"Planejamento" no menu e na barra do celular; "Categorias" só no menu do computador (P9)', async () => {
+  it('o menu do computador tem todas as telas; as que saíram da barra do celular ficam na folha "Mais"', async () => {
     renderApp(<AppShell />, { path: '/*' });
     const desktop = await screen.findByRole('navigation', { name: 'Principal' });
-    const mobile = screen.getByRole('navigation', { name: 'Principal (celular)' });
-    expect(within(desktop).getByRole('link', { name: 'Planejamento' })).toHaveAttribute('href', '/planejamento');
-    expect(within(desktop).getByRole('link', { name: 'Categorias' })).toBeInTheDocument();
-    expect(within(mobile).getByRole('link', { name: 'Planejamento' })).toBeInTheDocument();
-    expect(within(mobile).queryByRole('link', { name: 'Categorias' })).not.toBeInTheDocument();
+    for (const [name, href] of [['Planejamento', '/planejamento'], ['Empréstimos', '/emprestimos'], ['Relatórios', '/relatorios'], ['Categorias', '/categorias']]) {
+      expect(within(desktop).getByRole('link', { name })).toHaveAttribute('href', href);
+    }
+    await userEvent.click(within(screen.getByRole('navigation', { name: 'Principal (celular)' })).getByRole('button', { name: 'Mais' }));
+    const more = await screen.findByRole('dialog', { name: 'Mais' });
+    expect(within(more).getAllByRole('link').map((l) => l.textContent)).toEqual([
+      'Planejamento', 'Calendário', 'Empréstimos', 'Dívidas', 'Patrimônio', 'Resumo do mês', 'Relatórios', 'Assistente', 'Categorias', 'Perfil',
+    ]);
+  });
+
+  it('escolher uma tela no "Mais" abre a tela e fecha a folha', async () => {
+    renderApp(<AppShell />, { path: '/*' });
+    await userEvent.click(await screen.findByRole('button', { name: 'Mais' }));
+    await userEvent.click(within(await screen.findByRole('dialog', { name: 'Mais' })).getByRole('link', { name: 'Dívidas' }));
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Mais' })).not.toBeInTheDocument());
+    // Na tela de Dívidas, o "Mais" fica marcado como a seção atual.
+    expect(screen.getByRole('button', { name: 'Mais' }).className).toContain('bg-primary-soft');
+  });
+
+  it('o "+" da barra abre o novo lançamento em qualquer tela', async () => {
+    renderApp(<AppShell />, { route: '/contas', path: '/*' });
+    await userEvent.click(await screen.findByRole('button', { name: 'Novo lançamento' }));
+    expect(await screen.findByRole('dialog', { name: 'Novo lançamento' })).toBeInTheDocument();
   });
 
   it('o sino de notificações fica no topo de todas as telas, com os não lidos (N9)', async () => {
     renderApp(<AppShell />, { path: '/*', api: fakeApi({ 'GET /notifications': { items: [], unreadCount: 3 } }) });
     expect(await screen.findByRole('link', { name: 'Notificações, 3 não lidas' })).toHaveAttribute('href', '/notificacoes');
-  });
-
-  it('"Relatórios" só no menu do computador (R12); no celular, o acesso é pelo painel e pelo Perfil', async () => {
-    renderApp(<AppShell />, { path: '/*' });
-    const desktop = await screen.findByRole('navigation', { name: 'Principal' });
-    const mobile = screen.getByRole('navigation', { name: 'Principal (celular)' });
-    expect(within(desktop).getByRole('link', { name: 'Relatórios' })).toHaveAttribute('href', '/relatorios');
-    expect(within(mobile).queryByRole('link', { name: 'Relatórios' })).not.toBeInTheDocument();
   });
 });

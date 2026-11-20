@@ -1,25 +1,21 @@
-import { Sparkles } from 'lucide-react';
-import { NavLink, Outlet, useNavigate } from 'react-router';
+import { LayoutGrid, Plus, Sparkles } from 'lucide-react';
+import { useState } from 'react';
+import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router';
 import { Button } from '../components/ui/button';
+import { Dialog } from '../components/ui/dialog';
+import { IconTile } from '../components/ui/icon-tile';
+import { Logo } from '../components/ui/logo';
 import { useAuth } from '../features/auth/auth-context';
 import { cn } from '../lib/cn';
 import { NotificationBell } from '../features/notifications/bell';
-import { NAV_ITEMS } from './nav';
-
-function Logo() {
-  return (
-    <span className="font-display text-xl tracking-tight">
-      <span className="font-extralight">Fin</span>
-      <span className="font-extrabold">Control</span>
-    </span>
-  );
-}
+import { TransactionForm } from '../features/transactions/transaction-form';
+import { BAR_ITEMS, isInMore, MORE_ITEMS, NAV_ITEMS } from './nav';
 
 function DemoBadge() {
   const { signOut } = useAuth();
   const navigate = useNavigate();
   return (
-    <div className="flex items-center gap-3 rounded-full border border-primary/40 bg-primary-soft py-1.5 pl-4 pr-1.5 text-sm">
+    <div className="flex items-center gap-3 rounded-full border border-primary/30 bg-primary-soft py-1.5 pl-4 pr-1.5 text-sm">
       <Sparkles aria-hidden className="h-4 w-4 text-primary" strokeWidth={1.75} />
       <span className="mr-auto whitespace-nowrap font-medium">Modo demo</span>
       <Button
@@ -36,11 +32,46 @@ function DemoBadge() {
   );
 }
 
+const tabClass = (active: boolean) =>
+  cn(
+    'flex min-w-0 flex-col items-center gap-0.5 rounded-[18px] px-1 py-2 text-[10.5px] font-semibold tracking-[-0.01em] transition-colors',
+    active ? 'bg-primary-soft text-text' : 'text-muted hover:text-text',
+  );
+
+/** Folha "Mais" do celular (sub-projeto 16, L6): as telas fora da barra, cada uma num quadrado colorido. */
+function MoreSheet({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange} title="Mais">
+      <nav aria-label="Mais telas">
+        <ul className="grid grid-cols-3 gap-2.5">
+          {MORE_ITEMS.map(({ to, label, icon, tone }) => (
+            <li key={to}>
+              <Link
+                to={to}
+                onClick={() => onOpenChange(false)}
+                className="flex h-full flex-col items-center gap-2 rounded-[20px] bg-surface-2 px-2 pb-3 pt-3.5 text-center text-xs font-semibold leading-tight transition-colors hover:bg-primary-soft"
+              >
+                <IconTile icon={icon} color={tone} size="lg" />
+                {label}
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </nav>
+    </Dialog>
+  );
+}
+
 export function AppShell() {
   const { isDemo } = useAuth();
+  const { pathname } = useLocation();
+  // A folha "Mais" lembra em que tela foi aberta: trocar de tela (inclusive pelo voltar do navegador) a fecha.
+  const [moreAt, setMoreAt] = useState<string | null>(null);
+  const [newTransaction, setNewTransaction] = useState(false);
+
   return (
     <div className="min-h-dvh md:grid md:grid-cols-[248px_minmax(0,1fr)]">
-      <aside className="sticky top-0 hidden h-dvh flex-col gap-10 border-r border-border px-5 py-7 md:flex">
+      <aside className="sticky top-0 hidden h-dvh flex-col gap-10 overflow-y-auto border-r border-border px-5 py-7 md:flex">
         <Logo />
         <nav aria-label="Principal" className="grid gap-1">
           {NAV_ITEMS.map(({ to, label, icon: Icon }) => (
@@ -51,16 +82,12 @@ export function AppShell() {
               className={({ isActive }) =>
                 cn(
                   'flex items-center gap-3 rounded-full px-4 py-2.5 text-sm font-medium transition-colors',
-                  isActive ? 'bg-primary-soft text-text' : 'text-muted hover:bg-surface-2 hover:text-text',
+                  isActive ? 'bg-brand font-semibold text-brand-fg' : 'text-muted hover:bg-surface-2 hover:text-text',
                 )
               }
             >
-              {({ isActive }) => (
-                <>
-                  <Icon aria-hidden className={cn('h-[18px] w-[18px]', isActive && 'text-primary')} strokeWidth={1.75} />
-                  {label}
-                </>
-              )}
+              <Icon aria-hidden className="h-[18px] w-[18px]" strokeWidth={1.75} />
+              {label}
             </NavLink>
           ))}
         </nav>
@@ -81,29 +108,44 @@ export function AppShell() {
             <NotificationBell />
           </div>
         </header>
-        <main className="mx-auto w-full max-w-6xl flex-1 px-5 pb-28 pt-6 md:px-10 md:pb-12">
+        <main className="mx-auto w-full max-w-6xl flex-1 px-5 pb-32 pt-6 md:px-10 md:pb-12">
           <Outlet />
         </main>
       </div>
 
-      <nav
-        aria-label="Principal (celular)"
-        className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-6 border-t border-border bg-surface/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden"
-      >
-        {NAV_ITEMS.filter((item) => item.mobile !== false).map(({ to, label, icon: Icon }) => (
-          <NavLink
-            key={to}
-            to={to}
-            end={to === '/'}
-            className={({ isActive }) =>
-              cn('flex min-w-0 flex-col items-center gap-1 py-2.5 text-[10px] font-medium tracking-[-0.05em]', isActive ? 'text-primary' : 'text-muted')
-            }
+      {/* Barra flutuante do celular (L6): Painel, Lançamentos, "+", Contas e Mais. */}
+      <nav aria-label="Principal (celular)" className="fixed inset-x-3 bottom-[calc(0.75rem+env(safe-area-inset-bottom))] z-30 md:hidden">
+        {/* "Lançamentos" é o rótulo mais longo: a coluna dele é mais larga para caber a 360 px. */}
+        <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)_auto_minmax(0,1fr)_minmax(0,1fr)] items-center gap-1 rounded-[26px] border border-border bg-surface/95 p-1.5 shadow-bar backdrop-blur">
+          {BAR_ITEMS.slice(0, 2).map(({ to, label, icon: Icon }) => (
+            <NavLink key={to} to={to} end={to === '/'} className={({ isActive }) => tabClass(isActive)}>
+              <Icon aria-hidden className="h-5 w-5" strokeWidth={1.75} />
+              {label}
+            </NavLink>
+          ))}
+          <button
+            type="button"
+            aria-label="Novo lançamento"
+            onClick={() => setNewTransaction(true)}
+            className="mx-1 grid h-12 w-12 place-items-center rounded-full bg-brand text-brand-fg shadow-[0_8px_20px_-8px_rgba(63,98,18,0.65)] transition-transform active:scale-95"
           >
-            <Icon aria-hidden className="h-5 w-5" strokeWidth={1.75} />
-            {label}
-          </NavLink>
-        ))}
+            <Plus aria-hidden className="h-6 w-6" strokeWidth={2.25} />
+          </button>
+          {BAR_ITEMS.slice(2).map(({ to, label, icon: Icon }) => (
+            <NavLink key={to} to={to} className={({ isActive }) => tabClass(isActive)}>
+              <Icon aria-hidden className="h-5 w-5" strokeWidth={1.75} />
+              {label}
+            </NavLink>
+          ))}
+          <button type="button" aria-haspopup="dialog" onClick={() => setMoreAt(pathname)} className={tabClass(isInMore(pathname))}>
+            <LayoutGrid aria-hidden className="h-5 w-5" strokeWidth={1.75} />
+            Mais
+          </button>
+        </div>
       </nav>
+
+      <MoreSheet open={moreAt === pathname} onOpenChange={(o) => setMoreAt(o ? pathname : null)} />
+      {newTransaction && <TransactionForm open onOpenChange={setNewTransaction} />}
     </div>
   );
 }

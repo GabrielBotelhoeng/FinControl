@@ -17,8 +17,9 @@ export default defineConfig({
         lang: 'pt-BR',
         start_url: '/',
         display: 'standalone',
-        background_color: '#07080C',
-        theme_color: '#07080C',
+        // O fundo do tema claro, que é o padrão (sub-projeto 16, L1 e L9).
+        background_color: '#F5F6F0',
+        theme_color: '#F5F6F0',
         icons: [
           { src: '/pwa-192.png', sizes: '192x192', type: 'image/png' },
           { src: '/pwa-512.png', sizes: '512x512', type: 'image/png' },

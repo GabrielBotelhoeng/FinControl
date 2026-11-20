@@ -2,46 +2,60 @@
 @import '@fontsource-variable/outfit';
 @import '@fontsource-variable/manrope';
 
-/* Tokens: ver DESIGN.md ("Aurora no cofre"). O escuro é o padrão. */
+/* Tokens: ver DESIGN.md ("Feira de manhã"). O claro é o padrão (sub-projeto 16, L1). */
 :root,
+:root[data-theme='light'] {
+  color-scheme: light;
+  --background: #f5f6f0;
+  --surface: #ffffff;
+  --surface-2: #eef0e7;
+  --border: #e2e5d8;
+  --text: #14170f;
+  --text-muted: #5f6657;
+  --primary: #3d7a00;
+  --primary-fg: #ffffff;
+  --primary-soft: #eaf5c8;
+  --brand: #c8f24b;
+  --brand-fg: #14170f;
+  --glow: rgba(200, 242, 75, 0.55);
+  --income: #07794a;
+  --income-soft: #e1f4ea;
+  --expense: #c62e49;
+  --expense-soft: #fbe6ea;
+  --warning: #c62e49;
+  --panel-shadow: 0 1px 2px rgba(20, 23, 15, 0.04), 0 10px 28px -14px rgba(20, 23, 15, 0.14);
+  --bar-shadow: 0 14px 34px -14px rgba(20, 23, 15, 0.3);
+}
+
 :root[data-theme='dark'] {
   color-scheme: dark;
-  --background: #07080c;
-  --surface: #0f121a;
-  --surface-2: #161a24;
-  --border: #232838;
-  --text: #eef0f6;
-  --text-muted: #9aa1b5;
-  --primary: #e8b04b;
-  --primary-fg: #1a1305;
-  --primary-soft: #2a2111;
-  --glow: rgba(232, 176, 75, 0.26);
+  --background: #0b0d09;
+  --surface: #14170f;
+  --surface-2: #1c2016;
+  --border: #2a2f22;
+  --text: #eef1e6;
+  --text-muted: #9aa290;
+  --primary: #c8f24b;
+  --primary-fg: #14170f;
+  --primary-soft: #26301a;
+  --brand: #c8f24b;
+  --brand-fg: #14170f;
+  --glow: rgba(200, 242, 75, 0.18);
   --income: #3dd68c;
   --income-soft: #0e2a1e;
   --expense: #ff6b81;
   --expense-soft: #2e1219;
   --warning: #ff6b81;
   --panel-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  --bar-shadow: 0 14px 34px -14px rgba(0, 0, 0, 0.7);
 }
 
-:root[data-theme='light'] {
-  color-scheme: light;
-  --background: #f6f6f9;
-  --surface: #ffffff;
-  --surface-2: #efeff4;
-  --border: #e0e1e8;
-  --text: #10121a;
-  --text-muted: #5a6072;
-  --primary: #8a5a00;
-  --primary-fg: #ffffff;
-  --primary-soft: #f7edd8;
-  --glow: rgba(200, 140, 30, 0.18);
-  --income: #0a8754;
-  --income-soft: #e1f4ea;
-  --expense: #d23752;
-  --expense-soft: #fbe6ea;
-  --warning: #d23752;
-  --panel-shadow: 0 1px 2px rgba(16, 18, 26, 0.04), 0 8px 24px -12px rgba(16, 18, 26, 0.12);
+/* Cores de apoio (L3): só decoração. Verde e vermelho continuam reservados para receita e despesa. */
+:root {
+  --tangerine: #ff8a3d;
+  --grape: #7c5cff;
+  --sky: #38bdf8;
+  --banana: #ffd43b;
 }
 
 @theme inline {
@@ -54,6 +68,17 @@
   --color-primary: var(--primary);
   --color-primary-fg: var(--primary-fg);
   --color-primary-soft: var(--primary-soft);
+  --color-brand: var(--brand);
+  --color-brand-fg: var(--brand-fg);
+  --color-tangerine: var(--tangerine);
+  --color-grape: var(--grape);
+  --color-sky: var(--sky);
+  --color-banana: var(--banana);
+  /* Fundos pastel dos cartões coloridos: a cor de apoio misturada à superfície, nos dois temas. */
+  --color-tangerine-soft: color-mix(in srgb, var(--tangerine) 18%, var(--surface));
+  --color-grape-soft: color-mix(in srgb, var(--grape) 12%, var(--surface));
+  --color-sky-soft: color-mix(in srgb, var(--sky) 18%, var(--surface));
+  --color-banana-soft: color-mix(in srgb, var(--banana) 24%, var(--surface));
   --color-income: var(--income);
   --color-income-soft: var(--income-soft);
   --color-expense: var(--expense);
@@ -63,7 +88,9 @@
   --font-sans: 'Manrope Variable', ui-sans-serif, sans-serif;
   --radius-panel: 20px;
   --radius-control: 12px;
+  --radius-card: 28px;
   --shadow-panel: var(--panel-shadow);
+  --shadow-bar: var(--bar-shadow);
 }
 
 @layer base {
@@ -101,7 +128,16 @@
   .tabular {
     font-variant-numeric: tabular-nums;
   }
-  /* Aurora: o glow radial que é a assinatura do app (DESIGN.md). */
+  /* Anel decorativo do cartão limão (sub-projeto 16, L4): é um fundo, não um elemento, então nada passa da borda. */
+  .brand-ring {
+    background-image: radial-gradient(
+      circle at calc(100% - 48px) calc(100% - 32px),
+      transparent 89.5px,
+      color-mix(in srgb, var(--brand-fg) 6%, transparent) 90px 112px,
+      transparent 112.5px
+    );
+  }
+  /* Aurora: um brilho radial limão, discreto, atrás dos títulos das telas de detalhe (DESIGN.md). */
   .aurora {
     position: relative;
     isolation: isolate;
@@ -116,6 +152,24 @@
     z-index: -1;
     pointer-events: none;
     animation: aurora-breathe 8s ease-in-out infinite alternate;
+  }
+}
+
+@keyframes sheet-up {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
   }
 }
 

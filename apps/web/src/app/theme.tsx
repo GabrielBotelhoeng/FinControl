@@ -2,7 +2,11 @@ import type { ThemePreference } from '@fincontrol/shared';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 
 const STORAGE_KEY = 'fincontrol-theme';
-const DEFAULT_THEME: ThemePreference = 'dark';
+// Sub-projeto 16 (L1): o claro é o padrão. Quem escolheu "Escuro" ou "Sistema" no Perfil continua com a escolha.
+// O script no index.html aplica o mesmo tema antes do React, para não piscar o tema errado ao abrir.
+const DEFAULT_THEME: ThemePreference = 'light';
+/** Cor da barra do navegador e do app instalado: o fundo de cada tema (styles/index.css). */
+export const THEME_COLOR = { light: '#F5F6F0', dark: '#0B0D09' } as const;
 
 type ThemeContextValue = { theme: ThemePreference; setTheme: (t: ThemePreference) => void };
 const ThemeContext = createContext<ThemeContextValue | null>(null);
@@ -18,7 +22,7 @@ function readStored(): ThemePreference {
 
 function resolve(theme: ThemePreference): 'light' | 'dark' {
   if (theme !== 'system') return theme;
-  return window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
@@ -28,11 +32,11 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     const apply = () => {
       const resolved = resolve(theme);
       document.documentElement.dataset.theme = resolved;
-      document.querySelector('meta[name="theme-color"]')?.setAttribute('content', resolved === 'dark' ? '#07080C' : '#F6F6F9');
+      document.querySelector('meta[name="theme-color"]')?.setAttribute('content', THEME_COLOR[resolved]);
     };
     apply();
     if (theme !== 'system') return;
-    const media = window.matchMedia('(prefers-color-scheme: light)');
+    const media = window.matchMedia('(prefers-color-scheme: dark)');
     media.addEventListener('change', apply);
     return () => media.removeEventListener('change', apply);
   }, [theme]);

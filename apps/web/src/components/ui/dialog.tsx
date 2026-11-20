@@ -10,16 +10,24 @@ type Props = {
   children: ReactNode;
 };
 
-/** Diálogo centralizado no desktop e em tela cheia no celular (spec 8.3). */
+/**
+ * Diálogo centralizado no computador e, no celular, uma folha que sobe de baixo (sub-projeto 16, L7): alça no topo,
+ * cantos de 28 px, até 92% da altura e rolagem própria. A animação some com prefers-reduced-motion (index.css).
+ */
 export function Dialog({ open, onOpenChange, title, description, children }: Props) {
   return (
     <RadixDialog.Root open={open} onOpenChange={onOpenChange}>
       <RadixDialog.Portal>
-        <RadixDialog.Overlay className="fixed inset-0 z-40 bg-black/60 backdrop-blur-[2px]" />
+        <RadixDialog.Overlay className="fixed inset-0 z-40 bg-black/45 backdrop-blur-[2px] data-[state=open]:animate-[fade-in_200ms_ease-out]" />
         <RadixDialog.Content
-          className="fixed inset-0 z-50 flex flex-col overflow-y-auto bg-surface p-5 sm:inset-auto sm:left-1/2 sm:top-1/2 sm:max-h-[90dvh] sm:w-[min(560px,calc(100vw-2rem))] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-[var(--radius-panel)] sm:border sm:border-border sm:p-7 sm:shadow-panel"
+          className={
+            'fixed inset-x-0 bottom-0 z-50 flex max-h-[92dvh] flex-col overflow-y-auto rounded-t-[var(--radius-card)] border-t border-border bg-surface px-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] pt-2 shadow-bar ' +
+            'data-[state=open]:animate-[sheet-up_260ms_cubic-bezier(0.32,0.72,0,1)] ' +
+            'sm:inset-auto sm:bottom-auto sm:left-1/2 sm:top-1/2 sm:max-h-[90dvh] sm:w-[min(560px,calc(100vw-2rem))] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-[var(--radius-panel)] sm:border sm:p-7 sm:shadow-panel sm:data-[state=open]:animate-[fade-in_160ms_ease-out]'
+          }
           {...(description ? {} : { 'aria-describedby': undefined })}
         >
+          <span aria-hidden className="mx-auto mb-3 h-1.5 w-10 shrink-0 rounded-full bg-border sm:hidden" />
           <div className="mb-5 flex items-start justify-between gap-4">
             <div>
               <RadixDialog.Title className="font-display text-2xl font-semibold tracking-tight">{title}</RadixDialog.Title>

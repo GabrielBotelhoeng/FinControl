@@ -1,6 +1,7 @@
 import type { CategorySpendDTO } from '@fincontrol/shared';
 import { Cell, Pie, PieChart, ResponsiveContainer } from 'recharts';
 import { formatBRL } from '../../lib/format';
+import { IconTile } from '../../components/ui/icon-tile';
 import { iconFor } from '../categories/icons';
 
 const MAX_SLICES = 6;
@@ -38,12 +39,9 @@ export function CategoryDonut({ data }: { data: CategorySpendDTO[] }) {
       </div>
       <ul className="grid min-w-0 grid-cols-1 gap-2.5">
         {slices.map((s) => {
-          const Icon = iconFor(s.icon);
           return (
             <li key={s.categoryId} className="flex items-center gap-3 text-sm">
-              <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full" style={{ backgroundColor: `${s.color}22`, color: s.color }}>
-                <Icon aria-hidden className="h-3.5 w-3.5" strokeWidth={1.75} />
-              </span>
+              <IconTile icon={iconFor(s.icon)} color={s.color} size="sm" />
               <span className="min-w-0 flex-1 truncate">{s.name}</span>
               <span className="tabular text-xs text-muted">{percent.format(total ? s.total / total : 0)}</span>
               <span className="tabular shrink-0 text-right font-semibold sm:w-28">{formatBRL(s.total)}</span>
