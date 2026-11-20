@@ -65,9 +65,15 @@ function MoreSheet({ open, onOpenChange }: { open: boolean; onOpenChange: (o: bo
 export function AppShell() {
   const { isDemo } = useAuth();
   const { pathname } = useLocation();
-  // A folha "Mais" lembra em que tela foi aberta: trocar de tela (inclusive pelo voltar do navegador) a fecha.
-  const [moreAt, setMoreAt] = useState<string | null>(null);
+  const [moreOpen, setMoreOpen] = useState(false);
   const [newTransaction, setNewTransaction] = useState(false);
+  // Trocar de tela (inclusive pelo voltar e avançar do navegador) fecha a folha "Mais". O ajuste é feito durante a
+  // renderização, guardando a última tela, para não reabrir a folha ao voltar para a tela onde ela foi aberta (CodeRabbit).
+  const [shownPath, setShownPath] = useState(pathname);
+  if (pathname !== shownPath) {
+    setShownPath(pathname);
+    setMoreOpen(false);
+  }
 
   return (
     <div className="min-h-dvh md:grid md:grid-cols-[248px_minmax(0,1fr)]">
@@ -137,14 +143,14 @@ export function AppShell() {
               {label}
             </NavLink>
           ))}
-          <button type="button" aria-haspopup="dialog" onClick={() => setMoreAt(pathname)} className={tabClass(isInMore(pathname))}>
+          <button type="button" aria-haspopup="dialog" onClick={() => setMoreOpen(true)} className={tabClass(isInMore(pathname))}>
             <LayoutGrid aria-hidden className="h-5 w-5" strokeWidth={1.75} />
             Mais
           </button>
         </div>
       </nav>
 
-      <MoreSheet open={moreAt === pathname} onOpenChange={(o) => setMoreAt(o ? pathname : null)} />
+      <MoreSheet open={moreOpen} onOpenChange={setMoreOpen} />
       {newTransaction && <TransactionForm open onOpenChange={setNewTransaction} />}
     </div>
   );
