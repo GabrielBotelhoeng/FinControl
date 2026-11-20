@@ -101,7 +101,8 @@ export default function CalendarPage() {
 
 function Calendar({ asked }: { asked: string | null }) {
   const today = todayInSaoPaulo();
-  const max = addMonthsToYm(monthOf(today), 12);
+  // O mesmo limite da API (CALENDAR_MAX_MONTHS_AHEAD): as recorrências só existem até hoje + 366 dias.
+  const max = addMonthsToYm(monthOf(today), 11);
   const valid = asked && /^\d{4}-(0[1-9]|1[0-2])$/.test(asked) && asked <= max ? asked : null;
   const [month, setMonth] = useState<YearMonth>(valid ?? monthOf(today));
   const [picked, setPicked] = useState<string | null>(null);

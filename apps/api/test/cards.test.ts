@@ -46,6 +46,14 @@ describe('cartões (contas credit_card)', () => {
     });
   });
 
+  it('excluir a conta pagadora de um cartão dá 409 e o cartão continua com ela (auditoria final)', async () => {
+    const { user, card, checking } = await cardScenario();
+    const res = await request(app).delete(`/api/v1/accounts/${checking.id}`).set(user.auth);
+    expect(res.status).toBe(409);
+    expect(res.body.detail).toMatch(/paga a fatura de um cartão/);
+    expect((await testDb.account.findUnique({ where: { id: card.id } }))!.paymentAccountId).toBe(checking.id);
+  });
+
   it('saldo inicial diferente de 0 em cartão dá 422', async () => {
     const user = await newUser();
     const checking = await createAccount(app, user);
@@ -289,6 +297,16 @@ describe('compras no cartão e parceladas', () => {
     expect(res.status).toBe(422);
   });
 
+  it('parcelar um valor menor que o número de parcelas dá 422 com mensagem, não 500 (auditoria final, B1)', async () => {
+    const { user, card, food } = await cardScenario();
+    const res = await request(app).post('/api/v1/transactions').set(user.auth).send({
+      type: 'expense', amount: 5, description: 'Chiclete', accountId: card.id, categoryId: food, nature: 'variable',
+      dueDate: '2026-11-01', installments: 10,
+    });
+    expect(res.status).toBe(422);
+    expect(res.body.detail).toMatch(/pequeno demais/);
+  });
+
   it('transferência comum com origem no cartão dá 422 e orienta usar "Pagar fatura"', async () => {
     const { user, card, checking } = await cardScenario();
     const res = await request(app).post('/api/v1/transactions').set(user.auth).send({
@@ -426,6 +444,29 @@ describe('faturas do cartão e pagamento por transferência', () => {
     const { user, card, checking } = await cardScenario();
     const pay = await request(app).post(`/api/v1/cards/${card.id}/invoices/2026-11/payments`).set(user.auth).send({ amount: 5000, accountId: checking.id, paidDate: '2026-11-10' });
     expect(pay.status).toBe(201);
+  });
+
+  it('o que foi pago a mais numa fatura abate a seguinte em todas as telas (auditoria final, M3)', async () => {
+    const { user, card, checking, food } = await cardScenario();
+    await createTransaction(app, user, { type: 'expense', amount: 30000, description: 'Mercado', accountId: card.id, categoryId: food, nature: 'variable', dueDate: '2026-10-20' }); // fatura 2026-11
+    await createTransaction(app, user, { type: 'expense', amount: 20000, description: 'Farmácia', accountId: card.id, categoryId: food, nature: 'variable', dueDate: '2026-11-05' }); // fatura 2026-12 (aberta)
+    await request(app).post(`/api/v1/cards/${card.id}/invoices/2026-11/payments`).set(user.auth).send({ amount: 45000, accountId: checking.id, paidDate: '2026-11-10' });
+
+    const dec = (await request(app).get(`/api/v1/cards/${card.id}/invoices/2026-12`).set(user.auth)).body;
+    expect(dec).toMatchObject({ amount: 20000, paid: 15000 });
+    const list = (await request(app).get(`/api/v1/cards/${card.id}/invoices?from=2026-12`).set(user.auth)).body;
+    expect(list[0]).toMatchObject({ month: '2026-12', paid: 15000 });
+    const calendar = (await request(app).get('/api/v1/calendar?month=2026-12').set(user.auth)).body;
+    const invoice = calendar.days.flatMap((d: { items: { kind: string }[] }) => d.items).find((i: { kind: string }) => i.kind === 'invoice');
+    expect(invoice).toMatchObject({ remaining: 5000 });
+  });
+
+  it('o crédito aparece também numa fatura sem compras (CodeRabbit)', async () => {
+    const { user, card, checking, food } = await cardScenario();
+    await createTransaction(app, user, { type: 'expense', amount: 30000, description: 'Mercado', accountId: card.id, categoryId: food, nature: 'variable', dueDate: '2026-10-20' }); // fatura 2026-11
+    await request(app).post(`/api/v1/cards/${card.id}/invoices/2026-11/payments`).set(user.auth).send({ amount: 45000, accountId: checking.id, paidDate: '2026-11-10' });
+    const dec = (await request(app).get(`/api/v1/cards/${card.id}/invoices/2026-12`).set(user.auth)).body;
+    expect(dec).toMatchObject({ amount: 0, paid: 15000 });
   });
 
   it('pagamento é uma transferência paga, sem categoria/natureza, com dueDate=paidDate=data enviada e invoiceMonth da fatura', async () => {

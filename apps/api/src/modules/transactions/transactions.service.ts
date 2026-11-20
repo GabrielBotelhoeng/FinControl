@@ -56,10 +56,14 @@ export function createTransactionsService(deps: TransactionsServiceDeps) {
     return tx;
   }
 
-  function resolvePaidDate(status: TransactionStatus, paidDate: DateOnly | null | undefined): DateOnly | null {
+  /**
+   * Sem data de pagamento, `fallback` decide: na criação é o vencimento (auditoria final, A1: "Já está pago"
+   * num lançamento antigo conta no mês dele, não no de hoje), limitado a hoje; no "pagar" é hoje.
+   */
+  function resolvePaidDate(status: TransactionStatus, paidDate: DateOnly | null | undefined, fallback?: DateOnly): DateOnly | null {
     if (status === 'pending') return null;
     const t = today();
-    const date = paidDate ?? t;
+    const date = paidDate ?? (fallback && fallback < t ? fallback : t);
     if (date > t) throw new UnprocessableError('A data de pagamento não pode estar no futuro.');
     return date;
   }
@@ -75,6 +79,17 @@ export function createTransactionsService(deps: TransactionsServiceDeps) {
       }
       return txRepo.update(userId, current.id, patch);
     });
+  }
+
+  /**
+   * A1: num pago cujo pagamento caiu no próprio vencimento, mudar o vencimento leva o pagamento junto (senão ele
+   * seguiria contando no mês antigo). Pagamento em outra data é escolha da pessoa e fica; nunca vai para o futuro.
+   * Lançamentos de cartão e de dívida ficam de fora: lá a data de pagamento tem regra própria.
+   */
+  function followPaidDate(current: TransactionRow, dueDate: DateOnly | undefined): { paidDate?: DateOnly } {
+    if (!dueDate || dueDate === current.dueDate || current.status !== 'paid') return {};
+    if (current.paidDate !== current.dueDate || current.invoiceMonth || current.debtId || dueDate > today()) return {};
+    return { paidDate: dueDate };
   }
 
   async function isCard(userId: string, accountId: string): Promise<boolean> {
@@ -108,7 +123,7 @@ export function createTransactionsService(deps: TransactionsServiceDeps) {
       assertCardCreateRules(input, originIsCard, destinationIsCard);
       if (originIsCard) return createCardPurchase(userId, input, origin!);
 
-      const paidDate = resolvePaidDate(input.status, input.paidDate);
+      const paidDate = resolvePaidDate(input.status, input.paidDate, input.dueDate);
       if (input.recurrence) {
         const row = await recurrences.createSeries(userId, input, input.recurrence.frequency, input.recurrence.endDate, paidDate);
         return toTransactionDTO(row, today());
@@ -190,7 +205,13 @@ export function createTransactionsService(deps: TransactionsServiceDeps) {
         category: input.categoryId !== undefined,
       });
       const { recurrence: _recurrence, ...fields } = input;
-      return toTransactionDTO(await repo.update(userId, id, fields), today());
+      const updated = await repo.update(userId, id, fields);
+      const follow = followPaidDate(current, input.dueDate);
+      // Condicional: um pagamento registrado ao mesmo tempo (outra data) não é sobrescrito (CodeRabbit).
+      if (follow.paidDate && current.paidDate) {
+        return toTransactionDTO((await repo.movePaidDate(userId, id, current.paidDate, follow.paidDate)) ?? updated, today());
+      }
+      return toTransactionDTO(updated, today());
     },
 
     async remove(userId: string, id: string, scope: Scope): Promise<void> {

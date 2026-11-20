@@ -21,11 +21,20 @@ export function createProfileService(deps: { repo: ProfileRepository; provisione
     async update(claims: AuthClaims, input: UpdateProfileInput): Promise<ProfileDTO> {
       return toDTO(await deps.repo.update(claims.userId, input), claims.email);
     },
-    /** LGPD: apaga os dados (cascata a partir do perfil) e depois o usuário no Supabase Auth. */
-    async deleteAccount(userId: string): Promise<void> {
-      await deps.repo.delete(userId);
+    /**
+     * LGPD: apaga os dados (cascata a partir do perfil) e depois o usuário no Supabase Auth. `remember` guarda o id
+     * para um token antigo não recriar o perfil; a limpeza da demo não precisa (os tokens dela já expiraram).
+     */
+    async deleteAccount(userId: string, { remember = true }: { remember?: boolean } = {}): Promise<void> {
+      await deps.repo.delete(userId, remember);
       deps.provisioner.forget(userId);
-      await deps.authAdmin.deleteUser(userId);
+      try {
+        await deps.authAdmin.deleteUser(userId);
+      } catch (err) {
+        // A pessoa continua no Auth: sem desfazer a marca, ela ficaria com 401 para sempre (revisão final).
+        if (remember) await deps.repo.forgetDeleted(userId);
+        throw err;
+      }
     },
   };
 }

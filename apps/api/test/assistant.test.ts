@@ -285,6 +285,18 @@ describe('Assistente com IA', () => {
     expect(ai.calls).toHaveLength(1);
   });
 
+  it('A9: perguntas ao mesmo tempo não passam do limite do dia (auditoria final)', async () => {
+    const user = await newUser();
+    await consent(user);
+    await ask(user);
+    await testDb.aiUsage.updateMany({ data: { requests: 99 } });
+    const before = ai.calls.length;
+    const results = await Promise.all(Array.from({ length: 5 }, () => ask(user)));
+    expect(results.map((r) => r.status).sort()).toEqual([200, 429, 429, 429, 429]);
+    expect(ai.calls.length - before).toBe(1);
+    expect((await testDb.aiUsage.findFirst())!.requests).toBe(100);
+  });
+
   it('A11: créditos esgotados e sobrecarga viram 503 com mensagem clara', async () => {
     const user = await newUser();
     await consent(user);

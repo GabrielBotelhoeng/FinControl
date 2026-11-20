@@ -44,10 +44,14 @@ export function parseMoney(text: string): number | null {
   const lastDot = t.lastIndexOf('.');
   // O separador decimal é o último que aparece, com no máximo 2 dígitos depois; o outro é de milhar ("1.000" = mil).
   const decimalIdx = Math.max(lastComma, lastDot);
-  const hasDecimal = decimalIdx >= 0 && t.length - decimalIdx - 1 <= 2;
+  const after = decimalIdx >= 0 ? t.length - decimalIdx - 1 : 0;
+  // 4 ou mais casas nunca são milhar ("1234.5678"): é decimal, arredondado para centavos (auditoria final, B5).
+  const hasDecimal = decimalIdx >= 0 && (after <= 2 || after >= 4);
   const intPart = (hasDecimal ? t.slice(0, decimalIdx) : t).replace(/[.,]/g, '');
-  const decPart = hasDecimal ? t.slice(decimalIdx + 1).padEnd(2, '0') : '00';
-  const cents = Number(intPart || '0') * 100 + Number(decPart);
+  const decimals = hasDecimal ? t.slice(decimalIdx + 1) : '';
+  // Arredonda pelos dígitos (o terceiro decide): `0.145 * 100` em ponto flutuante dá 14,4999… (CodeRabbit).
+  const decPart = Number(decimals.slice(0, 2).padEnd(2, '0')) + (Number(decimals[2] ?? '0') >= 5 ? 1 : 0);
+  const cents = Number(intPart || '0') * 100 + decPart;
   if (!Number.isFinite(cents) || cents > MAX_CENTS) return null;
   return negative ? -cents : cents;
 }

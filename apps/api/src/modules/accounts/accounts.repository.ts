@@ -1,4 +1,4 @@
-import { monthOf, startOfMonth, type AccountType, type YearMonth } from '@fincontrol/shared';
+import { addMonthsToYm, monthOf, startOfMonth, type AccountType, type YearMonth } from '@fincontrol/shared';
 import { ZERO_FLOWS, type AccountFlows } from '../../domain/balance';
 import { fromDateOnly, toDateOnly } from '../../infra/date-mapping';
 import type { DbClient } from '../../infra/prisma';
@@ -43,6 +43,8 @@ export function createAccountsRepository(db: DbClient) {
    * valor = soma das despesas pagas do cartão naquele mês; pago = soma das transferências pagas para o cartão
    * no mesmo mês. Consulta única reaproveitada pelo DTO de conta (Tarefa 5) e pelas faturas (Tarefa 7, lista e
    * detalhe, via `invoiceTotals` abaixo); a Tarefa 8 usa para o painel.
+   * Auditoria final (M3): o que foi pago a mais numa fatura entra como pago na seguinte (e assim por diante),
+   * por isso a soma começa na primeira fatura do cartão e só o intervalo pedido volta.
    */
   async function invoiceTotalsByMonth(
     userId: string,
@@ -50,7 +52,7 @@ export function createAccountsRepository(db: DbClient) {
     fromMonth: YearMonth,
     toMonth: YearMonth,
   ): Promise<Map<YearMonth, { amount: number; paid: number }>> {
-    const range = { gte: fromDateOnly(startOfMonth(fromMonth)), lte: fromDateOnly(startOfMonth(toMonth)) };
+    const range = { lte: fromDateOnly(startOfMonth(toMonth)) };
     const [spent, paid] = await Promise.all([
       db.transaction.groupBy({
         by: ['invoiceMonth'],
@@ -74,6 +76,15 @@ export function createAccountsRepository(db: DbClient) {
     };
     for (const g of spent) if (g.invoiceMonth) at(monthOf(toDateOnly(g.invoiceMonth))).amount = Number(g._sum.amount ?? 0n);
     for (const g of paid) if (g.invoiceMonth) at(monthOf(toDateOnly(g.invoiceMonth))).paid = Number(g._sum.amount ?? 0n);
+    // Todo mês do intervalo existe, mesmo sem movimento: o crédito também aparece numa fatura vazia (CodeRabbit).
+    for (let ym = fromMonth; ym <= toMonth; ym = addMonthsToYm(ym, 1)) at(ym);
+    let credit = 0;
+    for (const ym of [...result.keys()].sort()) {
+      const v = result.get(ym)!;
+      v.paid += credit;
+      credit = Math.max(v.paid - v.amount, 0);
+      if (ym < fromMonth) result.delete(ym);
+    }
     return result;
   }
 
@@ -150,6 +161,11 @@ export function createAccountsRepository(db: DbClient) {
         db.loan.count({ where: { userId, accountId: id } }),
       ]);
       return transactions + recurrences + loans > 0;
+    },
+
+    /** Conta pagadora de algum cartão do usuário (inclusive arquivado). */
+    async paysACard(userId: string, id: string): Promise<boolean> {
+      return (await db.account.count({ where: { userId, paymentAccountId: id } })) > 0;
     },
 
     async flowsByAccount(userId: string): Promise<Map<string, AccountFlows>> {

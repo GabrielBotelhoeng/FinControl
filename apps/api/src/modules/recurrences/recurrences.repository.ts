@@ -135,6 +135,31 @@ export function createRecurrencesRepository(db: DbClient) {
       });
     },
 
+    /** Trava a série até o fim da transação (auditoria final): duas edições ao mesmo tempo não se cruzam. */
+    async lock(userId: string, id: string): Promise<void> {
+      await db.$queryRaw`SELECT id FROM recurrences WHERE id = ${id}::uuid AND user_id = ${userId}::uuid FOR UPDATE`;
+    },
+
+    /** Datas de ocorrência das pagas da série a partir de `fromDate` (as que `relinkFrom` leva para a série nova). */
+    async paidOccurrencesFrom(userId: string, recurrenceId: string, fromDate: DateOnly): Promise<DateOnly[]> {
+      const rows = await db.transaction.findMany({
+        where: { userId, recurrenceId, status: 'paid', occurrenceDate: { gte: fromDateOnly(fromDate) } },
+        select: { occurrenceDate: true },
+        orderBy: { occurrenceDate: 'asc' },
+      });
+      return rows.flatMap((r) => (r.occurrenceDate ? [toDateOnly(r.occurrenceDate)] : []));
+    },
+
+    /** Data da última ocorrência existente (paga ou pendente) antes de `date`; excluídas não contam. */
+    async lastOccurrenceBefore(userId: string, recurrenceId: string, date: DateOnly): Promise<DateOnly | null> {
+      const row = await db.transaction.findFirst({
+        where: { userId, recurrenceId, occurrenceDate: { lt: fromDateOnly(date) } },
+        select: { occurrenceDate: true },
+        orderBy: { occurrenceDate: 'desc' },
+      });
+      return row?.occurrenceDate ? toDateOnly(row.occurrenceDate) : null;
+    },
+
     countTransactions(userId: string, recurrenceId: string): Promise<number> {
       return db.transaction.count({ where: { userId, recurrenceId } });
     },

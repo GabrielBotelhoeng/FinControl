@@ -36,7 +36,8 @@ const monthLabel = (ym: string) => `${MONTHS[Number(ym.slice(5, 7)) - 1]}/${ym.s
 const asDate = (d: string) => new Date(`${d}T00:00:00Z`);
 const weekday = (d: string) => WEEKDAYS[asDate(d).getUTCDay()]!;
 /** Texto que começa com =, +, - ou @ ganha apóstrofo, como no CSV (R9): o Excel não o lê como fórmula. */
-const safeText = (t: string) => (/^[=+\-@]/.test(t) ? `'${t}` : t);
+// O mesmo conjunto do CSV (`csvCell`): tab e CR no começo também abrem fórmula em algumas planilhas (auditoria final).
+const safeText = (t: string) => (/^[=+\-@\t\r]/.test(t) ? `'${t}` : t);
 
 type Col = { header: string; width: number; fmt?: string };
 

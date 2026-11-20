@@ -15,6 +15,7 @@ export const CARD_RULE_MESSAGES = {
   move: 'Não é possível mover um lançamento de ou para um cartão de crédito.',
   changeDate: 'Não é possível mudar a data de um lançamento de cartão de crédito.',
   alwaysPaid: 'Lançamentos de cartão são sempre pagos.',
+  tinyInstallments: 'O valor é pequeno demais para esse número de parcelas: cada parcela precisa de pelo menos R$ 0,01.',
 } as const;
 
 /**
@@ -26,6 +27,8 @@ export function assertCardCreateRules(input: CreateTransactionInput, originIsCar
   if (originIsCard && input.recurrence) throw new UnprocessableError(CARD_RULE_MESSAGES.recurrence);
   if (input.installments !== undefined && !originIsCard) throw new UnprocessableError(CARD_RULE_MESSAGES.installmentsOffCard);
   if (originIsCard && input.type === 'income') throw new UnprocessableError(CARD_RULE_MESSAGES.income);
+  // Auditoria final (B1): sem isto, as parcelas de R$ 0,00 caíam na regra do banco (valor positivo) e viravam erro 500.
+  if (input.installments !== undefined && input.amount < input.installments) throw new UnprocessableError(CARD_RULE_MESSAGES.tinyInstallments);
 }
 
 /**
