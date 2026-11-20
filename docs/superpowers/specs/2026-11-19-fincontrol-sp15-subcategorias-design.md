@@ -44,7 +44,12 @@
 - Web: a árvore em Categorias, o seletor, o rótulo na linha e o detalhe no relatório.
 - E2E: criar uma subcategoria, lançar nela e ver o rótulo na linha e o detalhe no relatório.
 
-## 5. Fora deste sub-projeto
+## 5. Revisão (CodeRabbit)
+
+- **Corrigidos:** a subcategoria passa a mostrar o ícone e a cor lidos da categoria na hora (mudar a categoria ao mesmo tempo em que se cria uma subcategoria não deixa mais a cor antiga nela); o mesmo nome pedido duas vezes ao mesmo tempo dá 409, não 500; o diálogo de subcategoria só fecha a si mesmo e limpa o aviso quando a pessoa edita; o E2E confere os valores exatos.
+- **Mantidos:** a demo cria Mercado, Restaurante e Delivery numa conta nova, que só tem as categorias padrão, então o nome nunca está ocupado; a regra de nome sem diferença de maiúsculas é conferida pela API (como desde o sub-projeto 1), e o banco garante o nome exato.
+
+## 6. Fora deste sub-projeto
 
 - Mover uma subcategoria para outra categoria, ou transformar uma categoria em subcategoria (dá para criar a subcategoria e excluir a categoria antiga levando os lançamentos para ela).
 - Subcategorias padrão nas contas novas e limite por subcategoria.

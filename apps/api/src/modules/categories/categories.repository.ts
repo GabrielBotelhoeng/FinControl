@@ -4,57 +4,61 @@ import type { Db } from '../../infra/prisma';
 export type CategoryRow = CategoryDTO;
 type CategoryData = { name: string; type: CategoryType; icon: string; color: string };
 
-const select = { id: true, name: true, type: true, icon: true, color: true, parentId: true } as const;
+/**
+ * Sub-projeto 15 (U2): a subcategoria mostra sempre o ícone e a cor atuais da categoria, lidos dela. Os dela no banco
+ * (copiados na criação, só porque a coluna é obrigatória) não aparecem, então mudar a categoria não precisa correr
+ * atrás das subcategorias (CodeRabbit).
+ */
+const select = { id: true, name: true, type: true, icon: true, color: true, parentId: true, parent: { select: { icon: true, color: true } } } as const;
+type Selected = { id: string; name: string; type: CategoryType; icon: string; color: string; parentId: string | null; parent: { icon: string; color: string } | null };
+const toRow = ({ parent, ...c }: Selected): CategoryRow => ({ ...c, icon: parent?.icon ?? c.icon, color: parent?.color ?? c.color });
+const toRowOrNull = (c: Selected | null): CategoryRow | null => (c ? toRow(c) : null);
 
 /** A categoria e as subcategorias dela (sub-projeto 15, U9): a exclusão leva todas num comando só. */
 const withChildren = (userId: string, id: string) => ({ userId, OR: [{ id }, { parentId: id }] });
 
 export function createCategoriesRepository(db: Db) {
   return {
-    list(userId: string, type?: CategoryType): Promise<CategoryRow[]> {
-      return db.category.findMany({
+    async list(userId: string, type?: CategoryType): Promise<CategoryRow[]> {
+      const rows = await db.category.findMany({
         where: { userId, ...(type ? { type } : {}) },
         select,
         orderBy: [{ type: 'asc' }, { name: 'asc' }],
       });
+      return rows.map(toRow);
     },
 
-    findById(userId: string, id: string): Promise<CategoryRow | null> {
-      return db.category.findFirst({ where: { id, userId }, select });
+    async findById(userId: string, id: string): Promise<CategoryRow | null> {
+      return toRowOrNull(await db.category.findFirst({ where: { id, userId }, select }));
     },
 
     /** O nome é único por tipo, contando categorias e subcategorias (sub-projeto 15, U3). */
-    findByName(userId: string, type: CategoryType, name: string, exceptId?: string): Promise<CategoryRow | null> {
-      return db.category.findFirst({
-        where: { userId, type, name: { equals: name, mode: 'insensitive' }, ...(exceptId ? { NOT: { id: exceptId } } : {}) },
-        select,
-      });
+    async findByName(userId: string, type: CategoryType, name: string, exceptId?: string): Promise<CategoryRow | null> {
+      return toRowOrNull(
+        await db.category.findFirst({
+          where: { userId, type, name: { equals: name, mode: 'insensitive' }, ...(exceptId ? { NOT: { id: exceptId } } : {}) },
+          select,
+        }),
+      );
     },
 
     /** Cria se não existir, sem corrida: `ON CONFLICT DO NOTHING` (skipDuplicates) e depois lê a linha. */
     async ensure(userId: string, data: CategoryData): Promise<CategoryRow> {
       await db.category.createMany({ data: [{ ...data, userId }], skipDuplicates: true });
-      return db.category.findFirstOrThrow({ where: { userId, type: data.type, name: data.name }, select });
+      return toRow(await db.category.findFirstOrThrow({ where: { userId, type: data.type, name: data.name }, select }));
     },
 
-    create(userId: string, data: CategoryData): Promise<CategoryRow> {
-      return db.category.create({ data: { ...data, userId }, select });
+    async create(userId: string, data: CategoryData): Promise<CategoryRow> {
+      return toRow(await db.category.create({ data: { ...data, userId }, select }));
     },
 
-    /** U2: o tipo, o ícone e a cor vêm da categoria. */
-    createSubcategory(userId: string, parent: CategoryRow, name: string): Promise<CategoryRow> {
-      return db.category.create({ data: { userId, name, type: parent.type, icon: parent.icon, color: parent.color, parentId: parent.id }, select });
+    /** U2: o tipo vem da categoria; o ícone e a cor também, na leitura (`toRow`). */
+    async createSubcategory(userId: string, parent: CategoryRow, name: string): Promise<CategoryRow> {
+      return toRow(await db.category.create({ data: { userId, name, type: parent.type, icon: parent.icon, color: parent.color, parentId: parent.id }, select }));
     },
 
-    /** U2: o ícone e a cor da categoria valem também para as subcategorias dela. */
     async update(userId: string, id: string, data: Partial<Omit<CategoryData, 'type'>>): Promise<CategoryRow> {
-      const { icon, color } = data;
-      if (icon === undefined && color === undefined) return db.category.update({ where: { id, userId }, data, select });
-      const [row] = await db.$transaction([
-        db.category.update({ where: { id, userId }, data, select }),
-        db.category.updateMany({ where: { userId, parentId: id }, data: { ...(icon !== undefined ? { icon } : {}), ...(color !== undefined ? { color } : {}) } }),
-      ]);
-      return row;
+      return toRow(await db.category.update({ where: { id, userId }, data, select }));
     },
 
     async childIds(userId: string, id: string): Promise<string[]> {

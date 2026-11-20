@@ -17,6 +17,7 @@ export function SubcategoryForm({ parent, subcategory, onClose }: Props) {
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
+    setError(null);
     if (!name.trim()) return setError('Dê um nome para a subcategoria.');
     try {
       await save.mutateAsync({ ...(subcategory ? { id: subcategory.id } : {}), parentId: parent.id, name: name.trim() });
@@ -36,7 +37,15 @@ export function SubcategoryForm({ parent, subcategory, onClose }: Props) {
     >
       <form onSubmit={submit} className="grid gap-5" noValidate>
         <Field label="Nome" error={error ?? undefined}>
-          <Input value={name} onChange={(e) => setName(e.target.value)} maxLength={60} autoFocus />
+          <Input
+            value={name}
+            onChange={(e) => {
+              setName(e.target.value);
+              setError(null);
+            }}
+            maxLength={60}
+            autoFocus
+          />
         </Field>
         <div className="flex justify-end gap-2">
           <Button type="button" variant="ghost" onClick={onClose}>

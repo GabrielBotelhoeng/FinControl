@@ -22,7 +22,11 @@ describe('subcategorias (sub-projeto 15)', () => {
 
     await userEvent.click(screen.getByRole('button', { name: 'Nova subcategoria em Lazer' }));
     let dialog = await screen.findByRole('dialog', { name: 'Nova subcategoria em Lazer' });
+    // Sem nome, avisa; o aviso some quando a pessoa digita (CodeRabbit).
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Salvar' }));
+    expect(within(dialog).getByText('Dê um nome para a subcategoria.')).toBeInTheDocument();
     await userEvent.type(within(dialog).getByLabelText('Nome'), 'Cinema');
+    expect(within(dialog).queryByText('Dê um nome para a subcategoria.')).not.toBeInTheDocument();
     await userEvent.click(within(dialog).getByRole('button', { name: 'Salvar' }));
     expect(api.post).toHaveBeenCalledWith('/categories/c1/subcategories', { name: 'Cinema' });
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());

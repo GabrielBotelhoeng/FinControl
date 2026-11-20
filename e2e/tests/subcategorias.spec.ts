@@ -23,5 +23,7 @@ test('subcategorias: criar em Categorias, lançar nela e ver na linha e no relat
 
   // U5 e U7: a despesa soma em Alimentação, com o detalhe da subcategoria.
   await page.goto('/relatorios');
-  await expect(page.getByRole('list', { name: 'Subcategorias de Alimentação' }).getByRole('listitem', { name: 'Restaurante' })).toContainText('R$');
+  const food = page.getByRole('list', { name: 'Gastos por categoria' }).getByRole('listitem', { name: 'Alimentação' });
+  await expect(food).toContainText(/R\$\s45,00/);
+  await expect(food.getByRole('list', { name: 'Subcategorias de Alimentação' }).getByRole('listitem', { name: 'Restaurante' })).toContainText(/R\$\s45,00/);
 });

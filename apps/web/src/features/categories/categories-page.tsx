@@ -105,7 +105,14 @@ export default function CategoriesPage() {
 
       {editing && <CategoryForm open onOpenChange={(o) => !o && setEditing(null)} type={type} {...(editing === 'new' ? {} : { category: editing })} />}
       {deleting && <DeleteCategoryDialog category={deleting} siblings={list} onClose={() => setDeleting(null)} />}
-      {editingSub && <SubcategoryForm parent={editingSub.parent} subcategory={editingSub.subcategory} onClose={() => setEditingSub(null)} />}
+      {/* Só fecha o diálogo que pediu: um salvamento que termina depois não fecha outro aberto no meio tempo (CodeRabbit). */}
+      {editingSub && (
+        <SubcategoryForm
+          parent={editingSub.parent}
+          subcategory={editingSub.subcategory}
+          onClose={() => setEditingSub((current) => (current === editingSub ? null : current))}
+        />
+      )}
     </>
   );
 }

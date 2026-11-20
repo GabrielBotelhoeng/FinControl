@@ -116,6 +116,13 @@ describe('subcategorias (sub-projeto 15)', () => {
     expect((await request(app).post(`/api/v1/categories/${food.id}/subcategories`).set(intruder.auth).send({ name: 'X' })).status).toBe(404);
   });
 
+  it('o mesmo nome criado duas vezes ao mesmo tempo dá 409 na segunda, não 500 (CodeRabbit)', async () => {
+    const user = await newUser();
+    const food = await categoryId(app, user, 'Alimentação', 'expense');
+    const post = () => request(app).post(`/api/v1/categories/${food}/subcategories`).set(user.auth).send({ name: 'Padaria' });
+    expect((await Promise.all([post(), post()])).map((r) => r.status).sort()).toEqual([201, 409]);
+  });
+
   it('U2: o ícone e a cor da categoria mudam nas subcategorias; na subcategoria, só o nome muda', async () => {
     const user = await newUser();
     const food = await categoryId(app, user, 'Alimentação', 'expense');

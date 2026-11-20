@@ -102,7 +102,7 @@ As decisões, com as alternativas descartadas e os motivos, estão nas specs do 
 | Camada | Quantidade | Como roda |
 |---|---|---|
 | `packages/shared` | 216 | Unitários (Vitest) |
-| `apps/api` | 371 | Integração contra **Postgres real**: rotas HTTP, regras de saldo, recorrência, cartão e fatura, empréstimos, relatórios, CSV e PDF, sincronização com o Banco Central e isolamento entre usuários |
+| `apps/api` | 372 | Integração contra **Postgres real**: rotas HTTP, regras de saldo, recorrência, cartão e fatura, empréstimos, relatórios, CSV e PDF, sincronização com o Banco Central e isolamento entre usuários |
 | `apps/web` | 254 | Componentes e fluxos (Testing Library), com o provedor de identidade simulado |
 | `e2e` | 18 | Chromium contra a pilha inteira |
 
