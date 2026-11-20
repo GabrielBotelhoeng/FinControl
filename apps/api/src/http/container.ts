@@ -59,7 +59,12 @@ export function buildContainer(deps: AppDeps) {
   const transactionsRepo = createTransactionsRepository(deps.db);
   const validateRefs = createRefsValidator(accounts, categories);
   const recurrencesRepo = createRecurrencesRepository(deps.db);
-  const recurrences = createRecurrencesService({ repo: recurrencesRepo, transactions: transactionsRepo, validateRefs, clock: deps.clock });
+  const recurrences = createRecurrencesService({
+    repo: recurrencesRepo, transactions: transactionsRepo, validateRefs, clock: deps.clock,
+    // Auditoria final: "desta em diante" grava tudo ou nada, com a série travada (mesmo estilo de `createInstallments`).
+    inTransaction: (fn) =>
+      deps.db.$transaction((tx) => fn({ repo: createRecurrencesRepository(tx), transactions: createTransactionsRepository(tx) })),
+  });
   const debtsRepo = createDebtsRepository(deps.db);
   const transactions = createTransactionsService({
     repo: transactionsRepo, validateRefs, recurrences, clock: deps.clock,

@@ -118,6 +118,36 @@ describe('recorrências', () => {
     ]);
   });
 
+  it('nova data em "esta e as próximas" não duplica o mês já pago adiantado (auditoria final, M1)', async () => {
+    const user = await newUser();
+    await series(user);
+    const dec = (await range(user, '2026-12-01', '2026-12-31'))[0]!;
+    expect((await request(app).post(`/api/v1/transactions/${dec.id}/pay`).set(user.auth).send({ paidDate: '2026-11-11' })).status).toBe(200);
+    const nov = (await range(user, '2026-11-01', '2026-11-30'))[0]!;
+    const res = await request(app).patch(`/api/v1/transactions/${nov.id}?scope=future`).set(user.auth).send({ dueDate: '2026-11-15' });
+    expect(res.status).toBe(200);
+    const after = await range(user, '2026-09-01', '2027-02-28');
+    expect(after.map((i) => [i.dueDate, i.status])).toEqual([
+      ['2026-09-10', 'pending'],
+      ['2026-10-10', 'pending'],
+      ['2026-11-15', 'pending'],
+      ['2026-12-10', 'paid'],
+      ['2027-01-15', 'pending'],
+      ['2027-02-15', 'pending'],
+    ]);
+  });
+
+  it('mover "esta e as próximas" para antes da ocorrência anterior dá 422 e não altera nada (M1)', async () => {
+    const user = await newUser();
+    await series(user);
+    const before = await range(user, '2026-09-01', '2026-12-31');
+    const nov = before.find((i) => i.dueDate === '2026-11-10')!;
+    const res = await request(app).patch(`/api/v1/transactions/${nov.id}?scope=future`).set(user.auth).send({ dueDate: '2026-10-05' });
+    expect(res.status).toBe(422);
+    expect(res.body.detail).toMatch(/10\/10\/2026/);
+    expect(await range(user, '2026-09-01', '2026-12-31')).toEqual(before);
+  });
+
   it('mover uma ocorrência paga para a data de outra paga da série dá 422 e não altera nada', async () => {
     const user = await newUser();
     await series(user);
