@@ -28,13 +28,34 @@ describe('lançamentos', () => {
     expect(tx).toMatchObject({ status: 'pending', paidDate: null, recurrenceId: null, overdue: true });
   });
 
-  it('pago sem data de pagamento usa hoje; data futura dá 422', async () => {
+  it('pago sem data de pagamento usa o vencimento (ou hoje, se o vencimento é futuro); data futura dá 422', async () => {
     const user = await newUser();
     const { expense } = await setup(user);
+    // Auditoria final (A1): "Já está pago" num lançamento antigo conta no mês do vencimento, não no de hoje.
     const paid = await createTransaction(app, user, expense({ status: 'paid' }));
-    expect(paid.paidDate).toBe('2026-11-11');
+    expect(paid.paidDate).toBe('2026-11-10');
+    const old = await createTransaction(app, user, expense({ status: 'paid', dueDate: '2026-10-05' }));
+    expect(old.paidDate).toBe('2026-10-05');
+    const ahead = await createTransaction(app, user, expense({ status: 'paid', dueDate: '2026-11-30' }));
+    expect(ahead.paidDate).toBe('2026-11-11');
     const future = await request(app).post('/api/v1/transactions').set(user.auth).send(expense({ status: 'paid', paidDate: '2026-11-12' }));
     expect(future.status).toBe(422);
+  });
+
+  it('mudar a data de um pago junto com o vencimento leva o pagamento junto; pagamento em outra data fica (A1)', async () => {
+    const user = await newUser();
+    const { expense } = await setup(user);
+    const tied = await createTransaction(app, user, expense({ status: 'paid', dueDate: '2026-11-10' }));
+    const moved = await request(app).patch(`/api/v1/transactions/${tied.id}`).set(user.auth).send({ dueDate: '2026-10-28' });
+    expect(moved.body).toMatchObject({ dueDate: '2026-10-28', paidDate: '2026-10-28' });
+
+    const separate = await createTransaction(app, user, expense({ status: 'paid', dueDate: '2026-11-05', paidDate: '2026-11-08' }));
+    const kept = await request(app).patch(`/api/v1/transactions/${separate.id}`).set(user.auth).send({ dueDate: '2026-11-03' });
+    expect(kept.body).toMatchObject({ dueDate: '2026-11-03', paidDate: '2026-11-08' });
+
+    // Vencimento movido para o futuro: o pagamento não pode ir junto (não existe pagamento no futuro).
+    const future = await request(app).patch(`/api/v1/transactions/${tied.id}`).set(user.auth).send({ dueDate: '2026-12-10' });
+    expect(future.body).toMatchObject({ dueDate: '2026-12-10', paidDate: '2026-10-28' });
   });
 
   it('valida forma: transferência para a mesma conta, despesa sem categoria, descrição vazia e centavos fracionados', async () => {
