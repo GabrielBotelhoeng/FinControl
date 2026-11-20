@@ -7,7 +7,7 @@ _Atualizado em 2026-11-20 (auditoria final)._
 - **Relatório:** `docs/auditoria-final-2026-11-20.md` (quatro agentes: testes e E2E, valores e duplicações, banco, segurança). Nada crítico.
 - **Migration:** `20261120120000_auditoria_final` (`deleted_users`, RLS e `REVOKE` na `_prisma_migrations`, sete índices de chaves estrangeiras). Aplicar em produção **antes do merge** com o comando do sub-projeto 11.
 - **Corrigido:** data de pagamento de "Já está pago", mês duplicado e transação nas recorrências, crédito entre faturas, exclusão de conta (LGPD), cabeçalhos de segurança do site (CSP), limite do assistente, parcelas mínimas, calendário em 11 meses, valores com 4 casas no CSV, conta pagadora de cartão, variáveis da Vercel no bundle, XLSX.
-- **Testes:** 219 no shared, 380 na API e 262 na web, além de 19 E2E.
+- **Testes:** 221 no shared, 385 na API e 262 na web, além de 19 E2E. Revisão final por revisor novo e CodeRabbit (recorrência contada por período, anterior excluída, trava de perfil, exclusão que falha no Auth, crédito em fatura vazia, arredondamento do CSV, CSP).
 
 ## Sub-projeto 16: visual claro e colorido — no ar desde 2026-11-20 (PR #37)
 

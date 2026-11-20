@@ -205,7 +205,13 @@ export function createTransactionsService(deps: TransactionsServiceDeps) {
         category: input.categoryId !== undefined,
       });
       const { recurrence: _recurrence, ...fields } = input;
-      return toTransactionDTO(await repo.update(userId, id, { ...fields, ...followPaidDate(current, input.dueDate) }), today());
+      const updated = await repo.update(userId, id, fields);
+      const follow = followPaidDate(current, input.dueDate);
+      // Condicional: um pagamento registrado ao mesmo tempo (outra data) não é sobrescrito (CodeRabbit).
+      if (follow.paidDate && current.paidDate) {
+        return toTransactionDTO((await repo.movePaidDate(userId, id, current.paidDate, follow.paidDate)) ?? updated, today());
+      }
+      return toTransactionDTO(updated, today());
     },
 
     async remove(userId: string, id: string, scope: Scope): Promise<void> {

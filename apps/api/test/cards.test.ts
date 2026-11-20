@@ -461,6 +461,14 @@ describe('faturas do cartão e pagamento por transferência', () => {
     expect(invoice).toMatchObject({ remaining: 5000 });
   });
 
+  it('o crédito aparece também numa fatura sem compras (CodeRabbit)', async () => {
+    const { user, card, checking, food } = await cardScenario();
+    await createTransaction(app, user, { type: 'expense', amount: 30000, description: 'Mercado', accountId: card.id, categoryId: food, nature: 'variable', dueDate: '2026-10-20' }); // fatura 2026-11
+    await request(app).post(`/api/v1/cards/${card.id}/invoices/2026-11/payments`).set(user.auth).send({ amount: 45000, accountId: checking.id, paidDate: '2026-11-10' });
+    const dec = (await request(app).get(`/api/v1/cards/${card.id}/invoices/2026-12`).set(user.auth)).body;
+    expect(dec).toMatchObject({ amount: 0, paid: 15000 });
+  });
+
   it('pagamento é uma transferência paga, sem categoria/natureza, com dueDate=paidDate=data enviada e invoiceMonth da fatura', async () => {
     const { user, card, checking } = await cardScenario();
     const res = await request(app).post(`/api/v1/cards/${card.id}/invoices/2026-11/payments`).set(user.auth).send({ amount: 12345, accountId: checking.id, paidDate: '2026-11-10' });

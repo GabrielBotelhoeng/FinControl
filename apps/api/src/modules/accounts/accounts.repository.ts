@@ -1,4 +1,4 @@
-import { monthOf, startOfMonth, type AccountType, type YearMonth } from '@fincontrol/shared';
+import { addMonthsToYm, monthOf, startOfMonth, type AccountType, type YearMonth } from '@fincontrol/shared';
 import { ZERO_FLOWS, type AccountFlows } from '../../domain/balance';
 import { fromDateOnly, toDateOnly } from '../../infra/date-mapping';
 import type { DbClient } from '../../infra/prisma';
@@ -76,6 +76,8 @@ export function createAccountsRepository(db: DbClient) {
     };
     for (const g of spent) if (g.invoiceMonth) at(monthOf(toDateOnly(g.invoiceMonth))).amount = Number(g._sum.amount ?? 0n);
     for (const g of paid) if (g.invoiceMonth) at(monthOf(toDateOnly(g.invoiceMonth))).paid = Number(g._sum.amount ?? 0n);
+    // Todo mês do intervalo existe, mesmo sem movimento: o crédito também aparece numa fatura vazia (CodeRabbit).
+    for (let ym = fromMonth; ym <= toMonth; ym = addMonthsToYm(ym, 1)) at(ym);
     let credit = 0;
     for (const ym of [...result.keys()].sort()) {
       const v = result.get(ym)!;

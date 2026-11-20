@@ -49,7 +49,8 @@ export function parseMoney(text: string): number | null {
   const hasDecimal = decimalIdx >= 0 && (after <= 2 || after >= 4);
   const intPart = (hasDecimal ? t.slice(0, decimalIdx) : t).replace(/[.,]/g, '');
   const decimals = hasDecimal ? t.slice(decimalIdx + 1) : '';
-  const decPart = decimals.length > 2 ? Math.round(Number(`0.${decimals}`) * 100) : Number(decimals.padEnd(2, '0'));
+  // Arredonda pelos dígitos (o terceiro decide): `0.145 * 100` em ponto flutuante dá 14,4999… (CodeRabbit).
+  const decPart = Number(decimals.slice(0, 2).padEnd(2, '0')) + (Number(decimals[2] ?? '0') >= 5 ? 1 : 0);
   const cents = Number(intPart || '0') * 100 + decPart;
   if (!Number.isFinite(cents) || cents > MAX_CENTS) return null;
   return negative ? -cents : cents;

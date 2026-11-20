@@ -169,6 +169,17 @@ export function createTransactionsRepository(db: DbClient) {
       return toTransactionRow(await db.transaction.update({ where: { id, userId }, data: toUpdateData(patch) }));
     },
 
+    /** Troca a data de pagamento só se ela ainda for `from`; devolve o lançamento atualizado, ou `null` se mudou. */
+    async movePaidDate(userId: string, id: string, from: DateOnly, to: DateOnly): Promise<TransactionRow | null> {
+      const { count } = await db.transaction.updateMany({
+        where: { id, userId, status: 'paid', paidDate: fromDateOnly(from) },
+        data: { paidDate: fromDateOnly(to) },
+      });
+      if (count === 0) return null;
+      const row = await db.transaction.findFirst({ where: { id, userId } });
+      return row ? toTransactionRow(row) : null;
+    },
+
     async delete(userId: string, id: string): Promise<void> {
       await db.transaction.delete({ where: { id, userId } });
     },
