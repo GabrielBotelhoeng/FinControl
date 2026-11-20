@@ -1,11 +1,18 @@
 # HANDOFF — FinControl
 
-_Atualizado em 2026-11-19 (subcategorias)._
+_Atualizado em 2026-11-20 (visual claro e colorido)._
 
-## Sub-projeto 15: subcategorias (2026-11-19, branch feat/subcategorias)
+## Sub-projeto 16: visual claro e colorido (2026-11-20, branch feat/visual-claro)
+
+- **Spec:** `docs/superpowers/specs/2026-11-20-fincontrol-sp16-visual-claro-design.md` (L1–L14) e o `DESIGN.md` reescrito ("Feira de manhã"). Sem migration.
+- **Entregue:** o claro como padrão (o escuro continua no Perfil) com o verde-limão da marca e cores de apoio; o saldo num cartão limão e os cartões coloridos do painel; ícones de traço em quadrados da cor da categoria ou da conta (`IconTile`); a barra flutuante do celular com o "+" e a folha "Mais"; formulários em folha que sobe de baixo no celular; o valor grande e o tipo colorido no lançamento; o logo novo (o "F" com a seta de crescimento, a partir de uma referência do usuário), que também é o ícone do app; a entrada sem a arte dourada; o PDF e a planilha no verde da marca.
+- **Pedidos no meio do caminho:** a pesquisa de paletas e ideias no navegador do usuário, o logo "nessa pegada" e a troca das ilustrações 3D, que ficaram com "cara de IA" (seção 6 da spec).
+- **Testes:** 259 na web e 372 na API, além de 19 E2E (novo: a barra do celular a 360 px). As imagens do README foram refeitas.
+
+## Sub-projeto 15: subcategorias — no ar desde 2026-11-20 (PR #36)
 
 - **Spec:** `docs/superpowers/specs/2026-11-19-fincontrol-sp15-subcategorias-design.md` (U1–U11).
-- **Migration:** `20261119233139_subcategorias` (`categories.parent_id`, sem cascata, com índice e a checagem de não ser a própria principal). **Antes do deploy da API, aplicar no Supabase** com o comando do sub-projeto 11 (pelo usuário: o classificador bloqueia o agente).
+- **Migration:** `20261119233139_subcategorias` (`categories.parent_id`, sem cascata, com índice e a checagem de não ser a própria principal), **aplicada em produção antes do merge** com o comando do sub-projeto 11 (pelo usuário: o classificador bloqueia o agente). Conferido em produção pela demo (Categorias, Lançamentos, Relatórios e 360 px).
 - **Entregue:** `POST /categories/:id/subcategories`; renomear (só o nome) e excluir com o destino dos lançamentos (a categoria leva as subcategorias); o filtro `categoryId` inclui as subcategorias; `rollup.ts` (`subcategoryParents` e `foldIntoParents`) soma a subcategoria na principal no orçamento (limite só na principal), no gráfico do painel, nos relatórios (com `subcategories`, o detalhe), no PDF e na planilha; "Categoria" no CSV e no Excel é a principal, com a coluna "Subcategoria"; o assistente lista e busca as subcategorias; o calendário e as maiores despesas mostram "Categoria › Subcategoria"; na web, a árvore em Categorias, o seletor (`categoryOptions`), o rótulo na linha e o detalhe no relatório; na demo, Alimentação com Mercado, Restaurante e Delivery.
 - **Testes:** 216 no shared, 372 na API e 254 na web, além de 18 E2E (novo: `e2e/tests/subcategorias.spec.ts`). Revisão do CodeRabbit na seção 5 da spec.
 
