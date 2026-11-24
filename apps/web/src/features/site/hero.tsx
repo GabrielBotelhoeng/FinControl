@@ -1,12 +1,11 @@
 import { ArrowRight, Briefcase, ShoppingCart, Sparkles, Utensils, Wallet, type LucideIcon } from 'lucide-react';
-import { animate, useMotionValue, useMotionValueEvent, useReducedMotion, useScroll, useTransform } from 'motion/react';
+import { animate, useReducedMotion, useScroll, useTransform } from 'motion/react';
 import * as m from 'motion/react-m';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { Link } from 'react-router';
 import { Button } from '../../components/ui/button';
 import { IconTile } from '../../components/ui/icon-tile';
-import { HeroAmount } from '../../components/ui/money';
-import { formatBRL } from '../../lib/format';
+import { formatBRL, splitBRL } from '../../lib/format';
 import { PALETTE } from '../../lib/palette';
 import { CAPTURES } from './captures';
 import { useSiteDemo } from './demo-context';
@@ -19,21 +18,41 @@ import { EASE_OUT } from './reveal';
  */
 export const HERO_BALANCE_CENTS = 2135910;
 
-/** O saldo do cartão limão conta de 0 até o valor; com `prefers-reduced-motion`, já nasce no valor final. */
+/**
+ * O saldo do cartão limão conta de 0 até o valor; com `prefers-reduced-motion`, já nasce no valor final. Mesmo desenho
+ * do `HeroAmount`, mas o número é escrito direto no DOM a cada quadro (sem re-render do React enquanto a página carrega).
+ */
 function CountingBalance({ cents }: { cents: number }) {
   const reduce = useReducedMotion();
-  const value = useMotionValue(reduce ? cents : 0);
-  const [shown, setShown] = useState(reduce ? cents : 0);
-  useMotionValueEvent(value, 'change', (v) => setShown(Math.round(v)));
+  const integerRef = useRef<HTMLSpanElement>(null);
+  const centsRef = useRef<HTMLSpanElement>(null);
+  const start = splitBRL(reduce ? cents : 0);
   useEffect(() => {
     if (reduce) return;
-    const controls = animate(value, cents, { duration: 1.4, delay: 0.3, ease: EASE_OUT });
+    const controls = animate(0, cents, {
+      duration: 1.4,
+      delay: 0.3,
+      ease: EASE_OUT,
+      onUpdate: (v) => {
+        const parts = splitBRL(Math.round(v));
+        if (integerRef.current) integerRef.current.textContent = parts.integer;
+        if (centsRef.current) centsRef.current.textContent = parts.cents;
+      },
+    });
     return () => controls.stop();
-  }, [reduce, cents, value]);
+  }, [reduce, cents]);
   return (
     <>
       {/* O número que conta é decoração; o leitor de tela ouve o valor final uma vez. */}
-      <HeroAmount cents={shown} className="mt-1 block whitespace-nowrap text-[1.6rem] md:text-4xl" />
+      <span aria-hidden className="tabular mt-1 block whitespace-nowrap font-display text-[1.6rem] leading-none tracking-[-0.02em] md:text-4xl">
+        <span className="font-extralight">{start.currency} </span>
+        <span ref={integerRef} className="font-extrabold">
+          {start.integer}
+        </span>
+        <span ref={centsRef} className="font-extralight">
+          {start.cents}
+        </span>
+      </span>
       <span className="sr-only">{formatBRL(cents)}</span>
     </>
   );
