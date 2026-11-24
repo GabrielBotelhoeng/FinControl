@@ -1,10 +1,13 @@
 import '@testing-library/jest-dom/vitest';
 import { cleanup } from '@testing-library/react';
 import { afterEach } from 'vitest';
+import { resetDemoStartForTests } from '../features/auth/use-start-demo';
 
 afterEach(() => {
   cleanup();
   localStorage.clear();
+  // O início da demo guarda o estado fora do React (store de módulo): cada teste começa do zero.
+  resetDemoStartForTests();
 });
 
 if (!window.matchMedia) {
