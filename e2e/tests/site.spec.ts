@@ -26,13 +26,26 @@ test('sem sessão, a / mostra o site de apresentação, e as rotas protegidas co
 
 for (const width of [360, 390, 1440]) {
   test(`sem rolagem horizontal a ${width} px, com todas as seções reveladas`, async ({ page }) => {
-    await page.setViewportSize({ width, height: width < 1000 ? 800 : 900 });
+    await page.setViewportSize({ width, height: width === 360 ? 640 : width < 1000 ? 800 : 900 });
     await page.goto('/');
     await expect(hero(page)).toBeVisible();
     await scrollThrough(page);
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
     expect(overflow).toBeLessThanOrEqual(0);
     for (const id of ['recursos', 'planos', 'perguntas']) await expect(page.locator(`#${id} h2`)).toBeVisible();
+    await page.waitForTimeout(900); // a última revelação termina de subir
+    // O toBeVisible não olha a opacidade: confere a calculada de cada ancestral, em todo título, item e cartão que está
+    // na tela (inclusive os cartões dos recursos no celular), fora as respostas fechadas do acordeão (CodeRabbit, PR #39).
+    const transparent = await page.evaluate(() =>
+      [...document.querySelectorAll('main h2, main h3, main li')]
+        .filter((el) => el.getClientRects().length > 0 && !el.closest('[inert]'))
+        .filter((el) => {
+          for (let n: Element | null = el; n; n = n.parentElement) if (Number(getComputedStyle(n).opacity) < 0.5) return true;
+          return false;
+        })
+        .map((el) => (el.textContent ?? '').trim().slice(0, 40)),
+    );
+    expect(transparent).toEqual([]);
   });
 }
 

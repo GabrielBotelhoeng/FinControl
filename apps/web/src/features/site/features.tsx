@@ -123,17 +123,22 @@ export function Features() {
           </div>
         </div>
 
-        {/* Celular: um cartão por recurso, com a captura embaixo do texto. */}
-        <Reveal as="ul" className="mt-10 grid gap-5 md:hidden">
+        {/*
+          Celular: um cartão por recurso, com a captura embaixo do texto. Cada cartão se revela sozinho: a lista inteira
+          passa de 3.200 px a 360 px, e 20% dela nunca caberia na tela de uma vez (CodeRabbit, PR #39).
+        */}
+        <ul className="mt-10 grid gap-5 md:hidden">
           {FEATURES.map((f) => (
-            <RevealItem as="li" key={f.title} className="overflow-hidden rounded-[var(--radius-card)] border border-border bg-surface p-6 shadow-panel">
-              <IconTile icon={f.icon} color={f.tint} />
-              <h3 className="mt-4 font-display text-2xl font-bold tracking-[-0.02em]">{f.title}</h3>
-              <p className="mt-2 leading-relaxed text-muted">{f.text}</p>
-              <PhoneFrame capture={f.capture} className="mx-auto -mb-28 mt-6 w-[72%]" />
-            </RevealItem>
+            <Reveal as="li" key={f.title}>
+              <RevealItem className="overflow-hidden rounded-[var(--radius-card)] border border-border bg-surface p-6 shadow-panel">
+                <IconTile icon={f.icon} color={f.tint} />
+                <h3 className="mt-4 font-display text-2xl font-bold tracking-[-0.02em]">{f.title}</h3>
+                <p className="mt-2 leading-relaxed text-muted">{f.text}</p>
+                <PhoneFrame capture={f.capture} className="mx-auto -mb-28 mt-6 w-[72%]" />
+              </RevealItem>
+            </Reveal>
           ))}
-        </Reveal>
+        </ul>
       </div>
     </section>
   );
