@@ -114,11 +114,16 @@ export function LoginPage() {
     try {
       if (mode === 'entrar') {
         await gateway.signInWithPassword(values.email, values.password);
+        // Uma demo que falhou antes não pode segurar o site na `/` para quem acabou de entrar (CodeRabbit, PR #39).
+        demo.reset();
         navigate(from, { replace: true });
       } else {
         const { needsConfirmation } = await gateway.signUp(values.email, values.password, values.name);
         if (needsConfirmation) setNotice('Enviamos um link de confirmação para o seu e-mail. Depois de confirmar, é só entrar.');
-        else navigate('/', { replace: true });
+        else {
+          demo.reset();
+          navigate('/', { replace: true });
+        }
       }
     } catch (err) {
       setError(translateAuthError(err));

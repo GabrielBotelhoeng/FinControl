@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { fakeApi, fakeGateway, signedIn } from '../test/fakes';
 import { renderApp } from '../test/render';
+import { LoginPage } from '../features/auth/login-page';
 import { HomeGate } from './home-gate';
 
 const login = { '/entrar': <p>Tela de entrada</p> };
@@ -52,5 +53,20 @@ describe('HomeGate', () => {
     expect((await screen.findAllByRole('link', { name: 'Painel' })).length).toBeGreaterThan(0);
     expect(gateway.signInAnonymously).toHaveBeenCalledTimes(1);
     expect(api.post).toHaveBeenCalledTimes(2);
+  });
+
+  it('demo que falhou na entrada não segura o site: depois de entrar com senha, a / mostra o painel', async () => {
+    const { gateway } = fakeGateway(null);
+    const api = fakeApi({ 'POST /demo/seed': () => new Error('Falha temporária') });
+    renderApp(<LoginPage />, { gateway, api, route: '/entrar', path: '/entrar', extraRoutes: { '/*': <HomeGate /> } });
+
+    await userEvent.click(await screen.findByRole('button', { name: /Experimentar sem cadastro/ }));
+    expect(await screen.findByRole('alert')).toBeInTheDocument();
+
+    await userEvent.type(screen.getByLabelText('E-mail'), 'ana@exemplo.com');
+    await userEvent.type(screen.getByLabelText('Senha'), 'senha-segura');
+    await userEvent.click(screen.getByRole('button', { name: 'Entrar' }));
+    expect((await screen.findAllByRole('link', { name: 'Painel' }, { timeout: 5000 })).length).toBeGreaterThan(0);
+    expect(screen.queryByRole('heading', { level: 1, name: 'Seu dinheiro, sob controle.' })).not.toBeInTheDocument();
   });
 });

@@ -10,8 +10,9 @@ import { enterDemo } from './helpers';
 test.skip(!process.env.SITE_CAPTURES, 'só roda com SITE_CAPTURES=1');
 
 const OUT = '.site-capturas';
-// Início desta execução: a og-image só usa capturas feitas agora (CodeRabbit, PR #39).
-const RUN_STARTED = Date.now();
+// Início desta execução, marcado uma vez só pelo global-setup.ts antes dos workers (um worker novo, depois de uma falha
+// ou num retry, reavalia este arquivo): a og-image só usa capturas feitas nesta execução (CodeRabbit, PR #39).
+const RUN_STARTED = Number(process.env.E2E_RUN_STARTED);
 
 /** Abre a tela e fotografa a área visível; `focus` centraliza uma parte da tela antes (ex.: o resultado do plano). */
 async function shoot(page: Page, path: string, file: string, focus?: (page: Page) => Locator) {
@@ -78,6 +79,7 @@ test.describe('compartilhamento', () => {
     } catch {
       // Arquivo ausente: cai no erro abaixo.
     }
+    if (!RUN_STARTED) throw new Error('E2E_RUN_STARTED ausente: o global-setup.ts não rodou.');
     if (modified < RUN_STARTED) {
       throw new Error(`${panel} não é desta execução. Rode o arquivo inteiro: SITE_CAPTURES=1 npm run test:e2e -- site-capturas`);
     }

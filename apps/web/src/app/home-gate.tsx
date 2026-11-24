@@ -32,7 +32,7 @@ const isAuthRedirect = () => /access_token|error_description/.test(window.locati
  * apresentação (ou a entrada, no app instalado); sem sessão em qualquer outra rota, a entrada, como no `RequireAuth`.
  */
 export function HomeGate() {
-  const { status } = useAuth();
+  const { status, isDemo } = useAuth();
   const { pathname } = useLocation();
   const demo = useDemoStart();
   if (status === 'loading') {
@@ -43,7 +43,8 @@ export function HomeGate() {
   }
   // A demo começou pelo site: o login anônimo já abriu a sessão, mas o site fica até os dados existirem. Se a geração
   // falhar, ele continua com o erro e o botão de tentar de novo, em vez de abrir um painel vazio.
-  const demoInProgress = demo.status !== 'idle' && pathname === '/';
+  // A falha só segura o site se a sessão ainda for a anônima da demo: quem entrou com a própria conta vê o app.
+  const demoInProgress = pathname === '/' && (demo.status === 'pending' || (demo.status === 'failed' && isDemo));
   if (status === 'signed-in' && !demoInProgress) {
     return (
       <Suspense fallback={<AuthLoading />}>
