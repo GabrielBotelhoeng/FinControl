@@ -1,7 +1,7 @@
 import { Bot, CreditCard, FileBarChart, LayoutDashboard, ListChecks, TrendingDown, type LucideIcon } from 'lucide-react';
 import { useInView, useReducedMotion } from 'motion/react';
 import * as m from 'motion/react-m';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { IconTile } from '../../components/ui/icon-tile';
 import { PALETTE } from '../../lib/palette';
 import { CAPTURES, type Capture } from './captures';
@@ -56,6 +56,23 @@ export const FEATURES: Feature[] = [
   },
 ];
 
+const DESKTOP = '(min-width: 768px)';
+
+/**
+ * Computador ou celular (o `md` do Tailwind). A seção monta só a versão da largura atual, em vez das duas com uma
+ * escondida por CSS: são 6 molduras a menos no commit (Lighthouse no celular).
+ */
+function useIsDesktop() {
+  return useSyncExternalStore(
+    (onChange) => {
+      const query = window.matchMedia(DESKTOP);
+      query.addEventListener('change', onChange);
+      return () => query.removeEventListener('change', onChange);
+    },
+    () => window.matchMedia(DESKTOP).matches,
+  );
+}
+
 /** Um bloco de texto da coluna rolante: avisa quando passa pelo meio da tela para a tela presa trocar. */
 function FeatureText({ feature, index, onActive }: { feature: Feature; index: number; onActive: (i: number) => void }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -78,6 +95,7 @@ function FeatureText({ feature, index, onActive }: { feature: Feature; index: nu
  */
 export function Features() {
   const [active, setActive] = useState(0);
+  const desktop = useIsDesktop();
   const reduce = useReducedMotion();
 
   return (
@@ -95,50 +113,54 @@ export function Features() {
         />
 
         {/* Computador: coluna de texto rolando e a tela presa ao lado. */}
-        <div className="mt-6 hidden gap-16 md:grid md:grid-cols-[1fr_minmax(0,380px)] lg:gap-24">
-          <div>
-            {FEATURES.map((f, i) => (
-              <FeatureText key={f.title} feature={f} index={i} onActive={setActive} />
-            ))}
-          </div>
-          <div className="sticky top-24 flex h-[calc(100vh-7rem)] items-center">
-            <div className="relative w-full">
-              {/* Uma tela de cada vez; as outras ficam escondidas do leitor de tela. */}
-              <div className="invisible" aria-hidden>
-                <PhoneFrame capture={{ ...FEATURES[0]!.capture, src: undefined }} className="mx-auto w-[86%]" />
-              </div>
+        {desktop && (
+          <div className="mt-6 grid grid-cols-[1fr_minmax(0,380px)] gap-16 lg:gap-24">
+            <div>
               {FEATURES.map((f, i) => (
-                <m.div
-                  key={f.title}
-                  aria-hidden={i !== active}
-                  className="absolute inset-0"
-                  initial={false}
-                  animate={{ opacity: i === active ? 1 : 0, scale: i === active || reduce ? 1 : 0.98 }}
-                  transition={{ duration: 0.45, ease: EASE_OUT }}
-                >
-                  <PhoneFrame capture={f.capture} className="mx-auto w-[86%]" />
-                </m.div>
+                <FeatureText key={f.title} feature={f} index={i} onActive={setActive} />
               ))}
             </div>
+            <div className="sticky top-24 flex h-[calc(100vh-7rem)] items-center">
+              <div className="relative w-full">
+                {/* Uma tela de cada vez; as outras ficam escondidas do leitor de tela. */}
+                <div className="invisible" aria-hidden>
+                  <PhoneFrame capture={{ ...FEATURES[0]!.capture, src: undefined }} className="mx-auto w-[86%]" />
+                </div>
+                {FEATURES.map((f, i) => (
+                  <m.div
+                    key={f.title}
+                    aria-hidden={i !== active}
+                    className="absolute inset-0"
+                    initial={false}
+                    animate={{ opacity: i === active ? 1 : 0, scale: i === active || reduce ? 1 : 0.98 }}
+                    transition={{ duration: 0.45, ease: EASE_OUT }}
+                  >
+                    <PhoneFrame capture={f.capture} className="mx-auto w-[86%]" />
+                  </m.div>
+                ))}
+              </div>
+            </div>
           </div>
-        </div>
+        )}
 
         {/*
           Celular: um cartão por recurso, com a captura embaixo do texto. Cada cartão se revela sozinho: a lista inteira
           passa de 3.200 px a 360 px, e 20% dela nunca caberia na tela de uma vez (CodeRabbit, PR #39).
         */}
-        <ul className="mt-10 grid gap-5 md:hidden">
-          {FEATURES.map((f) => (
-            <Reveal as="li" key={f.title}>
-              <RevealItem className="overflow-hidden rounded-[var(--radius-card)] border border-border bg-surface p-6 shadow-panel">
-                <IconTile icon={f.icon} color={f.tint} />
-                <h3 className="mt-4 font-display text-2xl font-bold tracking-[-0.02em]">{f.title}</h3>
-                <p className="mt-2 leading-relaxed text-muted">{f.text}</p>
-                <PhoneFrame capture={f.capture} className="mx-auto -mb-28 mt-6 w-[72%]" />
-              </RevealItem>
-            </Reveal>
-          ))}
-        </ul>
+        {!desktop && (
+          <ul className="mt-10 grid gap-5">
+            {FEATURES.map((f) => (
+              <Reveal as="li" key={f.title}>
+                <RevealItem className="overflow-hidden rounded-[var(--radius-card)] border border-border bg-surface p-6 shadow-panel">
+                  <IconTile icon={f.icon} color={f.tint} />
+                  <h3 className="mt-4 font-display text-2xl font-bold tracking-[-0.02em]">{f.title}</h3>
+                  <p className="mt-2 leading-relaxed text-muted">{f.text}</p>
+                  <PhoneFrame capture={f.capture} className="mx-auto -mb-28 mt-6 w-[72%]" />
+                </RevealItem>
+              </Reveal>
+            ))}
+          </ul>
+        )}
       </div>
     </section>
   );

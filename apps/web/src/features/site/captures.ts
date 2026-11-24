@@ -3,9 +3,16 @@
  * convertidas para WebP em `public/site/` por `scripts/site-images.mjs`. Sem `src`, a moldura mostra um placeholder
  * com a mesma proporção.
  */
-export type Capture = { src?: string; alt: string; width: number; height: number };
+export type Capture = { src?: string; alt: string; width: number; height: number; srcSet?: string };
 
-const phone = (alt: string, src?: string): Capture => ({ src, alt, width: 780, height: 1688 });
+/** Celular: a captura de 780 px e as versões de 420 e 560 px (`-420.webp`, `-560.webp`), escolhidas pelo navegador. */
+const phone = (alt: string, src?: string): Capture => ({
+  src,
+  alt,
+  width: 780,
+  height: 1688,
+  srcSet: src ? [420, 560].map((w) => `${src.replace(/\.webp$/, `-${w}.webp`)} ${w}w`).concat(`${src} 780w`).join(', ') : undefined,
+});
 const laptop = (alt: string, src?: string): Capture => ({ src, alt, width: 1440, height: 900 });
 
 export const CAPTURES = {

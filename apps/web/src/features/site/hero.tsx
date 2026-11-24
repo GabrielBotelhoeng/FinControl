@@ -18,6 +18,9 @@ import { EASE_OUT } from './reveal';
  */
 export const HERO_BALANCE_CENTS = 2135910;
 
+/** Largura da captura do herói na página (`sizes`), repetida no preload de `public/theme-init.js` (teste). */
+export const HERO_IMAGE_SIZES = '(min-width: 768px) 265px, 235px';
+
 /**
  * O saldo do cartão limão conta de 0 até o valor; com `prefers-reduced-motion`, já nasce no valor final. Mesmo desenho
  * do `HeroAmount`, mas o número é escrito direto no DOM a cada quadro (sem re-render do React enquanto a página carrega).
@@ -125,11 +128,12 @@ export function Hero() {
 
   return (
     <section ref={ref} aria-labelledby="site-titulo" className="relative isolate px-4 pb-6 pt-28 md:px-10 md:pb-10 md:pt-36">
-      {/* Brilhos coloridos de fundo, como na entrada: limão, tangerina e uva, bem desfocados (estáticos). */}
+      {/* Brilhos coloridos de fundo, como na entrada: limão, tangerina e uva (estáticos). */}
+      {/* Gradientes radiais em vez de `filter: blur` (mesma luz, sem o custo de pintar o desfoque no primeiro quadro). */}
       <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
-        <span className="absolute -right-24 -top-24 h-96 w-96 rounded-full bg-brand/60 blur-3xl" />
-        <span className="absolute -left-28 top-1/3 h-72 w-72 rounded-full bg-tangerine/20 blur-3xl" />
-        <span className="absolute bottom-0 right-1/3 h-64 w-64 rounded-full bg-grape/15 blur-3xl" />
+        <span className="absolute -right-48 -top-48 h-[40rem] w-[40rem] rounded-full bg-[radial-gradient(closest-side,rgb(200_242_75/0.6),transparent)]" />
+        <span className="absolute -left-52 top-56 h-[32rem] w-[32rem] rounded-full bg-[radial-gradient(closest-side,rgb(255_138_61/0.2),transparent)]" />
+        <span className="absolute -bottom-24 right-1/4 h-[28rem] w-[28rem] rounded-full bg-[radial-gradient(closest-side,rgb(124_92_255/0.15),transparent)]" />
       </div>
 
       <div className="mx-auto grid max-w-7xl items-center gap-14 md:grid-cols-[1.1fr_0.9fr] md:gap-10">
@@ -189,11 +193,13 @@ export function Hero() {
           <m.div style={{ y: phoneY }}>
             <m.div
               className="relative mx-auto w-[74%]"
-              initial={enter({ opacity: 0, y: 32 })}
-              animate={{ opacity: 1, y: 0 }}
+              // A captura do celular é o LCP: como o título, ela só sobe, nunca começa invisível (S4).
+              initial={enter({ y: 32 })}
+              animate={{ y: 0 }}
               transition={{ duration: 0.7, delay: 0.12, ease: EASE_OUT }}
             >
-              <PhoneFrame capture={CAPTURES.dashboardPhone} priority />
+              {/* A tela tem ~235 px no celular e ~265 px no computador; o mesmo `sizes` vai no preload do theme-init.js. */}
+              <PhoneFrame capture={CAPTURES.dashboardPhone} priority sizes={HERO_IMAGE_SIZES} />
               {/*
                 O cartão limão "salta" da tela: fica sobre o mesmo cartão da captura (≈30% do topo, 25% da altura) e sai
                 um pouco para a esquerda, girado, com o saldo contando. Acompanha o celular no paralaxe.
