@@ -52,10 +52,12 @@ type ChipProps = {
 
 /** Um lançamento de exemplo: entra com fade e escala 0,95 e depois oscila devagar em CSS (fora do thread principal). */
 function FloatingChip({ icon, tint, name, amount, kind, className, delay, floatClass }: ChipProps) {
+  const reduce = useReducedMotion();
+  const enter = <T,>(from: T) => (reduce ? false : from);
   return (
     <m.div
       className={`absolute ${className}`}
-      initial={{ opacity: 0, scale: 0.95, y: 8 }}
+      initial={enter({ opacity: 0, scale: 0.95, y: 8 })}
       animate={{ opacity: 1, scale: 1, y: 0 }}
       transition={{ duration: 0.5, delay, ease: EASE_OUT }}
     >
@@ -93,6 +95,9 @@ function AgeNotice() {
  */
 export function Hero() {
   const demo = useSiteDemo();
+  // Com `prefers-reduced-motion`, as entradas do herói nascem paradas, no lugar (sem nem o fade).
+  const reduce = useReducedMotion();
+  const enter = <T,>(from: T) => (reduce ? false : from);
   const ref = useRef<HTMLElement>(null);
   const { scrollYProgress } = useScroll({ target: ref, offset: ['start start', 'end start'] });
   const phoneY = useTransform(scrollYProgress, [0, 1], [0, -60]);
@@ -111,7 +116,7 @@ export function Hero() {
         <div className="flex flex-col gap-7">
           <m.p
             className="text-[11px] font-semibold uppercase tracking-[0.24em] text-muted"
-            initial={{ opacity: 0 }}
+            initial={enter({ opacity: 0 })}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.4 }}
           >
@@ -120,7 +125,7 @@ export function Hero() {
           <m.h1
             id="site-titulo"
             className="font-display text-[clamp(2.75rem,8.5vw,5.75rem)] leading-[1.1] tracking-[-0.03em] [text-wrap:balance]"
-            initial={{ y: 16 }}
+            initial={enter({ y: 16 })}
             animate={{ y: 0 }}
             transition={{ duration: 0.6, ease: EASE_OUT }}
           >
@@ -129,14 +134,14 @@ export function Hero() {
           </m.h1>
           <m.p
             className="max-w-[44ch] text-base leading-relaxed text-muted md:text-lg"
-            initial={{ opacity: 0, y: 10 }}
+            initial={enter({ opacity: 0, y: 10 })}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.09, ease: EASE_OUT }}
           >
             Contas, cartões, faturas e metas num lugar só. Saiba quanto entra, quanto sai e o que ainda vence no mês, no celular ou
             no computador.
           </m.p>
-          <m.div className="flex flex-col gap-4" initial={{ y: 8 }} animate={{ y: 0 }} transition={{ duration: 0.5, delay: 0.16, ease: EASE_OUT }}>
+          <m.div className="flex flex-col gap-4" initial={enter({ y: 8 })} animate={{ y: 0 }} transition={{ duration: 0.5, delay: 0.16, ease: EASE_OUT }}>
             <div className="flex flex-wrap gap-3">
               <Button size="lg" onClick={() => void demo.start()} loading={demo.pending} className="max-sm:w-full">
                 {!demo.pending && <Sparkles aria-hidden className="h-4 w-4" strokeWidth={1.75} />}
@@ -164,7 +169,7 @@ export function Hero() {
           <m.div style={{ y: phoneY }}>
             <m.div
               className="relative mx-auto w-[74%]"
-              initial={{ opacity: 0, y: 32 }}
+              initial={enter({ opacity: 0, y: 32 })}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.7, delay: 0.12, ease: EASE_OUT }}
             >
@@ -176,7 +181,7 @@ export function Hero() {
               <m.div
                 aria-hidden
                 className="brand-ring absolute left-[7%] top-[30%] flex h-[25%] w-[86%] flex-col justify-between rounded-[22px] bg-brand p-4 text-brand-fg shadow-[0_24px_48px_-16px_rgba(20,23,15,0.45)] md:p-5"
-                initial={{ opacity: 0, x: 0, rotate: 0, scale: 0.98 }}
+                initial={enter({ opacity: 0, x: 0, rotate: 0, scale: 0.98 })}
                 animate={{ opacity: 1, x: '-7%', rotate: -3, scale: 1.08 }}
                 transition={{ duration: 0.7, delay: 0.35, ease: EASE_OUT }}
               >
