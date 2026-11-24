@@ -119,8 +119,9 @@ export function Hero() {
   const enter = <T,>(from: T) => (reduce ? false : from);
   const ref = useRef<HTMLElement>(null);
   const { scrollYProgress } = useScroll({ target: ref, offset: ['start start', 'end start'] });
-  const phoneY = useTransform(scrollYProgress, [0, 1], [0, -60]);
-  const chipsY = useTransform(scrollYProgress, [0, 1], [0, -130]);
+  // Paralaxe leve; com `prefers-reduced-motion`, nada acompanha a rolagem.
+  const phoneY = useTransform(scrollYProgress, [0, 1], reduce ? [0, 0] : [0, -60]);
+  const chipsY = useTransform(scrollYProgress, [0, 1], reduce ? [0, 0] : [0, -130]);
 
   return (
     <section ref={ref} aria-labelledby="site-titulo" className="relative isolate px-4 pb-6 pt-28 md:px-10 md:pb-10 md:pt-36">

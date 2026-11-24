@@ -132,6 +132,7 @@ export function LoginPage() {
   }
 
   async function forgotPassword() {
+    demo.reset();
     const email = form.getValues('email');
     if (!emailField.safeParse(email).success) {
       form.setError('email', { message: 'Digite seu e-mail para receber o link de redefinição.' });
@@ -187,6 +188,7 @@ export function LoginPage() {
               onChange={(m) => {
                 setMode(m);
                 setError(null);
+                demo.reset();
                 setNotice(null);
                 form.clearErrors();
               }}

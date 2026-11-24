@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { readFileSync, statSync } from 'node:fs';
 import { test, type Locator, type Page } from '@playwright/test';
 import { enterDemo } from './helpers';
 
@@ -10,6 +10,8 @@ import { enterDemo } from './helpers';
 test.skip(!process.env.SITE_CAPTURES, 'só roda com SITE_CAPTURES=1');
 
 const OUT = '.site-capturas';
+// Início desta execução: a og-image só usa capturas feitas agora (CodeRabbit, PR #39).
+const RUN_STARTED = Date.now();
 
 /** Abre a tela e fotografa a área visível; `focus` centraliza uma parte da tela antes (ex.: o resultado do plano). */
 async function shoot(page: Page, path: string, file: string, focus?: (page: Page) => Locator) {
@@ -68,7 +70,18 @@ test.describe('compartilhamento', () => {
     const b64 = (path: string) => readFileSync(path).toString('base64');
     const font = b64('../node_modules/@fontsource-variable/outfit/files/outfit-latin-wght-normal.woff2');
     const logo = readFileSync('../apps/web/public/icon.svg', 'utf8');
-    const shot = b64(`${OUT}/painel-celular.png`);
+    const panel = `${OUT}/painel-celular.png`;
+    // Sem a captura do celular desta mesma execução, a imagem sairia com um painel velho: falha em vez de usá-lo.
+    let modified = 0;
+    try {
+      modified = statSync(panel).mtimeMs;
+    } catch {
+      // Arquivo ausente: cai no erro abaixo.
+    }
+    if (modified < RUN_STARTED) {
+      throw new Error(`${panel} não é desta execução. Rode o arquivo inteiro: SITE_CAPTURES=1 npm run test:e2e -- site-capturas`);
+    }
+    const shot = b64(panel);
     await page.setContent(`<!doctype html><html><head><style>
       @font-face { font-family: Outfit; src: url(data:font/woff2;base64,${font}) format('woff2'); font-weight: 100 900; }
       * { box-sizing: border-box; margin: 0; }

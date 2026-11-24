@@ -1,5 +1,5 @@
 import { Cloud, Download, Smartphone, type LucideIcon } from 'lucide-react';
-import { useScroll, useTransform } from 'motion/react';
+import { useReducedMotion, useScroll, useTransform } from 'motion/react';
 import * as m from 'motion/react-m';
 import { useRef } from 'react';
 import { IconTile } from '../../components/ui/icon-tile';
@@ -33,9 +33,11 @@ const POINTS: { title: string; text: string; icon: LucideIcon; tint: string }[] 
 /** "No celular, como app" (seção 3.6): o notebook ao fundo e dois celulares na frente, com um paralaxe leve. */
 export function MobileApp() {
   const ref = useRef<HTMLDivElement>(null);
+  const reduce = useReducedMotion();
   const { scrollYProgress } = useScroll({ target: ref, offset: ['start end', 'end start'] });
-  const frontY = useTransform(scrollYProgress, [0, 1], [50, -50]);
-  const backY = useTransform(scrollYProgress, [0, 1], [20, -20]);
+  // Paralaxe leve; com `prefers-reduced-motion`, os aparelhos ficam parados.
+  const frontY = useTransform(scrollYProgress, [0, 1], reduce ? [0, 0] : [50, -50]);
+  const backY = useTransform(scrollYProgress, [0, 1], reduce ? [0, 0] : [20, -20]);
 
   return (
     <section aria-labelledby="celular-titulo" className="bg-surface-2/60 px-4 py-20 md:px-10 md:py-28">
