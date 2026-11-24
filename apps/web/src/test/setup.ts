@@ -22,3 +22,20 @@ if (!window.matchMedia) {
     }),
   });
 }
+
+// O jsdom não tem IntersectionObserver; o site (Motion `whileInView`/`useInView`) só precisa que ele exista.
+if (!('IntersectionObserver' in window)) {
+  class NoopIntersectionObserver {
+    readonly root = null;
+    readonly rootMargin = '0px';
+    readonly thresholds = [0];
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+    takeRecords() {
+      return [];
+    }
+  }
+  Object.defineProperty(window, 'IntersectionObserver', { writable: true, value: NoopIntersectionObserver });
+  Object.defineProperty(globalThis, 'IntersectionObserver', { writable: true, value: NoopIntersectionObserver });
+}

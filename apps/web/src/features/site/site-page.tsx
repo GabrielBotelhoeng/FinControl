@@ -1,8 +1,12 @@
 import { domMax, LazyMotion, MotionConfig } from 'motion/react';
 import { useEffect } from 'react';
 import { SiteDemoProvider } from './demo-context';
+import { Features } from './features';
 import { Hero } from './hero';
+import { HowItWorks } from './how-it-works';
 import { Marquee } from './marquee';
+import { MobileApp } from './mobile-app';
+import { PrivacyBlock } from './privacy-block';
 import { SiteFooter } from './site-footer';
 import { SiteHeader } from './site-header';
 
@@ -36,7 +40,10 @@ export default function SitePage() {
             <main id="conteudo" className="overflow-x-clip">
               <Hero />
               <Marquee />
-              <section id="recursos" aria-label="Recursos" />
+              <HowItWorks />
+              <Features />
+              <MobileApp />
+              <PrivacyBlock />
               <section id="planos" aria-label="Planos" />
               <section id="perguntas" aria-label="Perguntas" />
             </main>
