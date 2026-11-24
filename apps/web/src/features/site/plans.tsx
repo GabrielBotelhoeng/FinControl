@@ -18,7 +18,7 @@ const BILLING_OPTIONS: { value: Billing; label: string }[] = [
   { value: 'yearly', label: 'Anual' },
 ];
 
-/** Chave Mensal/Anual: radiogroup com as setas do teclado e o indicador limão deslizando (`layoutId`). */
+/** Chave Mensal/Anual: radiogroup com as setas do teclado e o indicador limão deslizando (só `transform`, em CSS). */
 function BillingSwitch({ value, onChange }: { value: Billing; onChange: (b: Billing) => void }) {
   function onKeyDown(e: KeyboardEvent<HTMLDivElement>) {
     if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) return;
@@ -28,7 +28,20 @@ function BillingSwitch({ value, onChange }: { value: Billing; onChange: (b: Bill
     e.currentTarget.querySelector<HTMLButtonElement>(`[data-value="${next}"]`)?.focus();
   }
   return (
-    <div role="radiogroup" aria-label="Forma de pagamento" onKeyDown={onKeyDown} className="inline-flex rounded-full border border-border bg-surface p-1 shadow-panel">
+    <div
+      role="radiogroup"
+      aria-label="Forma de pagamento"
+      onKeyDown={onKeyDown}
+      className="relative grid grid-cols-2 rounded-full border border-border bg-surface p-1 shadow-panel"
+    >
+      {/* As duas opções têm a mesma largura, então o indicador só desliza meia largura. */}
+      <span
+        aria-hidden
+        className={cn(
+          'absolute inset-y-1 left-1 w-[calc(50%-4px)] rounded-full bg-brand transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]',
+          value === 'yearly' && 'translate-x-full',
+        )}
+      />
       {BILLING_OPTIONS.map((o) => {
         const checked = o.value === value;
         return (
@@ -40,17 +53,10 @@ function BillingSwitch({ value, onChange }: { value: Billing; onChange: (b: Bill
             tabIndex={checked ? 0 : -1}
             data-value={o.value}
             onClick={() => onChange(o.value)}
-            className={cn('relative h-10 rounded-full px-5 text-sm font-semibold transition-colors', checked ? 'text-brand-fg' : 'text-muted hover:text-text')}
+            className={cn('relative h-10 whitespace-nowrap rounded-full px-5 text-sm font-semibold transition-colors', checked ? 'text-brand-fg' : 'text-muted hover:text-text')}
           >
-            {checked && (
-              <m.span layoutId="site-billing-pill" className="absolute inset-0 rounded-full bg-brand" transition={{ type: 'spring', duration: 0.4, bounce: 0.15 }} />
-            )}
-            <span className="relative">
-              {o.label}
-              {o.value === 'yearly' && YEARLY_FREE_MONTHS > 0 && (
-                <span className="ml-1.5 text-xs font-semibold opacity-75">{YEARLY_FREE_MONTHS} meses grátis</span>
-              )}
-            </span>
+            {o.label}
+            {o.value === 'yearly' && YEARLY_FREE_MONTHS > 0 && <span className="ml-1.5 text-xs font-semibold opacity-75">{YEARLY_FREE_MONTHS} meses grátis</span>}
           </button>
         );
       })}

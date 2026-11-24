@@ -35,6 +35,8 @@ export default defineConfig({
       workbox: {
         // Só o shell do app vai para o cache; dados da API nunca (spec 3.2: sem dados offline).
         globPatterns: ['**/*.{js,css,html,svg,png,webp,woff2}'],
+        // As fotos do site de apresentação não vão para o cache de quem instala o app (sub-projeto 17, S10).
+        globIgnores: ['site/**', 'og-image.png'],
         navigateFallback: '/index.html',
         navigateFallbackDenylist: [/^\/api\//],
         // Web Push (sub-projeto 5, Parte B, W7): o tratamento do aviso e do clique fica em public/push-sw.js.

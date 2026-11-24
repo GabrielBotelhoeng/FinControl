@@ -8,8 +8,125 @@
     <meta name="theme-color" content="#F5F6F0" />
     <!-- Tema guardado antes do app carregar (sub-projeto 16, L1). Em arquivo, não embutido: a CSP só aceita scripts do próprio site. -->
     <script src="/theme-init.js"></script>
-    <meta name="description" content="FinControl: saiba quanto ganha, quanto gasta e para onde vai o seu dinheiro." />
-    <title>FinControl</title>
+    <title>FinControl — controle financeiro pessoal no celular e no computador</title>
+    <!--
+      SEO do site de apresentação (sub-projeto 17, S11). As prévias de link (WhatsApp, redes) leem só este HTML, que é
+      servido em todas as rotas; as telas do app trocam o título com document.title.
+    -->
+    <meta name="description" content="Saiba quanto entra, quanto sai e o que vence no mês. Contas, cartões, faturas, orçamento, metas e relatórios num app simples, em português. Experimente sem cadastro." />
+    <link rel="canonical" href="https://fincontrol-gb.vercel.app/" />
+    <meta property="og:type" content="website" />
+    <meta property="og:locale" content="pt_BR" />
+    <meta property="og:site_name" content="FinControl" />
+    <meta property="og:title" content="FinControl — controle financeiro pessoal no celular e no computador" />
+    <meta property="og:description" content="Saiba quanto entra, quanto sai e o que vence no mês. Contas, cartões, faturas, orçamento, metas e relatórios num app simples, em português. Experimente sem cadastro." />
+    <meta property="og:url" content="https://fincontrol-gb.vercel.app/" />
+    <meta property="og:image" content="https://fincontrol-gb.vercel.app/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="O FinControl no celular, com o saldo no cartão limão, e o título Seu dinheiro, sob controle." />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="FinControl — controle financeiro pessoal no celular e no computador" />
+    <meta name="twitter:description" content="Saiba quanto entra, quanto sai e o que vence no mês. Contas, cartões, faturas, orçamento, metas e relatórios num app simples, em português. Experimente sem cadastro." />
+    <meta name="twitter:image" content="https://fincontrol-gb.vercel.app/og-image.png" />
+    <!-- Dados estruturados: bloco de dados, não é executado, então a CSP (script-src 'self') não o bloqueia. Preços iguais a src/features/site/pricing.ts (teste). -->
+    <script type="application/ld+json">
+      [
+        {
+          "@context": "https://schema.org",
+          "@type": "SoftwareApplication",
+          "name": "FinControl",
+          "url": "https://fincontrol-gb.vercel.app/",
+          "description": "Controle financeiro pessoal em português e em reais: contas, cartões e faturas, orçamento, metas, dívidas e relatórios, no celular e no computador.",
+          "applicationCategory": "FinanceApplication",
+          "operatingSystem": "Web, Android, iOS",
+          "inLanguage": "pt-BR",
+          "image": "https://fincontrol-gb.vercel.app/og-image.png",
+          "offers": [
+            {
+              "@type": "Offer",
+              "name": "Grátis",
+              "price": "0.00",
+              "priceCurrency": "BRL"
+            },
+            {
+              "@type": "Offer",
+              "name": "Completo (mensal)",
+              "price": "9.90",
+              "priceCurrency": "BRL"
+            },
+            {
+              "@type": "Offer",
+              "name": "Completo (anual)",
+              "price": "99.00",
+              "priceCurrency": "BRL"
+            }
+          ]
+        },
+        {
+          "@context": "https://schema.org",
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "O FinControl é grátis?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Sim. Hoje todos os recursos estão liberados de graça. No futuro, o plano Completo, com o assistente de IA e os relatórios, vai ter uma assinatura barata; o básico do dia a dia continua grátis."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Preciso instalar alguma coisa?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Não. O FinControl funciona no navegador do celular e do computador. Se quiser, instale pela tela inicial para abrir como um app, sem passar pela loja."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Meus dados ficam seguros?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Ficam num servidor em São Paulo, e cada consulta é filtrada pela sua conta: ninguém vê os lançamentos de outra pessoa. Não vendemos nem usamos seus dados para anúncios."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Funciona no iPhone?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Sim, pelo Safari. Para usar como app, toque em Compartilhar e depois em \"Adicionar à Tela de Início\"."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Consigo importar o extrato do banco?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Sim. Envie o arquivo OFX ou CSV que o seu banco gera: o FinControl sugere as categorias, marca o que já foi lançado e mostra tudo antes de importar."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Posso apagar tudo?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Pode. Em Perfil, \"Excluir minha conta\" apaga a conta e todos os seus dados na hora, como manda a LGPD."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Como a demo funciona?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Você entra sem cadastro, com dados de exemplo já lançados, para mexer à vontade. A demo é apagada depois de 7 dias; para guardar os seus dados, crie uma conta."
+              }
+            }
+          ]
+        }
+      ]
+    </script>
   </head>
   <body>
     <div id="root"></div>

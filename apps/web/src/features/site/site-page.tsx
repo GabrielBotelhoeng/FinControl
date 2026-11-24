@@ -1,4 +1,4 @@
-import { domMax, LazyMotion, MotionConfig } from 'motion/react';
+import { LazyMotion, MotionConfig } from 'motion/react';
 import { useEffect } from 'react';
 import { SiteDemoProvider } from './demo-context';
 import { Faq } from './faq';
@@ -12,6 +12,8 @@ import { Pricing } from './plans';
 import { PrivacyBlock } from './privacy-block';
 import { SiteFooter } from './site-footer';
 import { SiteHeader } from './site-header';
+
+const loadMotionFeatures = () => import('./motion-features').then((m) => m.default);
 
 export const SITE_TITLE = 'FinControl — controle financeiro pessoal no celular e no computador';
 
@@ -30,7 +32,7 @@ export default function SitePage() {
 
   return (
     <MotionConfig reducedMotion="user">
-      <LazyMotion features={domMax} strict>
+      <LazyMotion features={loadMotionFeatures} strict>
         <SiteDemoProvider>
           <div id="topo" className="site-root min-h-dvh bg-background text-text">
             <a
