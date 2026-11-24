@@ -4,7 +4,9 @@
 
 /* Tokens: ver DESIGN.md ("Feira de manhã"). O claro é o padrão (sub-projeto 16, L1). */
 :root,
-:root[data-theme='light'] {
+:root[data-theme='light'],
+/* O site de apresentação é sempre claro (sub-projeto 17, S14), mesmo com o app no escuro. */
+.site-root {
   color-scheme: light;
   --background: #f5f6f0;
   --surface: #ffffff;
@@ -105,6 +107,13 @@
     min-height: 100dvh;
     overflow-x: clip;
     background: var(--background);
+  }
+  /* Site de apresentação: rolagem suave para as âncoras, sem esconder o título atrás do cabeçalho fixo. */
+  html:has(.site-root) {
+    scroll-behavior: smooth;
+    scroll-padding-top: 88px;
+    color-scheme: light;
+    background: #f5f6f0;
   }
   ::selection {
     background: var(--primary-soft);
