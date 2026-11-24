@@ -2,8 +2,7 @@ import { lazy, Suspense, type ReactNode } from 'react';
 import { createBrowserRouter, Navigate } from 'react-router';
 import { ListSkeleton } from '../components/ui/states';
 import { LoginPage } from '../features/auth/login-page';
-import { RequireAuth } from '../features/auth/require-auth';
-import { AppShell } from './app-shell';
+import { HomeGate } from './home-gate';
 
 const DashboardPage = lazy(() => import('../features/dashboard/dashboard-page'));
 const TransactionsPage = lazy(() => import('../features/transactions/transactions-page'));
@@ -35,11 +34,8 @@ export const router = createBrowserRouter([
   { path: '/termos', element: page(<TermsPage />) },
   {
     path: '/',
-    element: (
-      <RequireAuth>
-        <AppShell />
-      </RequireAuth>
-    ),
+    // Sem sessão, a `/` é o site de apresentação e as outras rotas levam à entrada (sub-projeto 17, S1).
+    element: <HomeGate />,
     children: [
       { index: true, element: page(<DashboardPage />) },
       { path: 'lancamentos', element: page(<TransactionsPage />) },
