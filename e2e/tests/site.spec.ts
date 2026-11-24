@@ -65,7 +65,7 @@ test('a chave dos planos troca o preço do Completo', async ({ page }) => {
 test.describe('com prefers-reduced-motion', () => {
   test.use({ viewport: { width: 390, height: 844 } });
 
-  test('todo o conteúdo aparece parado, sem precisar rolar, e a faixa não anda', async ({ page }) => {
+  test('todo o conteúdo aparece parado, sem precisar rolar, a faixa não anda e as âncoras não rolam animadas', async ({ page }) => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await page.goto('/');
     await expect(hero(page)).toBeVisible();
@@ -83,5 +83,8 @@ test.describe('com prefers-reduced-motion', () => {
     expect(hidden).toEqual([]);
     const marquee = await page.locator('.site-marquee-track').first().evaluate((el) => getComputedStyle(el).animationName);
     expect(marquee).toBe('none');
+    // As âncoras do cabeçalho também não rolam animadas.
+    const scrollBehavior = await page.evaluate(() => getComputedStyle(document.documentElement).scrollBehavior);
+    expect(scrollBehavior).toBe('auto');
   });
 });

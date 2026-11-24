@@ -233,4 +233,8 @@
     animation: none !important;
     transition: none !important;
   }
+  /* O site rola suave até as âncoras; com movimento reduzido, salta direto (S4, WCAG 2.3.3). */
+  html:has(.site-root) {
+    scroll-behavior: auto;
+  }
 }
