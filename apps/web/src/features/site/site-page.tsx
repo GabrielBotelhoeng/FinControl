@@ -1,6 +1,8 @@
 import { domMax, LazyMotion, MotionConfig } from 'motion/react';
 import { useEffect } from 'react';
 import { SiteDemoProvider } from './demo-context';
+import { Hero } from './hero';
+import { Marquee } from './marquee';
 import { SiteFooter } from './site-footer';
 import { SiteHeader } from './site-header';
 
@@ -32,11 +34,8 @@ export default function SitePage() {
             </a>
             <SiteHeader />
             <main id="conteudo" className="overflow-x-clip">
-              <section className="px-4 pt-28 md:px-10">
-                <h1 className="font-display">
-                  <span className="font-extralight">Seu dinheiro,</span> <span className="font-extrabold">sob controle.</span>
-                </h1>
-              </section>
+              <Hero />
+              <Marquee />
               <section id="recursos" aria-label="Recursos" />
               <section id="planos" aria-label="Planos" />
               <section id="perguntas" aria-label="Perguntas" />

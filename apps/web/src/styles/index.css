@@ -193,6 +193,39 @@
   }
 }
 
+/* Site de apresentação (sub-projeto 17): movimentos contínuos em CSS, no compositor (só transform). */
+.site-float {
+  animation: site-float 6s ease-in-out infinite alternate;
+}
+.site-float-slow {
+  animation-duration: 7.5s;
+}
+.site-float-late {
+  animation-delay: -3s;
+}
+@keyframes site-float {
+  from {
+    transform: translateY(-5px);
+  }
+  to {
+    transform: translateY(6px);
+  }
+}
+.site-marquee-track {
+  animation: site-marquee 38s linear infinite;
+}
+.site-marquee:hover .site-marquee-track {
+  animation-play-state: paused;
+}
+@keyframes site-marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-100%);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

@@ -11,7 +11,8 @@ describe('HomeGate', () => {
 
   it('sem sessão, a / mostra o site de apresentação', async () => {
     renderApp(<HomeGate />, { gateway: fakeGateway(null).gateway, route: '/', path: '/*', extraRoutes: login });
-    expect(await screen.findByRole('heading', { level: 1, name: /Seu dinheiro, sob controle/ })).toBeInTheDocument();
+    // O site é um pedaço `lazy` com o Motion: sob a suíte inteira, o import pode passar de 1 s.
+    expect(await screen.findByRole('heading', { level: 1, name: /Seu dinheiro, sob controle/ }, { timeout: 5000 })).toBeInTheDocument();
   });
 
   it('com sessão, a / mostra o app', async () => {
