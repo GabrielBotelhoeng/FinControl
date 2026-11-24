@@ -11,17 +11,19 @@ const routes = { '/entrar': <p>Tela de entrada</p> };
 describe('herói e faixa do site', () => {
   it('o h1 e o botão principal estão no primeiro quadro', () => {
     renderApp(<SitePage />, { gateway: fakeGateway(null).gateway, route: '/', path: '/', extraRoutes: routes });
-    expect(screen.getByRole('heading', { level: 1, name: 'Seu dinheiro, sob controle.' })).toBeVisible();
-    expect(screen.getByRole('button', { name: 'Experimentar sem cadastro' })).toBeVisible();
-    expect(screen.getByRole('link', { name: /Criar conta grátis/ })).toHaveAttribute('href', '/entrar?modo=cadastro');
-    expect(screen.getAllByText(/declara ter 18 anos ou mais/)).toHaveLength(1);
+    const hero = screen.getByRole('region', { name: 'Seu dinheiro, sob controle.' });
+    expect(within(hero).getByRole('heading', { level: 1, name: 'Seu dinheiro, sob controle.' })).toBeVisible();
+    expect(within(hero).getByRole('button', { name: 'Experimentar sem cadastro' })).toBeVisible();
+    expect(within(hero).getByRole('link', { name: /Criar conta grátis/ })).toHaveAttribute('href', '/entrar?modo=cadastro');
+    expect(within(hero).getByText(/declara ter 18 anos ou mais/)).toBeInTheDocument();
   });
 
   it('"Experimentar sem cadastro" abre a demo uma vez só', async () => {
     const { gateway } = fakeGateway(null);
     const api = fakeApi({ 'POST /demo/seed': { seeded: true } });
     renderApp(<SitePage />, { gateway, api, route: '/', path: '/', extraRoutes: routes });
-    await userEvent.click(screen.getByRole('button', { name: 'Experimentar sem cadastro' }));
+    const hero = screen.getByRole('region', { name: 'Seu dinheiro, sob controle.' });
+    await userEvent.click(within(hero).getByRole('button', { name: 'Experimentar sem cadastro' }));
     expect(gateway.signInAnonymously).toHaveBeenCalledTimes(1);
     expect(api.post).toHaveBeenCalledTimes(1);
   });

@@ -1,11 +1,14 @@
 import { domMax, LazyMotion, MotionConfig } from 'motion/react';
 import { useEffect } from 'react';
 import { SiteDemoProvider } from './demo-context';
+import { Faq } from './faq';
 import { Features } from './features';
+import { FinalCta } from './final-cta';
 import { Hero } from './hero';
 import { HowItWorks } from './how-it-works';
 import { Marquee } from './marquee';
 import { MobileApp } from './mobile-app';
+import { Pricing } from './plans';
 import { PrivacyBlock } from './privacy-block';
 import { SiteFooter } from './site-footer';
 import { SiteHeader } from './site-header';
@@ -44,8 +47,9 @@ export default function SitePage() {
               <Features />
               <MobileApp />
               <PrivacyBlock />
-              <section id="planos" aria-label="Planos" />
-              <section id="perguntas" aria-label="Perguntas" />
+              <Pricing />
+              <Faq />
+              <FinalCta />
             </main>
             <SiteFooter />
           </div>
