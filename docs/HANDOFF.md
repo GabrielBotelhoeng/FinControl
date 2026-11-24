@@ -1,6 +1,19 @@
 # HANDOFF — FinControl
 
-_Atualizado em 2026-11-20 (auditoria final)._
+_Atualizado em 2026-11-24 (sub-projeto 17, site de apresentação)._
+
+## Sub-projeto 17: site de apresentação (2026-11-24, branch feat/site-apresentacao)
+
+- **Spec e plano:** `docs/superpowers/specs/2026-11-24-fincontrol-sp17-site-apresentacao-design.md` (S1–S14) e `docs/superpowers/plans/2026-11-24-fincontrol-sp17-site-apresentacao.md` (T1–T9). Sem migration, sem API.
+- **Entregue:** a `/` passa por um portão (`app/home-gate.tsx`): com sessão, o painel; sem sessão, o site (no app instalado, a entrada); as outras rotas sem sessão continuam indo para `/entrar`. O início da demo saiu da entrada para `features/auth/use-start-demo.ts`, usado pela entrada e pelo site. O site (`features/site/`) tem cabeçalho fixo, herói com o celular em CSS, a captura do painel e o cartão limão do saldo "saltando" da tela e contando, a faixa limão rolante, "Como funciona", recursos com a tela presa trocando no scroll (no celular, cartões), "No celular, como app", "Seus dados", planos com a chave Mensal/Anual, perguntas em acordeão, chamada final e rodapé. Sempre claro (`.site-root`), mesmo com o app no escuro.
+- **Preços provisórios** num arquivo só (`features/site/pricing.ts`): Grátis e Completo a R$ 9,90 por mês ou R$ 99,00 por ano, com o selo "Preços de lançamento, provisórios" e "Hoje todos os recursos estão liberados de graça". Nenhuma cobrança; os botões abrem a demo. O usuário decide os valores no fim do projeto.
+- **Animação:** Motion (`motion`, MIT) só no pedaço do site, com `LazyMotion` e os recursos (`domAnimation`) carregados depois do primeiro quadro; `MotionConfig reducedMotion="user"`. A faixa, os cartões flutuando e o indicador da chave são CSS (`transform`). O `h1` e o botão principal nunca começam invisíveis. Com `prefers-reduced-motion`, tudo aparece parado.
+- **Imagens:** capturas reais da demo por `e2e/tests/site-capturas.spec.ts` (`SITE_CAPTURES=1 npm run test:e2e -- site-capturas`) e `npm run site:images -w @fincontrol/web` (WebP em `public/site/` e a `og-image.png`). A imagem de compartilhamento é composta em HTML no Chromium do E2E, com a Outfit de verdade. Nada de 3D nem de imagem gerada.
+- **SEO:** título, descrição, canonical, Open Graph, Twitter Card e JSON-LD (`SoftwareApplication` com os preços e `FAQPage`) no `index.html`, conferidos contra `pricing.ts` e `faq-data.ts` por teste; `robots.txt` e `sitemap.xml`. As fotos do site ficam fora do cache do PWA (`globIgnores`).
+- **Desvios da spec:** o componente dos planos é `plans.tsx` (não `pricing.tsx`, que colidiria com `pricing.ts` no import); a `og-image` é renderizada pelo Chromium (o `sharp` não lê woff2), e o `sharp` só comprime; na captura do assistente, só a configuração é simulada (a demo nunca libera o assistente), para mostrar a tela inicial verdadeira com as sugestões, sem resposta inventada; o indicador da chave é CSS, não `layoutId` (economiza o `domMax`).
+- **Bundle:** o pedaço principal do app ficou em 152,22 KB gzip (152,97 KB na base: 0,75 KB a menos). O site tem 55 KB gzip, mais 6 KB de animação carregados depois.
+- **Testes:** 289 na web (Testing Library) e 27 E2E (novo: `e2e/tests/site.spec.ts`, com o site a 360, 390 e 1440 px sem rolagem horizontal, a demo pelo herói, a `/` com sessão no painel, a chave dos planos e o `prefers-reduced-motion`). Shared e API sem mudança (221 e 385).
+- **Pendente (Orquestrador):** revisão, QA nos portais, PR, prévia da Vercel, Lighthouse no celular na prévia (meta: desempenho ≥ 85, acessibilidade ≥ 95, SEO ≥ 95) e a aprovação do usuário para o merge e o deploy.
 
 ## Auditoria final (2026-11-20, branch fix/auditoria-final)
 
