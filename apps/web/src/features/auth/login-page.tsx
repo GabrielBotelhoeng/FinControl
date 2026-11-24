@@ -12,9 +12,9 @@ import { HeroAmount } from '../../components/ui/money';
 import { Panel } from '../../components/ui/panel';
 import { Segmented } from '../../components/ui/segmented';
 import { PALETTE } from '../../lib/palette';
-import { useApi } from '../../lib/api-context';
 import { useAuth } from './auth-context';
 import { translateAuthError } from './gateway';
+import { useStartDemo } from './use-start-demo';
 
 type Mode = 'entrar' | 'cadastro';
 
@@ -90,16 +90,16 @@ function AgeNotice({ className }: { className?: string }) {
 
 export function LoginPage() {
   const { gateway } = useAuth();
-  const api = useApi();
+  const demo = useStartDemo();
   const navigate = useNavigate();
   const location = useLocation();
   const [params] = useSearchParams();
   const [mode, setMode] = useState<Mode>(params.get('modo') === 'cadastro' ? 'cadastro' : 'entrar');
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
-  const [demoPending, setDemoPending] = useState(false);
-  const demoLock = useRef(false);
   const formRef = useRef<HTMLDivElement>(null);
+  // O erro da demo aparece no mesmo aviso do formulário, como antes da extração do hook.
+  const shownError = error ?? demo.error;
   const from = (location.state as { from?: string } | null)?.from ?? '/';
 
   const form = useForm<FormValues>({
@@ -114,35 +114,30 @@ export function LoginPage() {
     try {
       if (mode === 'entrar') {
         await gateway.signInWithPassword(values.email, values.password);
+        // Uma demo que falhou antes não pode segurar o site na `/` para quem acabou de entrar (CodeRabbit, PR #39).
+        demo.reset();
         navigate(from, { replace: true });
       } else {
         const { needsConfirmation } = await gateway.signUp(values.email, values.password, values.name);
         if (needsConfirmation) setNotice('Enviamos um link de confirmação para o seu e-mail. Depois de confirmar, é só entrar.');
-        else navigate('/', { replace: true });
+        else {
+          demo.reset();
+          navigate('/', { replace: true });
+        }
       }
     } catch (err) {
       setError(translateAuthError(err));
     }
   });
 
-  async function startDemo() {
-    if (demoLock.current) return;
-    demoLock.current = true;
-    setDemoPending(true);
+  function startDemo() {
     setError(null);
-    try {
-      // Nova tentativa depois de uma falha no seed: reaproveita o anônimo que já existe em vez de criar outro.
-      if (!(await gateway.getSession())?.user.isAnonymous) await gateway.signInAnonymously();
-      await api.post('/demo/seed', undefined);
-      navigate('/', { replace: true });
-    } catch (err) {
-      setError(translateAuthError(err));
-      demoLock.current = false;
-      setDemoPending(false);
-    }
+    setNotice(null);
+    void demo.start();
   }
 
   async function forgotPassword() {
+    demo.reset();
     const email = form.getValues('email');
     if (!emailField.safeParse(email).success) {
       form.setError('email', { message: 'Digite seu e-mail para receber o link de redefinição.' });
@@ -176,7 +171,7 @@ export function LoginPage() {
             seu dinheiro vai.
           </p>
           <div className="flex flex-wrap gap-3">
-            <Button size="lg" onClick={startDemo} loading={demoPending} disabled={demoPending}>
+            <Button size="lg" onClick={startDemo} loading={demo.pending} disabled={demo.pending}>
               <Sparkles aria-hidden className="h-4 w-4" strokeWidth={1.75} />
               Experimentar sem cadastro
             </Button>
@@ -198,6 +193,7 @@ export function LoginPage() {
               onChange={(m) => {
                 setMode(m);
                 setError(null);
+                demo.reset();
                 setNotice(null);
                 form.clearErrors();
               }}
@@ -218,9 +214,9 @@ export function LoginPage() {
               <Field label="Senha" error={errors.password?.message} hint={mode === 'cadastro' ? 'Mínimo de 8 caracteres.' : undefined}>
                 <Input type="password" autoComplete={mode === 'cadastro' ? 'new-password' : 'current-password'} {...form.register('password')} />
               </Field>
-              {error && (
+              {shownError && (
                 <p role="alert" className="rounded-[var(--radius-control)] bg-expense-soft px-3.5 py-2.5 text-sm text-expense">
-                  {error}
+                  {shownError}
                 </p>
               )}
               {notice && (

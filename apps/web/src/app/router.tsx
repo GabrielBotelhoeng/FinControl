@@ -1,10 +1,9 @@
 import { lazy, Suspense, type ReactNode } from 'react';
 import { createBrowserRouter, Navigate } from 'react-router';
 import { ListSkeleton } from '../components/ui/states';
-import { LoginPage } from '../features/auth/login-page';
-import { RequireAuth } from '../features/auth/require-auth';
-import { AppShell } from './app-shell';
+import { HomeGate } from './home-gate';
 
+const LoginPage = lazy(() => import('../features/auth/login-page').then((m) => ({ default: m.LoginPage })));
 const DashboardPage = lazy(() => import('../features/dashboard/dashboard-page'));
 const TransactionsPage = lazy(() => import('../features/transactions/transactions-page'));
 const AccountsPage = lazy(() => import('../features/accounts/accounts-page'));
@@ -30,16 +29,13 @@ const TermsPage = lazy(() => import('../features/legal/terms-page'));
 const page = (node: ReactNode) => <Suspense fallback={<ListSkeleton />}>{node}</Suspense>;
 
 export const router = createBrowserRouter([
-  { path: '/entrar', element: <LoginPage /> },
+  { path: '/entrar', element: page(<LoginPage />) },
   { path: '/privacidade', element: page(<PrivacyPage />) },
   { path: '/termos', element: page(<TermsPage />) },
   {
     path: '/',
-    element: (
-      <RequireAuth>
-        <AppShell />
-      </RequireAuth>
-    ),
+    // Sem sessão, a `/` é o site de apresentação e as outras rotas levam à entrada (sub-projeto 17, S1).
+    element: <HomeGate />,
     children: [
       { index: true, element: page(<DashboardPage />) },
       { path: 'lancamentos', element: page(<TransactionsPage />) },

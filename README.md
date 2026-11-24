@@ -4,7 +4,7 @@
 
 Gestão financeira pessoal: contas, cartões de crédito, empréstimos e financiamentos, receitas, despesas, transferências, recorrências e um painel do mês. Web responsivo e PWA instalável, em português e em reais. É um projeto de portfólio.
 
-**[Abrir o app →](https://fincontrol-gb.vercel.app)** · Clique em **“Experimentar sem cadastro”** para entrar numa demo própria, com 6 meses de dados. Nada precisa ser preenchido.
+**[Abrir o app →](https://fincontrol-gb.vercel.app)** · A página inicial é o site de apresentação, com os recursos, os planos e as perguntas. Clique em **“Experimentar sem cadastro”** para entrar numa demo própria, com 6 meses de dados. Nada precisa ser preenchido.
 
 ![Painel do FinControl](docs/screenshots/painel.png)
 
@@ -101,10 +101,10 @@ As decisões, com as alternativas descartadas e os motivos, estão nas specs do 
 
 | Camada | Quantidade | Como roda |
 |---|---|---|
-| `packages/shared` | 216 | Unitários (Vitest) |
-| `apps/api` | 372 | Integração contra **Postgres real**: rotas HTTP, regras de saldo, recorrência, cartão e fatura, empréstimos, relatórios, CSV e PDF, sincronização com o Banco Central e isolamento entre usuários |
-| `apps/web` | 254 | Componentes e fluxos (Testing Library), com o provedor de identidade simulado |
-| `e2e` | 18 | Chromium contra a pilha inteira |
+| `packages/shared` | 221 | Unitários (Vitest) |
+| `apps/api` | 385 | Integração contra **Postgres real**: rotas HTTP, regras de saldo, recorrência, cartão e fatura, empréstimos, relatórios, CSV e PDF, sincronização com o Banco Central e isolamento entre usuários |
+| `apps/web` | 289 | Componentes e fluxos (Testing Library), com o provedor de identidade simulado |
+| `e2e` | 27 | Chromium contra a pilha inteira |
 
 O E2E roda a **web buildada como em produção**, a **API real** e o **Postgres real**. A única peça simulada é o provedor de identidade: um servidor Auth mínimo ([`e2e/fake-auth.ts`](e2e/fake-auth.ts)) que fala o mesmo protocolo do Supabase e assina JWTs ES256 de verdade. Assim, a API valida os tokens pelo mesmo caminho de produção (JWKS, issuer e audience), sem segredos no CI e sem sujar o projeto real. Os cenários seguem os critérios de aceite da spec:
 
@@ -124,7 +124,8 @@ O E2E roda a **web buildada como em produção**, a **API real** e o **Postgres 
 - “Excluir minha conta” apagando também o usuário no Auth;
 - nenhuma rolagem horizontal nem conteúdo cortado a 360 px, em todas as páginas, inclusive no cabeçalho;
 - política de privacidade e termos de uso públicos;
-- rota protegida sem sessão.
+- rota protegida sem sessão;
+- site de apresentação na `/` sem sessão: sem rolagem horizontal a 360, 390 e 1440 px, a demo pelo herói, a `/` com sessão no painel, a chave Mensal/Anual dos planos e tudo parado com `prefers-reduced-motion`.
 
 O CI ([`ci.yml`](.github/workflows/ci.yml)) roda lint, typecheck, os testes e o E2E em toda PR. Cada PR também ganha um deploy de preview da web e da API na Vercel.
 
@@ -164,4 +165,4 @@ Dois projetos na Vercel a partir deste monorepo: `fincontrol-web` (raiz `apps/we
 
 ## Roadmap
 
-Prontos: os sub-projetos 1 a 15 (fundação e fluxo de caixa; crédito; planejamento e metas; relatórios e exportação; notificações; dívidas com credores; plano de quitação; calendário e resumo do mês; importação de extrato; gastos que se repetem; patrimônio líquido; primeiros passos; tags; tags nos relatórios; subcategorias), além do assistente com IA e da planilha de análise. Os próximos saem da [pesquisa de concorrentes](docs/pesquisa-concorrentes-2026-11-18.md). Cada um sai com spec, testes e deploy.
+Prontos: os sub-projetos 1 a 16 (fundação e fluxo de caixa; crédito; planejamento e metas; relatórios e exportação; notificações; dívidas com credores; plano de quitação; calendário e resumo do mês; importação de extrato; gastos que se repetem; patrimônio líquido; primeiros passos; tags; tags nos relatórios; subcategorias; visual claro e colorido), além do assistente com IA e da planilha de análise. Em revisão: o 17, site de apresentação. Os próximos saem da [pesquisa de concorrentes](docs/pesquisa-concorrentes-2026-11-18.md). Cada um sai com spec, testes e deploy.

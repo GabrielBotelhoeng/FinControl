@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://fincontrol-gb.vercel.app/sitemap.xml

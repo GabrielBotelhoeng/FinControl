@@ -4,7 +4,9 @@
 
 /* Tokens: ver DESIGN.md ("Feira de manhã"). O claro é o padrão (sub-projeto 16, L1). */
 :root,
-:root[data-theme='light'] {
+:root[data-theme='light'],
+/* O site de apresentação é sempre claro (sub-projeto 17, S14), mesmo com o app no escuro. */
+.site-root {
   color-scheme: light;
   --background: #f5f6f0;
   --surface: #ffffff;
@@ -106,6 +108,13 @@
     overflow-x: clip;
     background: var(--background);
   }
+  /* Site de apresentação: rolagem suave para as âncoras, sem esconder o título atrás do cabeçalho fixo. */
+  html:has(.site-root) {
+    scroll-behavior: smooth;
+    scroll-padding-top: 88px;
+    color-scheme: light;
+    background: #f5f6f0;
+  }
   ::selection {
     background: var(--primary-soft);
     color: var(--text);
@@ -184,11 +193,48 @@
   }
 }
 
+/* Site de apresentação (sub-projeto 17): movimentos contínuos em CSS, no compositor (só transform). */
+.site-float {
+  animation: site-float 6s ease-in-out infinite alternate;
+}
+.site-float-slow {
+  animation-duration: 7.5s;
+}
+.site-float-late {
+  animation-delay: -3s;
+}
+@keyframes site-float {
+  from {
+    transform: translateY(-5px);
+  }
+  to {
+    transform: translateY(6px);
+  }
+}
+.site-marquee-track {
+  animation: site-marquee 38s linear infinite;
+}
+.site-marquee:hover .site-marquee-track {
+  animation-play-state: paused;
+}
+@keyframes site-marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-100%);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
   *::after {
     animation: none !important;
     transition: none !important;
+  }
+  /* O site rola suave até as âncoras; com movimento reduzido, salta direto (S4, WCAG 2.3.3). */
+  html:has(.site-root) {
+    scroll-behavior: auto;
   }
 }

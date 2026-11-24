@@ -67,6 +67,26 @@ describe('LoginPage', () => {
     expect(gateway.signInAnonymously).toHaveBeenCalledTimes(1);
   });
 
+  it('o erro da demo some ao trocar para "Criar conta" e ao pedir a redefinição de senha', async () => {
+    const { gateway } = fakeGateway(null);
+    const api = fakeApi({ 'POST /demo/seed': () => new Error('Falha temporária') });
+    renderApp(<LoginPage />, { gateway, api, route: '/entrar', path: '/entrar', extraRoutes: { '/': home } });
+    const demo = await screen.findByRole('button', { name: /Experimentar sem cadastro/ });
+
+    await userEvent.click(demo);
+    expect(await screen.findByRole('alert')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('radio', { name: 'Criar conta' }));
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('radio', { name: 'Entrar' }));
+    await userEvent.click(demo);
+    expect(await screen.findByRole('alert')).toBeInTheDocument();
+    await userEvent.type(screen.getByLabelText('E-mail'), 'ana@exemplo.com');
+    await userEvent.click(screen.getByRole('button', { name: 'Esqueci a senha' }));
+    expect(await screen.findByRole('status')).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
   it('com sessão de usuário cadastrado, a demo ainda entra como anônimo (não gera demo na conta real)', async () => {
     const { gateway } = fakeGateway(signedIn(false));
     const api = fakeApi({ 'POST /demo/seed': { seeded: true } });
