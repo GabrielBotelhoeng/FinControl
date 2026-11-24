@@ -13,7 +13,11 @@ import { useSiteDemo } from './demo-context';
 import { PhoneFrame } from './device-frame';
 import { EASE_OUT } from './reveal';
 
-export const HERO_BALANCE_CENTS = 1248050;
+/**
+ * O saldo da demo na captura do painel (`public/site/painel-celular.webp`): o cartão limão "salta" da tela com o mesmo
+ * valor, contando de 0 até ele. Se as capturas forem refeitas e o saldo da demo mudar, atualize aqui.
+ */
+export const HERO_BALANCE_CENTS = 2135910;
 
 /** O saldo do cartão limão conta de 0 até o valor; com `prefers-reduced-motion`, já nasce no valor final. */
 function CountingBalance({ cents }: { cents: number }) {
@@ -158,27 +162,37 @@ export function Hero() {
         {/* O celular com a captura do painel, o cartão limão do saldo e os lançamentos flutuando em volta. */}
         <div className="relative mx-auto w-full max-w-[340px] md:max-w-[380px]">
           <m.div style={{ y: phoneY }}>
-            <m.div initial={{ opacity: 0, y: 32 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, delay: 0.12, ease: EASE_OUT }}>
-              <PhoneFrame capture={CAPTURES.dashboardPhone} priority className="mx-auto w-[74%]" />
+            <m.div
+              className="relative mx-auto w-[74%]"
+              initial={{ opacity: 0, y: 32 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.7, delay: 0.12, ease: EASE_OUT }}
+            >
+              <PhoneFrame capture={CAPTURES.dashboardPhone} priority />
+              {/*
+                O cartão limão "salta" da tela: fica sobre o mesmo cartão da captura (≈30% do topo, 25% da altura) e sai
+                um pouco para a esquerda, girado, com o saldo contando. Acompanha o celular no paralaxe.
+              */}
+              <m.div
+                aria-hidden
+                className="brand-ring absolute left-[7%] top-[30%] flex h-[25%] w-[86%] flex-col justify-between rounded-[22px] bg-brand p-4 text-brand-fg shadow-[0_24px_48px_-16px_rgba(20,23,15,0.45)] md:p-5"
+                initial={{ opacity: 0, x: 0, rotate: 0, scale: 0.98 }}
+                animate={{ opacity: 1, x: '-7%', rotate: -3, scale: 1.08 }}
+                transition={{ duration: 0.7, delay: 0.35, ease: EASE_OUT }}
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <p className="text-xs font-semibold">Saldo em todas as contas</p>
+                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-tangerine">
+                    <Wallet className="h-4 w-4 text-brand-fg" strokeWidth={2} />
+                  </span>
+                </div>
+                <CountingBalance cents={HERO_BALANCE_CENTS} />
+              </m.div>
             </m.div>
           </m.div>
-          <m.div aria-hidden style={{ y: chipsY }} className="absolute inset-0">
-            <m.div
-              className="brand-ring absolute -left-1 bottom-[14%] w-[66%] rounded-[var(--radius-card)] bg-brand p-4 md:p-5 text-brand-fg shadow-bar md:-left-10"
-              initial={{ opacity: 0, scale: 0.95, y: 12 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.3, ease: EASE_OUT }}
-            >
-              <div className="flex items-start justify-between gap-2">
-                <p className="text-xs font-semibold">Saldo em todas as contas</p>
-                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-tangerine">
-                  <Wallet className="h-4 w-4 text-brand-fg" strokeWidth={2} />
-                </span>
-              </div>
-              <CountingBalance cents={HERO_BALANCE_CENTS} />
-            </m.div>
+          <m.div aria-hidden style={{ y: chipsY }} className="pointer-events-none absolute inset-0">
             <FloatingChip icon={ShoppingCart} tint={PALETTE.sky} name="Mercado" amount="− R$ 164,30" kind="expense" className="-right-1 top-[9%] rotate-3 md:-right-8" delay={0.42} floatClass="site-float" />
-            <FloatingChip icon={Briefcase} tint={PALETTE.grape} name="Salário" amount="+ R$ 5.070,00" kind="income" className="-left-1 top-[30%] -rotate-2 md:-left-14" delay={0.5} floatClass="site-float site-float-slow" />
+            <FloatingChip icon={Briefcase} tint={PALETTE.grape} name="Salário" amount="+ R$ 5.070,00" kind="income" className="-left-1 top-[62%] -rotate-2 md:-left-14" delay={0.5} floatClass="site-float site-float-slow" />
             <FloatingChip icon={Utensils} tint={PALETTE.tangerine} name="Restaurante" amount="− R$ 70,00" kind="expense" className="-right-1 bottom-[3%] -rotate-1 md:-right-10" delay={0.56} floatClass="site-float site-float-late" />
           </m.div>
         </div>

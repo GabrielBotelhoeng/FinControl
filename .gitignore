@@ -10,3 +10,4 @@ test-results/
 .superpowers/
 .secrets/
 .vercel/
+e2e/.site-capturas/

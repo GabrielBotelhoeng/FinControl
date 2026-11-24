@@ -28,9 +28,9 @@ function Screen({ capture, priority, className }: { capture: Capture; priority?:
 }
 
 const PHONE = {
-  md: { body: 'rounded-[44px] p-[9px]', screen: 'rounded-[36px]', island: 'top-2.5 h-[22px]' },
+  md: { body: 'rounded-[44px] p-[9px]', screen: 'rounded-[36px] pt-[9%]', island: 'top-[2.2%] h-[22px]' },
   // Celular miniatura (ao lado do notebook): borda e ilha da câmera proporcionais ao tamanho.
-  sm: { body: 'rounded-[22px] p-[4px]', screen: 'rounded-[18px]', island: 'top-1.5 h-[9px]' },
+  sm: { body: 'rounded-[22px] p-[4px]', screen: 'rounded-[18px] pt-[9%]', island: 'top-[2.2%] h-[9px]' },
 } as const;
 
 /** Celular em CSS: corpo quase-preto, tela arredondada e a ilha da câmera. Nada de 3D (DESIGN.md). */
@@ -38,7 +38,8 @@ export function PhoneFrame({ capture, priority, size = 'md', className }: { capt
   const s = PHONE[size];
   return (
     <div className={cn('relative bg-[#14170F] shadow-[0_30px_60px_-24px_rgba(20,23,15,0.45)]', s.body, className)}>
-      <div className={cn('relative overflow-hidden bg-surface', s.screen)}>
+      {/* A faixa de status em cima (cor do fundo do app) guarda a ilha da câmera sem cobrir a captura. */}
+      <div className={cn('relative overflow-hidden bg-background', s.screen)}>
         <Screen capture={capture} priority={priority} />
         <span aria-hidden className={cn('absolute left-1/2 w-[30%] -translate-x-1/2 rounded-full bg-[#14170F]', s.island)} />
       </div>
