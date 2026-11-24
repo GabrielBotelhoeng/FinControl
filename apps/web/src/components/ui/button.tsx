@@ -2,7 +2,7 @@ import { Loader2 } from 'lucide-react';
 import { forwardRef, type ButtonHTMLAttributes } from 'react';
 import { cn } from '../../lib/cn';
 
-type Variant = 'primary' | 'secondary' | 'ghost' | 'danger';
+type Variant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'dark';
 type Size = 'sm' | 'md' | 'lg' | 'icon';
 
 const variants: Record<Variant, string> = {
@@ -11,6 +11,8 @@ const variants: Record<Variant, string> = {
   secondary: 'border border-border bg-transparent text-text hover:bg-surface-2',
   ghost: 'bg-transparent text-muted hover:bg-surface-2 hover:text-text',
   danger: 'bg-expense text-white hover:brightness-110',
+  // Quase-preto com texto limão: só sobre fundo limão (site de apresentação). O limão como texto só vale sobre o escuro.
+  dark: 'bg-brand-fg text-brand hover:brightness-125',
 };
 
 const sizes: Record<Size, string> = {

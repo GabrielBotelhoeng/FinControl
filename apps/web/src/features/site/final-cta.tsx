@@ -21,7 +21,7 @@ export function FinalCta() {
           </p>
         </RevealItem>
         <RevealItem className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
-          <Button size="lg" onClick={() => void demo.start()} loading={demo.pending} className="bg-brand-fg text-brand hover:brightness-125 max-sm:w-full">
+          <Button size="lg" variant="dark" onClick={() => void demo.start()} loading={demo.pending} className="max-sm:w-full">
             {!demo.pending && <Sparkles aria-hidden className="h-4 w-4" strokeWidth={1.75} />}
             Experimentar sem cadastro
           </Button>

@@ -141,7 +141,8 @@ function PlanCard({ plan, billing }: { plan: Plan; billing: Billing }) {
           size="lg"
           onClick={() => void demo.start()}
           loading={demo.pending}
-          className={cn('w-full', plan.highlight && 'bg-brand-fg text-brand hover:brightness-125')}
+          variant={plan.highlight ? 'dark' : 'primary'}
+          className="w-full"
         >
           {!demo.pending && <Sparkles aria-hidden className="h-4 w-4" strokeWidth={1.75} />}
           {free ? 'Experimentar sem cadastro' : 'Experimentar o Completo'}

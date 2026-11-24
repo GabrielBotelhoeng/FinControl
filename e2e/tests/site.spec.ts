@@ -62,6 +62,31 @@ test('a chave dos planos troca o preço do Completo', async ({ page }) => {
   await expect(page.getByText('Preços de lançamento, provisórios')).toBeVisible();
 });
 
+test('os botões escuros sobre o limão têm texto visível (QA E-001)', async ({ page }) => {
+  await page.goto('/');
+  await scrollThrough(page);
+  const buttons = [
+    page.getByRole('button', { name: 'Experimentar o Completo' }),
+    page.getByRole('region', { name: /Comece agora/ }).getByRole('button', { name: 'Experimentar sem cadastro' }),
+  ];
+  for (const button of buttons) {
+    const { color, background } = await button.evaluate((el) => {
+      const style = getComputedStyle(el);
+      return { color: style.color, background: style.backgroundColor };
+    });
+    expect(color, 'cor do texto igual à do fundo').not.toBe(background);
+    expect(color).toBe('rgb(200, 242, 75)'); // o limão, só sobre o quase-preto (DESIGN.md)
+  }
+});
+
+test('a 390 px, o "Experimentar" do cabeçalho tem folga da borda', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/');
+  const right = await page.getByRole('banner').getByRole('button', { name: 'Experimentar' }).evaluate((el) => el.getBoundingClientRect().right);
+  // O portal do celular perde ~10 px para a barra de rolagem; o botão precisa terminar antes disso.
+  expect(right).toBeLessThanOrEqual(390 - 16);
+});
+
 test.describe('com prefers-reduced-motion', () => {
   test.use({ viewport: { width: 390, height: 844 } });
 
