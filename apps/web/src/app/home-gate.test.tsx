@@ -69,4 +69,25 @@ describe('HomeGate', () => {
     expect((await screen.findAllByRole('link', { name: 'Painel' }, { timeout: 5000 })).length).toBeGreaterThan(0);
     expect(screen.queryByRole('heading', { level: 1, name: 'Seu dinheiro, sob controle.' })).not.toBeInTheDocument();
   });
+
+  it('na volta do link de confirmação (?token_hash=…&type=signup), sem sessão guardada, a / não desenha o site enquanto carrega', async () => {
+    const { gateway } = fakeGateway(null);
+    gateway.getSession.mockImplementation(() => new Promise(() => {})); // a sessão ainda está sendo conferida
+    window.history.replaceState(null, '', '/?token_hash=x&type=signup');
+    try {
+      renderApp(<HomeGate />, { gateway, route: '/', path: '/*', extraRoutes: login });
+      expect(screen.getByRole('status', { name: 'Carregando' })).toBeInTheDocument();
+      await new Promise((r) => setTimeout(r, 300));
+      expect(screen.queryByRole('heading', { level: 1, name: 'Seu dinheiro, sob controle.' })).not.toBeInTheDocument();
+    } finally {
+      window.history.replaceState(null, '', '/');
+    }
+  });
+
+  it('sem retorno de login e sem sessão guardada, a / já desenha o site enquanto a sessão é conferida', async () => {
+    const { gateway } = fakeGateway(null);
+    gateway.getSession.mockImplementation(() => new Promise(() => {}));
+    renderApp(<HomeGate />, { gateway, route: '/', path: '/*', extraRoutes: login });
+    expect(await screen.findByRole('heading', { level: 1, name: 'Seu dinheiro, sob controle.' }, { timeout: 5000 })).toBeInTheDocument();
+  });
 });

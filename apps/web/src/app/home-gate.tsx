@@ -24,8 +24,18 @@ function hasStoredSession(): boolean {
   }
 }
 
-/** Volta de um login externo (Google): a sessão chega pela URL, ainda sem estar guardada. */
-const isAuthRedirect = () => /access_token|error_description/.test(window.location.hash) || new URLSearchParams(window.location.search).has('code');
+/** Parâmetros que o Supabase usa na volta para o app (login com Google, link de confirmação, erro). */
+export const AUTH_RETURN_PARAMS = ['access_token', 'refresh_token', 'code', 'token_hash', 'type', 'error', 'error_code', 'error_description'];
+
+/**
+ * Volta de um login externo ou do link de confirmação de cadastro: a sessão chega pela URL (no hash ou na query), ainda
+ * sem estar guardada. A mesma lista vale no `public/theme-init.js` (teste).
+ */
+const isAuthRedirect = () => {
+  const hash = new URLSearchParams(window.location.hash.slice(1));
+  const query = new URLSearchParams(window.location.search);
+  return AUTH_RETURN_PARAMS.some((p) => hash.has(p) || query.has(p));
+};
 
 /**
  * Portão da `/` (sub-projeto 17, S1): com sessão, o app (o painel e as rotas filhas); sem sessão na `/`, o site de

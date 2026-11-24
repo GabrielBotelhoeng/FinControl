@@ -33,11 +33,19 @@ try {
     if (/^sb-.+-auth-token$/.test(localStorage.key(i) || '')) signedIn = true;
   }
   var path = location.pathname;
+  // Volta do login com Google ou do link de confirmação de cadastro: a sessão chega pela URL e o app vai abrir, não o
+  // site. A mesma lista do AUTH_RETURN_PARAMS de home-gate.tsx (teste).
+  var authParams = ['access_token', 'refresh_token', 'code', 'token_hash', 'type', 'error', 'error_code', 'error_description'];
+  var hashParams = new URLSearchParams(location.hash.slice(1));
+  var queryParams = new URLSearchParams(location.search);
+  var authReturn = authParams.some(function (p) {
+    return hashParams.has(p) || queryParams.has(p);
+  });
   if (path === '/entrar') {
     preload('entrar');
   } else if (signedIn) {
     preload('app');
-  } else if (path === '/' && !matchMedia('(display-mode: standalone)').matches) {
+  } else if (path === '/' && !authReturn && !matchMedia('(display-mode: standalone)').matches) {
     var hero = document.createElement('link');
     hero.rel = 'preload';
     hero.as = 'image';

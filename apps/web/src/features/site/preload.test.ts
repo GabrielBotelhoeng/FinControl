@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { CAPTURES } from './captures';
+import { AUTH_RETURN_PARAMS } from '../../app/home-gate';
 import { HERO_IMAGE_SIZES } from './hero';
 
 // O Vitest roda a partir de apps/web.
@@ -27,6 +28,8 @@ function runThemeInit() {
 describe('public/theme-init.js adianta a tela que vai abrir (Lighthouse do site)', () => {
   afterEach(() => {
     document.head.innerHTML = '';
+    localStorage.clear();
+    window.history.replaceState(null, '', '/');
   });
 
   it('na / sem sessão: a captura do herói (mesmo srcset e sizes da imagem) e o pedaço do site com as dependências', () => {
@@ -42,5 +45,14 @@ describe('public/theme-init.js adianta a tela que vai abrir (Lighthouse do site)
     localStorage.setItem('sb-projeto-auth-token', '{}');
     const links = runThemeInit();
     expect(links.map((l) => [l.rel, l.href])).toEqual([['modulepreload', '/assets/app.js']]);
+  });
+
+  it('na volta do link de confirmação (?token_hash=…&type=signup), não adianta o site', () => {
+    window.history.replaceState(null, '', '/?token_hash=x&type=signup');
+    expect(runThemeInit()).toEqual([]);
+  });
+
+  it('usa a mesma lista de parâmetros de retorno do portão da /', () => {
+    expect(script).toContain(`[${AUTH_RETURN_PARAMS.map((p) => `'${p}'`).join(', ')}]`);
   });
 });
