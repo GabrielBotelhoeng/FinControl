@@ -178,6 +178,11 @@ export default defineConfig({
         navigateFallbackAllowlist: offlineAppPatterns(rewrites),
         // Web Push (sub-projeto 5, Parte B, W7): o tratamento do aviso e do clique fica em public/push-sw.js.
         importScripts: ['push-sw.js'],
+        // O service worker novo assume sem esperar as abas fecharem (sub-projeto 19, A1). Com o `injectRegister`
+        // 'script-defer', o plugin não liga isso sozinho (só com 'auto'). A página aberta não recarrega: ela mostra o
+        // aviso de nova versão (lib/pwa-update.ts).
+        skipWaiting: true,
+        clientsClaim: true,
       },
     }),
   ],
