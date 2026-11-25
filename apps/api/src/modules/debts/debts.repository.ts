@@ -1,4 +1,5 @@
 import type { DateOnly, DebtKind, DebtLedger } from '@fincontrol/shared';
+import { NotFoundError } from '../../http/errors';
 import { fromDateOnly, toDateOnly } from '../../infra/date-mapping';
 import type { Db, DbClient } from '../../infra/prisma';
 
@@ -129,7 +130,8 @@ export function createDebtsRepository(db: Db) {
   async function lockAndCheck(tx: DbClient, userId: string, debtId: string, check: LockedCheck): Promise<DebtData> {
     await tx.$queryRaw`SELECT "id" FROM "debts" WHERE "id" = ${debtId}::uuid AND "user_id" = ${userId}::uuid FOR UPDATE`;
     const data = (await loadWith(tx, userId, [debtId]))[0];
-    if (!data) throw new Error('Dívida sumiu durante a operação');
+    // Excluída enquanto esta operação esperava a trava (E-003): 404, como se tivesse chegado depois.
+    if (!data) throw new NotFoundError('Dívida');
     check(data);
     return data;
   }
