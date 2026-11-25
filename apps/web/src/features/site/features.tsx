@@ -84,25 +84,31 @@ export function Features() {
   const desktop = useIsDesktop();
   const reduce = useSiteReducedMotion();
 
+  const heading = (
+    <SectionHeading
+      id="recursos-titulo"
+      eyebrow="Recursos"
+      title={
+        <>
+          <span className="font-extralight">Tudo o que o seu dinheiro</span> <span className="font-extrabold">precisa.</span>
+        </>
+      }
+      text="Do gasto do almoço ao plano para sair das dívidas. Sem planilha, sem fórmula."
+    />
+  );
+
   return (
     <section id="recursos" aria-labelledby="recursos-titulo" className="relative isolate px-4 pb-20 pt-14 md:px-10 md:pb-28 md:pt-20">
       <FloatingBackdrop items={BACKDROPS.features} />
       <div className="mx-auto max-w-7xl">
-        <SectionHeading
-          id="recursos-titulo"
-          eyebrow="Recursos"
-          title={
-            <>
-              <span className="font-extralight">Tudo o que o seu dinheiro</span> <span className="font-extrabold">precisa.</span>
-            </>
-          }
-          text="Do gasto do almoço ao plano para sair das dívidas. Sem planilha, sem fórmula."
-        />
+        {!desktop && heading}
 
         {/* Computador: coluna de texto rolando e a tela presa ao lado. */}
         {desktop && (
-          <div className="mt-6 grid grid-cols-[1fr_minmax(0,380px)] gap-16 lg:gap-24">
+          // O título fica na coluna da esquerda, e o celular preso começa ao lado dele (sem vão à direita do título).
+          <div className="grid grid-cols-[1fr_minmax(0,380px)] gap-16 lg:gap-24">
             <div>
+              {heading}
               {FEATURES.map((f, i) => (
                 <FeatureText key={f.title} feature={f} index={i} onActive={setActive} />
               ))}

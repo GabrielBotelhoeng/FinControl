@@ -30,8 +30,8 @@ function Track({ items, hidden, back }: { items: string[]; hidden?: boolean; bac
         <Fragment key={label}>
           <li
             className={cn(
-              'whitespace-nowrap px-5 font-display font-semibold tracking-[-0.01em] md:px-7',
-              back ? 'text-lg md:text-2xl' : 'text-xl md:text-3xl',
+              'whitespace-nowrap font-display font-semibold tracking-[-0.01em] md:px-7',
+              back ? 'px-3 text-sm md:text-2xl' : 'px-4 text-lg md:text-3xl',
             )}
           >
             {label}
@@ -48,16 +48,17 @@ function Track({ items, hidden, back }: { items: string[]; hidden?: boolean; bac
  * esquerda, e a verde-folha atrás, com a inclinação oposta e indo para a direita. Em cada uma, a primeira lista é lida
  * uma vez pelo leitor de tela e a cópia que fecha o laço fica `aria-hidden`. A animação é CSS (compositor), as duas
  * param com o mouse em cima da seção e somem com `prefers-reduced-motion`. A seção corta o que passa da largura (sem
- * rolagem horizontal a 360 px).
+ * rolagem horizontal a 360 px). No celular, as duas se encontram na ponta esquerda e se afastam para a direita (68 px no
+ * centro): um X cruzado no meio esconderia o texto da de trás numa tela de 360 px.
  */
 export function Marquee() {
   return (
-    <section aria-label="O que o FinControl faz" className="site-marquees relative isolate overflow-hidden pb-24 pt-14 md:py-20">
-      <div className="site-marquee absolute left-[-6%] top-[52%] flex w-[112%] -translate-y-1/2 rotate-[7deg] overflow-hidden bg-primary py-3 md:top-1/2 md:rotate-3 text-surface md:py-4">
+    <section aria-label="O que o FinControl faz" className="site-marquees relative isolate overflow-hidden pb-28 pt-14 md:py-20">
+      <div className="site-marquee absolute left-[-6%] top-[154px] flex w-[112%] -translate-y-1/2 rotate-[9deg] overflow-hidden bg-primary py-3 md:top-1/2 md:rotate-3 text-surface md:py-4">
         <Track items={MARQUEE_BACK_ITEMS} back />
         <Track items={MARQUEE_BACK_ITEMS} back hidden />
       </div>
-      <div className="site-marquee relative -ml-[6%] flex w-[112%] -rotate-2 overflow-hidden bg-brand py-4 text-brand-fg shadow-bar md:py-5">
+      <div className="site-marquee relative -ml-[6%] flex w-[112%] -rotate-3 overflow-hidden md:-rotate-2 bg-brand py-4 text-brand-fg shadow-bar md:py-5">
         <Track items={MARQUEE_ITEMS} />
         <Track items={MARQUEE_ITEMS} hidden />
       </div>

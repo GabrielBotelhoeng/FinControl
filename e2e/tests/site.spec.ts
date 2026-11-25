@@ -122,6 +122,38 @@ test('as duas faixas em X andam em sentidos opostos e o fundo flutua só com tra
   expect(animated.every((p) => ['transform', 'opacity'].includes(p)), animated.join(', ')).toBe(true);
 });
 
+for (const width of [360, 390]) {
+  test(`a ${width} px, as duas faixas em X ficam legíveis: cada uma com pelo menos 2 termos inteiros à vista (QA)`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 800 });
+    await openSite(page, '/');
+    await page.locator('section[aria-label="O que o FinControl faz"]').scrollIntoViewIfNeeded();
+    // As faixas andam: conta, em 10 instantes, os termos inteiros à vista em cada uma (dentro da tela e sem nada por cima
+    // em três pontos ao longo do termo) e exige a mediana de 2 ou mais.
+    const counts: [number[], number[]] = [[], []];
+    for (let i = 0; i < 10; i++) {
+      const [back, front] = await page.evaluate(() =>
+        [...document.querySelectorAll('.site-marquee')].map(
+          (strip) =>
+            [...strip.querySelectorAll('ul > li:not([aria-hidden])')].filter((li) => {
+              const r = li.getBoundingClientRect();
+              if (r.left < 0 || r.right > innerWidth) return false;
+              return [0.15, 0.5, 0.85].every((f) => {
+                const hit = document.elementFromPoint(r.left + r.width * f, r.top + r.height / 2);
+                return hit === li || li.contains(hit);
+              });
+            }).length,
+        ),
+      );
+      counts[0].push(back ?? 0);
+      counts[1].push(front ?? 0);
+      await page.waitForTimeout(600);
+    }
+    const median = (xs: number[]) => [...xs].sort((a, b) => a - b)[Math.floor(xs.length / 2)]!;
+    expect(median(counts[0]), `faixa de trás: ${counts[0].join(',')}`).toBeGreaterThanOrEqual(2);
+    expect(median(counts[1]), `faixa da frente: ${counts[1].join(',')}`).toBeGreaterThanOrEqual(2);
+  });
+}
+
 test.describe('com prefers-reduced-motion', () => {
   test.use({ viewport: { width: 390, height: 844 } });
 

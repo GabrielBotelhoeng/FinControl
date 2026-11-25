@@ -1,8 +1,28 @@
 import { render, waitFor } from '@testing-library/react';
-import { beforeAll, describe, expect, it } from 'vitest';
+import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { BACKDROPS, FloatingBackdrop, type FloatItem } from './floating-backdrop';
 
-/** Os elementos entram no quadro seguinte à montagem (numa transição): espera eles aparecerem. */
+/** Um IntersectionObserver que avisa na hora que a seção está na tela (o do jsdom nunca avisa). */
+class VisibleObserver {
+  constructor(private readonly callback: IntersectionObserverCallback) {}
+  observe(target: Element) {
+    this.callback([{ isIntersecting: true, target } as IntersectionObserverEntry], this as unknown as IntersectionObserver);
+  }
+  unobserve() {}
+  disconnect() {}
+  takeRecords() {
+    return [];
+  }
+}
+// O setup define o observador sem `configurable`: troca por atribuição e volta ao original depois de cada teste.
+const original = window.IntersectionObserver;
+const useObserver = (impl: unknown) => {
+  window.IntersectionObserver = impl as typeof IntersectionObserver;
+};
+beforeEach(() => useObserver(VisibleObserver));
+afterEach(() => useObserver(original));
+
+/** Os elementos entram quando a seção chega perto da tela (numa transição): espera eles aparecerem. */
 async function renderBackdrop(items: readonly FloatItem[]) {
   const view = render(<FloatingBackdrop items={items} />);
   await waitFor(() => expect(view.container.querySelectorAll('[data-float]')).toHaveLength(items.length));

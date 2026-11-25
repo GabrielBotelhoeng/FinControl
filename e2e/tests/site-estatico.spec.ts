@@ -79,6 +79,34 @@ test('rota inexistente é 404 de verdade, e as rotas do app abrem a casca com no
   }
 });
 
+test('o fundo flutuante não vem no HTML gerado (só o contêiner vazio) e entra depois da hidratação, sem erro (sub-projeto 20, V9)', async ({ page, request }) => {
+  // HTML cru da /: os contêineres [data-backdrop] estão lá, vazios; nenhum elemento de fundo ([data-float]).
+  const html = await (await request.get('/')).text();
+  const containers = [...html.matchAll(/<div[^>]*data-backdrop[^>]*>(.*?)<\/div>/g)];
+  expect(containers.length).toBeGreaterThanOrEqual(4);
+  for (const [, inner] of containers) expect(inner).toBe('');
+  expect(html).not.toContain('data-float');
+  // No computador (onde o paralaxe monta) e no celular: a hidratação reaproveita os nós e os elementos chegam depois.
+  for (const width of [390, 1440]) {
+    const errors = collectErrors(page);
+    await page.setViewportSize({ width, height: 844 });
+    await page.goto('/', { waitUntil: 'commit' });
+    await page.waitForSelector('#site-titulo', { state: 'attached' });
+    await page.evaluate(() => {
+      (window as unknown as { __static: Element[] }).__static = [...document.querySelectorAll('#root *')];
+    });
+    await page.locator('html[data-app-ready]').waitFor({ state: 'attached' });
+    await expect(page.locator('section[aria-labelledby="site-titulo"] [data-float]').first()).toBeAttached();
+    // A 390 px, nenhum nó do HTML é trocado. A 1440 px os recursos trocam de propósito para a versão do computador depois
+    // da hidratação (sub-projeto 17), então ali a conferência é só a do console.
+    if (width === 390) {
+      const detached = await page.evaluate(() => (window as unknown as { __static: Element[] }).__static.filter((n) => !n.isConnected).length);
+      expect(detached).toBe(0);
+    }
+    expect(errors, `${width} px`).toEqual([]);
+  }
+});
+
 test('sem sessão, a / hidrata o HTML estático (os mesmos nós, sem redesenhar) sem erro no console e continua interativa', async ({ page }) => {
   const errors = collectErrors(page);
   await page.setViewportSize({ width: 390, height: 844 });

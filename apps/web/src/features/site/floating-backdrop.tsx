@@ -20,10 +20,13 @@ type Base = {
   /** Duração do ciclo em segundos (6 a 14) e o quanto ele já começa adiantado, para não sincronizar. */
   seconds: number;
   offset?: number;
+  /** Maior (×1,4): ícones de 56 px e moedas de 67 px no computador, ~45–50 px no celular. Para o herói chamar atenção. */
+  big?: boolean;
 };
 
 export type FloatItem =
-  | (Base & { kind: 'blob'; color: string; size: string })
+  /** `clear`: a mancha nunca fica atrás de texto, então pode ser mais forte (alfa até 0,45). */
+  | (Base & { kind: 'blob'; color: string; size: string; clear?: boolean })
   | (Base & { kind: 'coin'; tone: 'tangerine' | 'banana'; tilt?: string })
   | (Base & { kind: 'icon'; icon: LucideIcon; color: string; tilt?: string })
   | (Base & { kind: 'chip'; icon: LucideIcon; color: string; name: string; amount: string; tilt?: string })
@@ -96,8 +99,9 @@ function Item({ item, still }: { item: FloatItem; still: boolean }) {
         'absolute',
         item.at,
         // No celular: só os marcados, menores e mais transparentes, sempre nas bordas, fora do texto (V3 e V4).
-        item.phone ? (item.kind === 'blob' ? '' : 'max-md:opacity-70') : 'max-md:hidden',
-        item.kind === 'icon' && 'opacity-80',
+        item.phone ? (item.kind === 'blob' ? '' : 'max-md:opacity-90') : 'max-md:hidden',
+        item.kind === 'icon' && 'opacity-90',
+        item.big && 'scale-[1.4]',
         tilt,
       )}
     >
@@ -114,18 +118,20 @@ function Item({ item, still }: { item: FloatItem; still: boolean }) {
   );
 }
 
-/** Cor de apoio com transparência, para os blobs (até 0,25: passam atrás de texto, V4). */
-const soft = (hex: string, alpha: number) => `${hex}${Math.floor(Math.min(alpha, 0.25) * 255).toString(16).padStart(2, '0')}`;
+/** Cor de apoio com transparência, para os blobs: até 0,25 quando passam atrás de texto (V4), até 0,45 quando não. */
+const soft = (hex: string, alpha: number, max = 0.25) => `${hex}${Math.floor(Math.min(alpha, max) * 255).toString(16).padStart(2, '0')}`;
 
 /** Onde fica cada elemento, por área do site. No computador até 8 por área; no celular até 4 (V3). */
 export const BACKDROPS = {
   hero: [
     { kind: 'blob', color: soft(PALETTE.sky, 0.22), size: 'h-64 w-64', at: 'left-[34%] top-[4%]', drift: 'b', seconds: 14 },
-    { kind: 'blob', color: soft(PALETTE.tangerine, 0.2), size: 'h-44 w-44', at: '-right-12 top-[26%]', phone: true, drift: 'c', seconds: 12, offset: 4 },
-    { kind: 'coin', tone: 'banana', at: 'right-[5%] top-[8%] md:left-[45%] md:right-auto md:top-[16%]', phone: true, tilt: 'rotate-12', drift: 'a', seconds: 7 },
-    { kind: 'coin', tone: 'tangerine', at: 'right-[3%] top-[58%]', drift: 'b', seconds: 9, offset: 3 },
-    { kind: 'icon', icon: PiggyBank, color: PALETTE.pink, at: 'left-[2%] top-[52%] md:left-[49%] md:top-auto md:bottom-[14%]', phone: true, tilt: '-rotate-6', drift: 'c', seconds: 8, offset: 2 },
-    { kind: 'icon', icon: Target, color: PALETTE.grape, at: 'left-[3%] top-[86%] md:left-[58%] md:top-[9%]', phone: true, tilt: 'rotate-6', drift: 'a', seconds: 10, offset: 5 },
+    { kind: 'blob', color: soft(PALETTE.tangerine, 0.4, 0.45), size: 'h-96 w-96', at: '-right-16 top-[18%]', clear: true, drift: 'c', seconds: 12, offset: 4 },
+    { kind: 'coin', tone: 'banana', at: 'right-[6%] top-[8%] md:left-[45%] md:right-auto md:top-[16%]', phone: true, big: true, tilt: 'rotate-12', drift: 'a', seconds: 7 },
+    { kind: 'coin', tone: 'tangerine', at: 'right-[3%] top-[73%] md:right-[3%] md:top-[58%]', phone: true, big: true, drift: 'b', seconds: 9, offset: 3 },
+    { kind: 'icon', icon: PiggyBank, color: PALETTE.pink, at: 'left-[1%] top-[57%] md:left-[49%] md:top-auto md:bottom-[14%]', phone: true, big: true, tilt: '-rotate-6', drift: 'c', seconds: 8, offset: 2 },
+    { kind: 'icon', icon: Target, color: PALETTE.grape, at: 'left-[4%] top-[85%] md:left-[58%] md:top-[9%]', phone: true, big: true, tilt: 'rotate-6', drift: 'a', seconds: 10, offset: 5 },
+    { kind: 'icon', icon: CreditCard, color: PALETTE.sky, at: 'right-[5%] top-[11%]', big: true, tilt: '-rotate-6', drift: 'b', seconds: 11, offset: 1 },
+    { kind: 'icon', icon: ChartPie, color: PALETTE.teal, at: 'left-[52%] top-[44%]', big: true, tilt: 'rotate-3', drift: 'c', seconds: 9, offset: 6 },
   ],
   howItWorks: [
     { kind: 'blob', color: soft(PALETTE.lime, 0.25), size: 'h-72 w-72', at: 'right-[12%] -top-16', drift: 'c', seconds: 13 },
@@ -147,10 +153,10 @@ export const BACKDROPS = {
   ],
   features: [
     { kind: 'blob', color: soft(PALETTE.grape, 0.16), size: 'h-72 w-72', at: '-left-24 top-[1%] md:left-[30%] md:-top-10', phone: true, drift: 'a', seconds: 14 },
-    { kind: 'coin', tone: 'banana', at: 'right-[5%] top-[1.5%] md:right-[18%] md:top-[3%]', phone: true, tilt: 'rotate-12', drift: 'c', seconds: 8, offset: 2 },
-    { kind: 'icon', icon: CreditCard, color: PALETTE.tangerine, at: 'left-[46%] top-[20%]', tilt: '-rotate-6', drift: 'b', seconds: 9 },
+    { kind: 'coin', tone: 'banana', at: 'right-[5%] top-[1.5%] md:left-[54%] md:right-auto md:top-[2.5%]', phone: true, big: true, tilt: 'rotate-12', drift: 'c', seconds: 8, offset: 2 },
+    { kind: 'icon', icon: CreditCard, color: PALETTE.tangerine, at: 'left-[46%] top-[6%]', big: true, tilt: '-rotate-6', drift: 'b', seconds: 9 },
     { kind: 'coin', tone: 'tangerine', at: 'left-[1.5%] top-[36%]', drift: 'a', seconds: 7, offset: 3 },
-    { kind: 'icon', icon: ChartPie, color: PALETTE.grape, at: 'left-[47%] top-[46%]', tilt: 'rotate-6', drift: 'c', seconds: 11, offset: 4 },
+    { kind: 'icon', icon: ChartPie, color: PALETTE.grape, at: 'left-[58%] top-[9%]', tilt: 'rotate-6', drift: 'c', seconds: 11, offset: 4 },
     { kind: 'icon', icon: PiggyBank, color: PALETTE.pink, at: 'right-[2%] top-[58%]', tilt: '-rotate-3', drift: 'a', seconds: 10, offset: 1 },
     { kind: 'coin', tone: 'banana', at: 'left-[45%] top-[74%]', drift: 'b', seconds: 8, offset: 5 },
     { kind: 'icon', icon: Target, color: PALETTE.sky, at: 'left-[1.5%] top-[86%]', tilt: 'rotate-6', drift: 'c', seconds: 12, offset: 2 },
@@ -164,13 +170,6 @@ export const BACKDROPS = {
   ],
 } satisfies Record<string, FloatItem[]>;
 
-/**
- * Elementos flutuando no fundo de uma seção (sub-projeto 20, V1–V4): blobs, moedas, ícones do app e mini-cartões de
- * lançamento, `aria-hidden` e sem receber toque, atrás do conteúdo. A seção precisa de `relative isolate`. Cada um
- * flutua em CSS (só `transform`, no compositor); no computador, a camada acompanha a rolagem com um paralaxe leve. Com
- * `prefers-reduced-motion`, tudo parado; fora da tela, a flutuação pausa. No build e na hidratação, o mesmo HTML para
- * todo mundo (sub-projeto 18): posição absoluta e tamanho fixo, sem CLS.
- */
 /** As duas camadas, longe (blobs) e perto (o resto), paradas: no celular e com `prefers-reduced-motion`. */
 function StillLayers({ far, near, still }: { far: FloatItem[]; near: FloatItem[]; still: boolean }) {
   return (
@@ -217,20 +216,39 @@ function ParallaxLayers({ target, far, near }: { target: RefObject<HTMLDivElemen
  * Elementos flutuando no fundo de uma seção (sub-projeto 20, V1–V4): blobs, moedas, ícones do app e mini-cartões de
  * lançamento, `aria-hidden` e sem receber toque, atrás do conteúdo. A seção precisa de `relative isolate`. Cada um
  * flutua em CSS (só `transform`, no compositor); no computador, a camada acompanha a rolagem com um paralaxe leve. Com
- * `prefers-reduced-motion`, tudo parado; fora da tela, a flutuação pausa. No build e na hidratação, o mesmo HTML para
- * todo mundo (sub-projeto 18, sem paralaxe): posição absoluta e tamanho fixo, sem CLS.
+ * `prefers-reduced-motion`, tudo parado; fora da tela, a flutuação pausa.
+ *
+ * HTML estático (sub-projeto 18; V9 da spec, revisado): de propósito, o build gera só o contêiner vazio
+ * (`[data-backdrop]`, sem nenhum elemento), e os elementos são montados depois do primeiro quadro, para não competir com
+ * o LCP (a captura do herói). Medido: com os elementos no HTML, o LCP no celular ia de 1,7 para 1,9 s e o Lighthouse caía
+ * para 97–99. Como o servidor e a hidratação desenham o mesmo contêiner vazio (`useIsDesktop` e o movimento reduzido
+ * também são `false` lá), não há diferença na hidratação; e, como tudo é absoluto, nada se desloca (CLS 0).
  */
 export function FloatingBackdrop({ items }: { items: readonly FloatItem[] }) {
   const ref = useRef<HTMLDivElement>(null);
   const reduce = useSiteReducedMotion();
   const desktop = useIsDesktop();
-  // Os elementos entram no quadro depois da montagem (ou da hidratação), numa transição do React e com um fade (CSS): o
-  // HTML estático fica menor, o LCP não espera por eles e a hidratação não ganha trabalho. A camada já vem no HTML; como
-  // tudo é absoluto, nada se mexe (CLS 0) e a hidratação vê o mesmo HTML.
+  // Começa sem os elementos (no build, na hidratação e na primeira montagem) e os monta quando a seção chega perto da tela
+  // (200 px antes), numa transição do React e com um fade de opacidade (CSS): o LCP não espera por eles, a hidratação não
+  // ganha trabalho e o que está abaixo da dobra não pesa na carga. Sem `IntersectionObserver`, no quadro seguinte.
   const [shown, setShown] = useState(false);
   useEffect(() => {
-    const frame = requestAnimationFrame(() => startTransition(() => setShown(true)));
-    return () => cancelAnimationFrame(frame);
+    const el = ref.current;
+    const show = () => startTransition(() => setShown(true));
+    if (!el || typeof IntersectionObserver === 'undefined') {
+      const frame = requestAnimationFrame(show);
+      return () => cancelAnimationFrame(frame);
+    }
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry?.isIntersecting) return;
+        observer.disconnect();
+        show();
+      },
+      { rootMargin: '200px 0px' },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
   }, []);
 
   // Pausa a flutuação fora da tela (direto no DOM, sem re-render).

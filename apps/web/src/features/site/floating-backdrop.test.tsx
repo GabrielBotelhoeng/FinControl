@@ -1,9 +1,29 @@
 import { render, waitFor } from '@testing-library/react';
 import { renderToString } from 'react-dom/server';
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { BACKDROPS, FloatingBackdrop, type FloatItem } from './floating-backdrop';
 
-/** Os elementos entram no quadro seguinte à montagem (numa transição): espera eles aparecerem. */
+/** Um IntersectionObserver que avisa na hora que a seção está na tela (o do jsdom nunca avisa). */
+class VisibleObserver {
+  constructor(private readonly callback: IntersectionObserverCallback) {}
+  observe(target: Element) {
+    this.callback([{ isIntersecting: true, target } as IntersectionObserverEntry], this as unknown as IntersectionObserver);
+  }
+  unobserve() {}
+  disconnect() {}
+  takeRecords() {
+    return [];
+  }
+}
+// O setup define o observador sem `configurable`: troca por atribuição e volta ao original depois de cada teste.
+const original = window.IntersectionObserver;
+const useObserver = (impl: unknown) => {
+  window.IntersectionObserver = impl as typeof IntersectionObserver;
+};
+beforeEach(() => useObserver(VisibleObserver));
+afterEach(() => useObserver(original));
+
+/** Os elementos entram quando a seção chega perto da tela (numa transição): espera eles aparecerem. */
 async function renderBackdrop(items: readonly FloatItem[]) {
   const view = render(<FloatingBackdrop items={items} />);
   await waitFor(() => expect(view.container.querySelectorAll('[data-float]')).toHaveLength(items.length));
@@ -56,17 +76,34 @@ describe('elementos flutuando no fundo (sub-projeto 20)', () => {
     expect(ticker.querySelector('.site-ticker')).not.toBeNull();
   });
 
+  it('abaixo da dobra (a seção ainda longe da tela), os elementos não montam', async () => {
+    useObserver(
+      class {
+        observe() {}
+        unobserve() {}
+        disconnect() {}
+        takeRecords() {
+          return [];
+        }
+      },
+    );
+    const { container } = render(<FloatingBackdrop items={BACKDROPS.features} />);
+    await new Promise((r) => setTimeout(r, 50));
+    expect(container.querySelector('[data-backdrop]')).not.toBeNull();
+    expect(container.querySelectorAll('[data-float]')).toHaveLength(0);
+  });
+
   it('a moeda não tem texto no DOM (o "R$" é desenho do CSS)', async () => {
     const { container } = await renderBackdrop(BACKDROPS.hero);
     for (const coin of container.querySelectorAll('[data-float="coin"]')) expect(coin.textContent).toBe('');
   });
 
-  it('os blobs passam atrás de texto com opacidade de no máximo 0,25', async () => {
+  it('os blobs passam atrás de texto com opacidade de no máximo 0,25 (0,45 os que nunca ficam atrás de texto)', async () => {
     for (const items of Object.values(BACKDROPS)) {
       for (const item of items) {
         if (item.kind !== 'blob') continue;
         const alpha = parseInt(item.color.slice(7, 9), 16) / 255;
-        expect(alpha).toBeLessThanOrEqual(0.25);
+        expect(alpha).toBeLessThanOrEqual('clear' in item && item.clear ? 0.45 : 0.25);
       }
     }
   });
