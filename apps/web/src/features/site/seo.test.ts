@@ -3,6 +3,7 @@ import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { FAQ } from './faq-data';
 import { PLANS } from './pricing';
+import { PUBLIC_HEAD } from '../../lib/public-head';
 import { SITE_TITLE } from './site-page';
 
 // O Vitest roda a partir de apps/web.
@@ -17,6 +18,9 @@ describe('SEO do index.html (sub-projeto 17, S11)', () => {
   it('título, descrição, canonical, Open Graph e Twitter Card', () => {
     expect(doc.title).toBe(SITE_TITLE);
     expect(meta('meta[name="description"]')?.length).toBeGreaterThan(80);
+    // A cabeça da home é a mesma da tabela que o build usa para gerar cada página pública (sub-projeto 18, E6).
+    expect(meta('meta[name="description"]')).toBe(PUBLIC_HEAD['/'].description);
+    expect(meta('meta[property="og:description"]')).toBe(PUBLIC_HEAD['/'].description);
     expect(doc.querySelector('link[rel="canonical"]')?.getAttribute('href')).toBe('https://fincontrol-gb.vercel.app/');
     expect(meta('meta[property="og:locale"]')).toBe('pt_BR');
     expect(meta('meta[property="og:title"]')).toBe(SITE_TITLE);
@@ -33,24 +37,27 @@ describe('SEO do index.html (sub-projeto 17, S11)', () => {
     }
   });
 
-  it('o JSON-LD é válido e tem os mesmos preços de pricing.ts e as mesmas perguntas do site', () => {
+  it('o JSON-LD é válido, só com a oferta grátis (os preços pagos são provisórios, sub-projeto 18, E8) e as mesmas perguntas do site', () => {
     const blocks = [...doc.querySelectorAll('script[type="application/ld+json"]')];
     expect(blocks).toHaveLength(1);
     const nodes = JSON.parse(blocks[0]!.textContent ?? '') as LdNode[];
 
     const app = nodes.find((n) => n['@type'] === 'SoftwareApplication')!;
-    const prices = app.offers!.map((o) => Math.round(Number(o.price) * 100)).sort((a, b) => a - b);
-    const expected = [...new Set(PLANS.flatMap((p) => [p.monthlyCents, p.yearlyCents]))].sort((a, b) => a - b);
-    expect(prices).toEqual(expected);
-    for (const o of app.offers!) expect(o.priceCurrency).toBe('BRL');
+    expect(app.offers!.length).toBeGreaterThan(0);
+    for (const o of app.offers!) {
+      expect(Number(o.price)).toBe(0);
+      expect(o.priceCurrency).toBe('BRL');
+    }
+    expect(PLANS.some((p) => p.monthlyCents === 0)).toBe(true);
 
     const faq = nodes.find((n) => n['@type'] === 'FAQPage')!;
     expect(faq.mainEntity!.map((q) => [q.name, q.acceptedAnswer.text])).toEqual(FAQ.map((f) => [f.question, f.answer]));
   });
 
-  it('robots.txt aponta o sitemap, e o sitemap lista as páginas públicas', () => {
+  it('robots.txt aponta o sitemap, e o sitemap lista só as páginas públicas (sem a /entrar)', () => {
     expect(read('public/robots.txt')).toContain('Sitemap: https://fincontrol-gb.vercel.app/sitemap.xml');
     const sitemap = read('public/sitemap.xml');
-    for (const path of ['', 'entrar', 'privacidade', 'termos']) expect(sitemap).toContain(`<loc>https://fincontrol-gb.vercel.app/${path}</loc>`);
+    const locs = [...sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1]);
+    expect(locs).toEqual(['', 'privacidade', 'termos'].map((path) => `https://fincontrol-gb.vercel.app/${path}`));
   });
 });

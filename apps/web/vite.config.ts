@@ -1,11 +1,85 @@
+import { existsSync, readFileSync, statSync } from 'node:fs';
+import { resolve, sep } from 'node:path';
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
-import type { Plugin } from 'vite';
+import type { Plugin, ResolvedConfig } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
 import { defineConfig } from 'vitest/config';
+import { prerenderPages } from './scripts/prerender.mjs';
+import { appRoutePatterns, offlineAppPatterns } from './src/app/app-route-patterns';
+
+/** Os rewrites do `vercel.json`: as rotas do app, que abrem a casca (`/app.html`). Fonte única da Vercel, do preview e do PWA. */
+const { rewrites } = JSON.parse(readFileSync(new URL('./vercel.json', import.meta.url), 'utf8')) as { rewrites: { source: string; destination: string }[] };
+
+/**
+ * HTML estático das páginas públicas, da casca do app e do 404 (sub-projeto 18, E1): no fim do build do cliente, antes do
+ * service worker (o PWA roda depois, `closeBundleOrder: 'post'`), para o precache levar o HTML final e o `app.html`.
+ */
+function prerenderPublicPages(): Plugin {
+  let config: ResolvedConfig;
+  return {
+    name: 'fincontrol-prerender',
+    apply: 'build',
+    configResolved(resolved) {
+      config = resolved;
+    },
+    closeBundle: {
+      sequential: true,
+      order: 'pre',
+      async handler() {
+        // O próprio build SSR do prerender passa por este arquivo de configuração: nele, nada a fazer.
+        if (config.build.ssr) return;
+        const files = await prerenderPages({ root: config.root, outDir: resolve(config.root, config.build.outDir), mode: config.mode });
+        config.logger.info(`HTML estático gerado: ${files.join(', ')}`);
+      },
+    },
+  };
+}
+
+/**
+ * O `vite preview` (E2E e Lighthouse locais) serve como a Vercel (sub-projeto 18, E5): primeiro o arquivo (as páginas
+ * públicas são `pasta/index.html`), depois os rewrites do `vercel.json` (as rotas do app para `/app.html`) e, no resto, o
+ * `404.html` com status 404. Sem isso, o fallback de SPA do preview serviria o index.html em qualquer caminho.
+ */
+function previewLikeVercel(): Plugin {
+  return {
+    name: 'fincontrol-preview-like-vercel',
+    configurePreviewServer(server) {
+      const root = server.config.root;
+      const outDir = resolve(root, server.config.build.outDir);
+      const patterns = appRoutePatterns(rewrites);
+      const rules = rewrites.map((r, i) => ({ pattern: patterns[i]!, destination: r.destination }));
+      const isFile = (path: string) => path.startsWith(outDir + sep) && existsSync(path) && statSync(path).isFile();
+      server.middlewares.use((req, res, next) => {
+        if (req.method !== 'GET' && req.method !== 'HEAD') return next();
+        const url = new URL(req.url ?? '/', 'http://localhost');
+        const path = decodeURIComponent(url.pathname);
+        if (isFile(resolve(outDir, `.${path}`))) return next();
+        if (isFile(resolve(outDir, `.${path}`, 'index.html'))) {
+          req.url = `${path.replace(/\/?$/, '/')}index.html${url.search}`;
+          return next();
+        }
+        const rule = rules.find((r) => r.pattern.test(path));
+        if (rule) {
+          req.url = `${rule.destination}${url.search}`;
+          return next();
+        }
+        res.statusCode = 404;
+        res.setHeader('Content-Type', 'text/html; charset=utf-8');
+        res.end(readFileSync(resolve(outDir, '404.html')));
+      });
+    },
+  };
+}
 
 /** Os pedaços que o `public/theme-init.js` adianta com modulepreload, conforme a rota e a sessão. */
-const PRELOADED_CHUNKS = { site: '/features/site/site-page.tsx', app: '/app/app-shell.tsx', entrar: '/features/auth/login-page.tsx' };
+const PRELOADED_CHUNKS = {
+  // O pedaço que monta o app (o main.tsx o importa; sub-projeto 18).
+  boot: '/src/boot.tsx',
+  site: '/features/site/site-page.tsx',
+  app: '/app/app-shell.tsx',
+  entrar: '/features/auth/login-page.tsx',
+};
 
 /**
  * Põe no index.html o nome de cada pedaço adiantado (`<meta name="fincontrol-chunk-site">` etc.), para o
@@ -61,8 +135,12 @@ export default defineConfig({
     react(),
     tailwindcss(),
     preloadChunkMetas(),
+    prerenderPublicPages(),
+    previewLikeVercel(),
     VitePWA({
       registerType: 'autoUpdate',
+      // O service worker é gerado depois do HTML estático (plugin acima), para o precache levar a versão final.
+      integration: { closeBundleOrder: 'post' },
       // O registro do service worker não segura a primeira pintura (Lighthouse do site, sub-projeto 17).
       injectRegister: 'script-defer',
       includeAssets: ['icon.svg', 'apple-touch-icon.png'],
@@ -93,8 +171,11 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,svg,png,webp,woff2}'],
         // As fotos do site de apresentação não vão para o cache de quem instala o app (sub-projeto 17, S10).
         globIgnores: ['site/**', 'og-image.png'],
-        navigateFallback: '/index.html',
-        navigateFallbackDenylist: [/^\/api\//],
+        // O app instalado abre a casca do app só nas rotas do app (as mesmas do vercel.json). As páginas públicas vêm do HTML
+        // gerado, e um caminho desconhecido vai à rede e recebe o 404 de verdade (sub-projeto 18, seção 3 da spec; CodeRabbit).
+        navigateFallback: '/app.html',
+        // O Workbox compara caminho + query: o atalho /lancamentos?novo=1 também abre a casca offline.
+        navigateFallbackAllowlist: offlineAppPatterns(rewrites),
         // Web Push (sub-projeto 5, Parte B, W7): o tratamento do aviso e do clique fica em public/push-sw.js.
         importScripts: ['push-sw.js'],
       },

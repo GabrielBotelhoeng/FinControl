@@ -1,12 +1,12 @@
 import { Cloud, Download, Smartphone, type LucideIcon } from 'lucide-react';
-import { useReducedMotion, useScroll, useTransform } from 'motion/react';
+import { useScroll, useTransform } from 'motion/react';
 import * as m from 'motion/react-m';
 import { useRef } from 'react';
 import { IconTile } from '../../components/ui/icon-tile';
 import { PALETTE } from '../../lib/palette';
 import { CAPTURES } from './captures';
 import { LaptopFrame, PhoneFrame } from './device-frame';
-import { Reveal, RevealItem } from './reveal';
+import { Reveal, RevealItem, useSiteReducedMotion } from './reveal';
 import { SectionHeading } from './section-heading';
 
 const POINTS: { title: string; text: string; icon: LucideIcon; tint: string }[] = [
@@ -33,7 +33,7 @@ const POINTS: { title: string; text: string; icon: LucideIcon; tint: string }[] 
 /** "No celular, como app" (seção 3.6): o notebook ao fundo e dois celulares na frente, com um paralaxe leve. */
 export function MobileApp() {
   const ref = useRef<HTMLDivElement>(null);
-  const reduce = useReducedMotion();
+  const reduce = useSiteReducedMotion();
   const { scrollYProgress } = useScroll({ target: ref, offset: ['start end', 'end start'] });
   // Paralaxe leve; com `prefers-reduced-motion`, os aparelhos ficam parados.
   const frontY = useTransform(scrollYProgress, [0, 1], reduce ? [0, 0] : [50, -50]);

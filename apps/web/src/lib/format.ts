@@ -1,4 +1,6 @@
-import { formatBRL, type DateOnly, type TransactionType, type YearMonth } from '@fincontrol/shared';
+import type { DateOnly, TransactionType, YearMonth } from '@fincontrol/shared';
+// Do arquivo, não do barrel: o barrel puxa os schemas (zod) para o site e para o pedaço de entrada (sub-projeto 18, E10).
+import { formatBRL } from '@fincontrol/shared/money';
 
 export { formatBRL };
 

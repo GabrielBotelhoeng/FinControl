@@ -1,4 +1,4 @@
-import type { Session, SupabaseClient } from '@supabase/supabase-js';
+import type { GoTrueClient, Session } from '@supabase/auth-js';
 
 export type AuthUser = { id: string; email: string | null; isAnonymous: boolean };
 export type AuthSession = { user: AuthUser; accessToken: string };
@@ -22,35 +22,35 @@ function check(error: { message: string } | null): void {
   if (error) throw new Error(error.message);
 }
 
-export function createSupabaseGateway(client: SupabaseClient): AuthGateway {
+export function createSupabaseGateway(auth: GoTrueClient): AuthGateway {
   return {
     async getSession() {
-      const { data } = await client.auth.getSession();
+      const { data } = await auth.getSession();
       return toSession(data.session);
     },
     onChange(cb) {
-      const { data } = client.auth.onAuthStateChange((_event, session) => cb(toSession(session)));
+      const { data } = auth.onAuthStateChange((_event, session) => cb(toSession(session)));
       return () => data.subscription.unsubscribe();
     },
     async signInWithPassword(email, password) {
-      check((await client.auth.signInWithPassword({ email, password })).error);
+      check((await auth.signInWithPassword({ email, password })).error);
     },
     async signUp(email, password, name) {
-      const { data, error } = await client.auth.signUp({ email, password, options: { data: { full_name: name } } });
+      const { data, error } = await auth.signUp({ email, password, options: { data: { full_name: name } } });
       check(error);
       return { needsConfirmation: !data.session };
     },
     async signInWithGoogle() {
-      check((await client.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.origin } })).error);
+      check((await auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.origin } })).error);
     },
     async signInAnonymously() {
-      check((await client.auth.signInAnonymously()).error);
+      check((await auth.signInAnonymously()).error);
     },
     async resetPassword(email) {
-      check((await client.auth.resetPasswordForEmail(email, { redirectTo: `${window.location.origin}/perfil` })).error);
+      check((await auth.resetPasswordForEmail(email, { redirectTo: `${window.location.origin}/perfil` })).error);
     },
     async signOut() {
-      check((await client.auth.signOut()).error);
+      check((await auth.signOut()).error);
     },
   };
 }

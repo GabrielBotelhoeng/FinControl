@@ -3,21 +3,31 @@ import { Navigate, useLocation } from 'react-router';
 import { useAuth } from '../features/auth/auth-context';
 import { AuthLoading, ToLogin } from '../features/auth/require-auth';
 import { useDemoStart } from '../features/auth/use-start-demo';
+import { preloadable } from '../lib/preloadable';
 
-// O site e a biblioteca de animação ficam num pedaço separado do bundle (sub-projeto 17, S3).
-const SitePage = lazy(() => import('../features/site/site-page'));
+// O site e a biblioteca de animação ficam num pedaço separado do bundle (sub-projeto 17, S3). Pré-carregável: antes de
+// hidratar o HTML estático da `/`, o boot.tsx carrega o pedaço (sub-projeto 18).
+export const SitePage = preloadable(() => import('../features/site/site-page'));
 // O app também é um pedaço próprio: quem vê o site não baixa o app (o formulário de lançamento, o react-hook-form…), e
 // quem tem sessão recebe o modulepreload dele pelo public/theme-init.js, sem esperar (Lighthouse do site).
 const AppShell = lazy(() => import('./app-shell').then((m) => ({ default: m.AppShell })));
 
+/** No build (prerender do HTML estático, sub-projeto 18) não há navegador: a `/` é o site, sem sessão. */
+const isServer = () => typeof window === 'undefined';
+
 /** App instalado (PWA): quem abre pela tela inicial quer entrar, não ler a apresentação (S2). */
 const isStandalone = () =>
-  window.matchMedia?.('(display-mode: standalone)').matches || (navigator as { standalone?: boolean }).standalone === true;
+  !isServer() &&
+  (window.matchMedia?.('(display-mode: standalone)').matches || (navigator as { standalone?: boolean }).standalone === true);
+
+/** A chave de uma sessão do Supabase no localStorage. A mesma regra vale no `public/theme-init.js` (teste). */
+export const SESSION_KEY_PATTERN = /^sb-.+-auth-token$/;
 
 /** Há uma sessão do Supabase guardada neste navegador? (A mesma regra do `public/theme-init.js`.) */
 function hasStoredSession(): boolean {
+  if (isServer()) return false;
   try {
-    for (let i = 0; i < localStorage.length; i++) if (/^sb-.+-auth-token$/.test(localStorage.key(i) ?? '')) return true;
+    for (let i = 0; i < localStorage.length; i++) if (SESSION_KEY_PATTERN.test(localStorage.key(i) ?? '')) return true;
     return false;
   } catch {
     return true; // Sem acesso ao armazenamento: não arrisca mostrar o site para quem pode estar logado.
@@ -32,6 +42,7 @@ export const AUTH_RETURN_PARAMS = ['access_token', 'refresh_token', 'code', 'tok
  * sem estar guardada. A mesma lista vale no `public/theme-init.js` (teste).
  */
 const isAuthRedirect = () => {
+  if (isServer()) return false;
   const hash = new URLSearchParams(window.location.hash.slice(1));
   const query = new URLSearchParams(window.location.search);
   return AUTH_RETURN_PARAMS.some((p) => hash.has(p) || query.has(p));
