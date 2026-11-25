@@ -98,7 +98,7 @@ export const BACKDROPS = {
     { kind: 'coin', tone: 'tangerine', at: 'right-[5%] top-[3%] md:right-[9%] md:top-[12%]', phone: true, tilt: '-rotate-12', drift: 'b', seconds: 8 },
     { kind: 'icon', icon: CalendarDays, color: PALETTE.sky, at: 'right-[24%] top-[6%]', tilt: 'rotate-6', drift: 'a', seconds: 9, offset: 3 },
     { kind: 'icon', icon: Wallet, color: PALETTE.teal, at: 'left-[3%] bottom-[2%] md:left-[30%] md:bottom-[3%]', phone: true, tilt: '-rotate-6', drift: 'c', seconds: 11, offset: 2 },
-    { kind: 'chip', icon: Receipt, color: PALETTE.indigo, name: 'Conta de luz', amount: '− R$ 182,40', at: 'right-[6%] bottom-[2%]', tilt: 'rotate-2', drift: 'b', seconds: 10, offset: 6 },
+    { kind: 'chip', icon: Receipt, color: PALETTE.indigo, name: 'Conta de luz', amount: '− R$ 182,40', at: 'left-[47%] top-[13%]', tilt: 'rotate-2', drift: 'b', seconds: 10, offset: 6 },
   ],
   features: [
     { kind: 'blob', color: soft(PALETTE.grape, 0.16), size: 'h-72 w-72', at: '-left-24 top-[1%] md:left-[30%] md:-top-10', phone: true, drift: 'a', seconds: 14 },

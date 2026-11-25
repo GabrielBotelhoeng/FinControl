@@ -15,7 +15,7 @@ const ITEMS: { title: string; text: string; icon: LucideIcon; tint: string }[] =
 /** "Seus dados" (seção 3.7): quatro garantias com ícone e os links para a privacidade e os termos. */
 export function PrivacyBlock() {
   return (
-    <section aria-labelledby="dados-titulo" className="px-4 py-20 md:px-10 md:py-28">
+    <section aria-labelledby="dados-titulo" className="px-4 pb-14 pt-20 md:px-10 md:pb-20 md:pt-28">
       <div className="mx-auto max-w-7xl">
         <SectionHeading
           id="dados-titulo"

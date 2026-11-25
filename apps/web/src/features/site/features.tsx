@@ -85,7 +85,7 @@ export function Features() {
   const reduce = useSiteReducedMotion();
 
   return (
-    <section id="recursos" aria-labelledby="recursos-titulo" className="relative isolate px-4 py-20 md:px-10 md:py-28">
+    <section id="recursos" aria-labelledby="recursos-titulo" className="relative isolate px-4 pb-20 pt-14 md:px-10 md:pb-28 md:pt-20">
       <FloatingBackdrop items={BACKDROPS.features} />
       <div className="mx-auto max-w-7xl">
         <SectionHeading

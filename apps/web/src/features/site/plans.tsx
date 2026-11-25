@@ -156,7 +156,7 @@ function PlanCard({ plan, billing }: { plan: Plan; billing: Billing }) {
 export function Pricing() {
   const [billing, setBilling] = useState<Billing>('monthly');
   return (
-    <section id="planos" aria-labelledby="planos-titulo" className="px-4 py-20 md:px-10 md:py-28">
+    <section id="planos" aria-labelledby="planos-titulo" className="px-4 py-14 md:px-10 md:py-20">
       <div className="mx-auto max-w-5xl">
         <div className="flex flex-col items-center text-center">
           <SectionHeading
