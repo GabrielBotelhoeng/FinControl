@@ -1,6 +1,7 @@
 import { BarChart3, FileUp, Landmark, type LucideIcon } from 'lucide-react';
 import { IconTile } from '../../components/ui/icon-tile';
 import { PALETTE } from '../../lib/palette';
+import { BACKDROPS, FloatingBackdrop } from './floating-backdrop';
 import { Reveal, RevealItem } from './reveal';
 import { SectionHeading } from './section-heading';
 
@@ -13,7 +14,8 @@ const STEPS: { title: string; text: string; icon: LucideIcon; tint: string }[] =
 /** "Como funciona": três passos numerados que entram em sequência. */
 export function HowItWorks() {
   return (
-    <section aria-labelledby="como-funciona-titulo" className="px-4 py-20 md:px-10 md:py-28">
+    <section aria-labelledby="como-funciona-titulo" className="relative isolate px-4 py-14 md:px-10 md:py-20">
+      <FloatingBackdrop items={BACKDROPS.howItWorks} />
       <div className="mx-auto max-w-7xl">
         <SectionHeading
           id="como-funciona-titulo"

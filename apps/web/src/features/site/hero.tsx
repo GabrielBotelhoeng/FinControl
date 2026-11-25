@@ -9,6 +9,7 @@ import { formatBRL, splitBRL } from '../../lib/format';
 import { useBornFromStaticHtml } from '../../lib/hydration';
 import { PALETTE } from '../../lib/palette';
 import { CAPTURES } from './captures';
+import { BACKDROPS, FloatingBackdrop } from './floating-backdrop';
 import { useSiteDemo } from './demo-context';
 import { PhoneFrame } from './device-frame';
 import { EASE_OUT, useSiteReducedMotion } from './reveal';
@@ -148,6 +149,7 @@ export function Hero() {
         <span className="absolute -left-52 top-56 h-[32rem] w-[32rem] rounded-full bg-[radial-gradient(closest-side,rgb(255_138_61/0.2),transparent)]" />
         <span className="absolute -bottom-24 right-1/4 h-[28rem] w-[28rem] rounded-full bg-[radial-gradient(closest-side,rgb(124_92_255/0.15),transparent)]" />
       </div>
+      <FloatingBackdrop items={BACKDROPS.hero} />
 
       <div className="mx-auto grid max-w-7xl items-center gap-14 md:grid-cols-[1.1fr_0.9fr] md:gap-10">
         <div className="flex flex-col gap-7">

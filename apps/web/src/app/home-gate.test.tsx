@@ -8,6 +8,8 @@ import { HomeGate } from './home-gate';
 
 const login = { '/entrar': <p>Tela de entrada</p> };
 
+// Os testes que esperam um pedaço `lazy` (o site ou o AppShell) têm 15 s: a espera do findBy é de 5 s, e o prazo padrão
+// do Vitest para o teste inteiro também (CodeRabbit, PR #42).
 describe('HomeGate', () => {
   afterEach(() => vi.restoreAllMocks());
 
@@ -15,13 +17,14 @@ describe('HomeGate', () => {
     renderApp(<HomeGate />, { gateway: fakeGateway(null).gateway, route: '/', path: '/*', extraRoutes: login });
     // O site é um pedaço `lazy` com o Motion: sob a suíte inteira, o import pode passar de 1 s.
     expect(await screen.findByRole('heading', { level: 1, name: /Seu dinheiro, sob controle/ }, { timeout: 5000 })).toBeInTheDocument();
-  });
+  }, 15_000);
 
   it('com sessão, a / mostra o app', async () => {
     renderApp(<HomeGate />, { gateway: fakeGateway(signedIn()).gateway, route: '/', path: '/*', extraRoutes: login });
-    expect((await screen.findAllByRole('link', { name: 'Painel' })).length).toBeGreaterThan(0);
+    // O AppShell é um pedaço `lazy`: sob a suíte inteira, o import pode passar de 1 s (QA).
+    expect((await screen.findAllByRole('link', { name: 'Painel' }, { timeout: 5000 })).length).toBeGreaterThan(0);
     expect(screen.queryByRole('heading', { level: 1, name: /sob controle/ })).not.toBeInTheDocument();
-  });
+  }, 15_000);
 
   it('sem sessão em outra rota, vai para a entrada', async () => {
     renderApp(<HomeGate />, { gateway: fakeGateway(null).gateway, route: '/lancamentos', path: '/*', extraRoutes: login });
@@ -50,10 +53,10 @@ describe('HomeGate', () => {
     expect(screen.queryAllByRole('link', { name: 'Painel' })).toHaveLength(0);
 
     await userEvent.click(within(hero).getByRole('button', { name: 'Experimentar sem cadastro' }));
-    expect((await screen.findAllByRole('link', { name: 'Painel' })).length).toBeGreaterThan(0);
+    expect((await screen.findAllByRole('link', { name: 'Painel' }, { timeout: 5000 })).length).toBeGreaterThan(0);
     expect(gateway.signInAnonymously).toHaveBeenCalledTimes(1);
     expect(api.post).toHaveBeenCalledTimes(2);
-  });
+  }, 15_000);
 
   it('demo que falhou na entrada não segura o site: depois de entrar com senha, a / mostra o painel', async () => {
     const { gateway } = fakeGateway(null);
@@ -68,7 +71,7 @@ describe('HomeGate', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Entrar' }));
     expect((await screen.findAllByRole('link', { name: 'Painel' }, { timeout: 5000 })).length).toBeGreaterThan(0);
     expect(screen.queryByRole('heading', { level: 1, name: 'Seu dinheiro, sob controle.' })).not.toBeInTheDocument();
-  });
+  }, 15_000);
 
   it('na volta do link de confirmação (?token_hash=…&type=signup), sem sessão guardada, a / não desenha o site enquanto carrega', async () => {
     const { gateway } = fakeGateway(null);
@@ -89,5 +92,5 @@ describe('HomeGate', () => {
     gateway.getSession.mockImplementation(() => new Promise(() => {}));
     renderApp(<HomeGate />, { gateway, route: '/', path: '/*', extraRoutes: login });
     expect(await screen.findByRole('heading', { level: 1, name: 'Seu dinheiro, sob controle.' }, { timeout: 5000 })).toBeInTheDocument();
-  });
+  }, 15_000);
 });

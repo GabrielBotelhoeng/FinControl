@@ -1,13 +1,15 @@
 import { Bot, CreditCard, FileBarChart, LayoutDashboard, ListChecks, TrendingDown, type LucideIcon } from 'lucide-react';
 import { useInView } from 'motion/react';
 import * as m from 'motion/react-m';
-import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { IconTile } from '../../components/ui/icon-tile';
 import { PALETTE } from '../../lib/palette';
 import { CAPTURES, type Capture } from './captures';
 import { PhoneFrame } from './device-frame';
+import { BACKDROPS, FloatingBackdrop } from './floating-backdrop';
 import { EASE_OUT, Reveal, RevealItem, useSiteReducedMotion } from './reveal';
 import { SectionHeading } from './section-heading';
+import { useIsDesktop } from './use-is-desktop';
 
 type Feature = { title: string; text: string; icon: LucideIcon; tint: string; capture: Capture };
 
@@ -56,25 +58,6 @@ export const FEATURES: Feature[] = [
   },
 ];
 
-const DESKTOP = '(min-width: 768px)';
-
-/**
- * Computador ou celular (o `md` do Tailwind). A seção monta só a versão da largura atual, em vez das duas com uma
- * escondida por CSS: são 6 molduras a menos no commit (Lighthouse no celular).
- */
-function useIsDesktop() {
-  return useSyncExternalStore(
-    (onChange) => {
-      const query = window.matchMedia(DESKTOP);
-      query.addEventListener('change', onChange);
-      return () => query.removeEventListener('change', onChange);
-    },
-    () => window.matchMedia(DESKTOP).matches,
-    // No build e na hidratação, a versão do celular (o HTML gerado é um só); no computador, troca logo depois.
-    () => false,
-  );
-}
-
 /** Um bloco de texto da coluna rolante: avisa quando passa pelo meio da tela para a tela presa trocar. */
 function FeatureText({ feature, index, onActive }: { feature: Feature; index: number; onActive: (i: number) => void }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -97,27 +80,35 @@ function FeatureText({ feature, index, onActive }: { feature: Feature; index: nu
  */
 export function Features() {
   const [active, setActive] = useState(0);
+  // Monta só a versão da largura atual, em vez das duas com uma escondida por CSS: 6 molduras a menos no commit.
   const desktop = useIsDesktop();
   const reduce = useSiteReducedMotion();
 
+  const heading = (
+    <SectionHeading
+      id="recursos-titulo"
+      eyebrow="Recursos"
+      title={
+        <>
+          <span className="font-extralight">Tudo o que o seu dinheiro</span> <span className="font-extrabold">precisa.</span>
+        </>
+      }
+      text="Do gasto do almoço ao plano para sair das dívidas. Sem planilha, sem fórmula."
+    />
+  );
+
   return (
-    <section id="recursos" aria-labelledby="recursos-titulo" className="px-4 py-20 md:px-10 md:py-28">
+    <section id="recursos" aria-labelledby="recursos-titulo" className="relative isolate px-4 pb-20 pt-14 md:px-10 md:pb-28 md:pt-20">
+      <FloatingBackdrop items={BACKDROPS.features} />
       <div className="mx-auto max-w-7xl">
-        <SectionHeading
-          id="recursos-titulo"
-          eyebrow="Recursos"
-          title={
-            <>
-              <span className="font-extralight">Tudo o que o seu dinheiro</span> <span className="font-extrabold">precisa.</span>
-            </>
-          }
-          text="Do gasto do almoço ao plano para sair das dívidas. Sem planilha, sem fórmula."
-        />
+        {!desktop && heading}
 
         {/* Computador: coluna de texto rolando e a tela presa ao lado. */}
         {desktop && (
-          <div className="mt-6 grid grid-cols-[1fr_minmax(0,380px)] gap-16 lg:gap-24">
+          // O título fica na coluna da esquerda, e o celular preso começa ao lado dele (sem vão à direita do título).
+          <div className="grid grid-cols-[1fr_minmax(0,380px)] gap-16 lg:gap-24">
             <div>
+              {heading}
               {FEATURES.map((f, i) => (
                 <FeatureText key={f.title} feature={f} index={i} onActive={setActive} />
               ))}

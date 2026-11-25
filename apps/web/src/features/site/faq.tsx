@@ -52,7 +52,7 @@ function FaqItem({ question, answer }: { question: string; answer: string }) {
 /** Perguntas (seção 3.9): acordeão acessível por teclado (`button` + `aria-expanded` + `aria-controls`). */
 export function Faq() {
   return (
-    <section id="perguntas" aria-labelledby="perguntas-titulo" className="px-4 py-20 md:px-10 md:py-28">
+    <section id="perguntas" aria-labelledby="perguntas-titulo" className="px-4 pb-20 pt-14 md:px-10 md:pb-28 md:pt-20">
       <div className="mx-auto grid max-w-7xl gap-10 md:grid-cols-[0.8fr_1.2fr] md:gap-16">
         <SectionHeading
           id="perguntas-titulo"

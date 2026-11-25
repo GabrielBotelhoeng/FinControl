@@ -14,6 +14,8 @@ const phone = (alt: string, src?: string): Capture => ({
   srcSet: src ? [420, 560].map((w) => `${src.replace(/\.webp$/, `-${w}.webp`)} ${w}w`).concat(`${src} 780w`).join(', ') : undefined,
 });
 const laptop = (alt: string, src?: string): Capture => ({ src, alt, width: 1440, height: 900 });
+/** Tablet (sub-projeto 20, V8): uma versão só, de 560 px; a moldura fica pequena, ao lado do notebook. */
+const tablet = (alt: string, src?: string): Capture => ({ src, alt, width: 560, height: 806 });
 
 export const CAPTURES = {
   dashboardPhone: phone('Painel do FinControl no celular, com o saldo no cartão limão e o resumo do mês', '/site/painel-celular.webp'),
@@ -22,6 +24,7 @@ export const CAPTURES = {
   payoffPhone: phone('Plano de quitação de dívidas no celular, com o saldo devedor caindo até zero e a ordem de pagamento', '/site/quitacao-celular.webp'),
   reportsPhone: phone('Relatórios no celular, com os botões de PDF, Excel e CSV e o resumo de receitas e despesas do mês', '/site/relatorios-celular.webp'),
   assistantPhone: phone('Assistente de IA no celular, com sugestões de perguntas sobre os gastos', '/site/assistente-celular.webp'),
+  dashboardTablet: tablet('Painel do FinControl no tablet, com o menu ao lado, o saldo no cartão limão e as receitas e despesas do mês', '/site/painel-tablet.webp'),
   dashboardDesktop: laptop('Painel do FinControl no computador, com o saldo, as receitas e despesas do mês, os indicadores e o orçamento', '/site/painel-computador.webp'),
   reportsDesktop: laptop('Relatórios do FinControl no computador, com a exportação em PDF, Excel e CSV e o resumo do período', '/site/relatorios-computador.webp'),
 } satisfies Record<string, Capture>;

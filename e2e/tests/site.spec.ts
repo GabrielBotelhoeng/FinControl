@@ -100,6 +100,76 @@ test('a 390 px, o "Experimentar" do cabeçalho tem folga da borda', async ({ pag
   expect(right).toBeLessThanOrEqual(390 - 16);
 });
 
+test('as duas faixas em X andam em sentidos opostos e o fundo flutua só com transform (sub-projeto 20)', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await openSite(page, '/');
+  const tracks = await page.locator('.site-marquee-track').evaluateAll((els) =>
+    els.map((el) => ({ name: getComputedStyle(el).animationName, direction: getComputedStyle(el).animationDirection, hidden: el.getAttribute('aria-hidden') })),
+  );
+  expect(tracks.map((t) => t.direction)).toEqual(['reverse', 'reverse', 'normal', 'normal']);
+  expect(tracks.every((t) => t.name === 'site-marquee')).toBe(true);
+  expect(tracks.map((t) => t.hidden)).toEqual([null, 'true', null, 'true']);
+  // Os elementos do fundo: escondidos do leitor de tela, sem receber toque, e as animações só mexem em transform.
+  const layers = await page.locator('[data-backdrop]').evaluateAll((els) =>
+    els.map((el) => ({ hidden: el.getAttribute('aria-hidden'), pointer: getComputedStyle(el).pointerEvents })),
+  );
+  expect(layers.length).toBeGreaterThanOrEqual(4);
+  expect(layers.every((l) => l.hidden === 'true' && l.pointer === 'none')).toBe(true);
+  const props = await page.evaluate(() =>
+    [...new Set(document.getAnimations().flatMap((a) => ((a.effect as KeyframeEffect | null)?.getKeyframes() ?? []).flatMap((k) => Object.keys(k))))],
+  );
+  const animated = props.filter((p) => !['offset', 'computedOffset', 'easing', 'composite'].includes(p));
+  expect(animated.every((p) => ['transform', 'opacity'].includes(p)), animated.join(', ')).toBe(true);
+});
+
+for (const width of [1920, 1440, 360]) {
+  test(`a ${width} px, cada lista das faixas cobre a largura da faixa (sem lado vazio no fim da volta)`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 });
+    await openSite(page, '/');
+    const gaps = await page.evaluate(() =>
+      [...document.querySelectorAll('.site-marquee')].flatMap((strip) =>
+        [...strip.querySelectorAll('ul')].map((ul) => Math.round(ul.scrollWidth - (strip as HTMLElement).offsetWidth)),
+      ),
+    );
+    expect(gaps).toHaveLength(4);
+    for (const gap of gaps) expect(gap).toBeGreaterThanOrEqual(0);
+  });
+}
+
+for (const width of [360, 390]) {
+  test(`a ${width} px, as duas faixas em X ficam legíveis: cada uma com pelo menos 2 termos inteiros à vista (QA)`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 800 });
+    await openSite(page, '/');
+    await page.locator('section[aria-label="O que o FinControl faz"]').scrollIntoViewIfNeeded();
+    // As faixas andam: conta, em 10 instantes, os termos inteiros à vista em cada uma (dentro da tela e sem nada por cima
+    // em três pontos ao longo do termo) e exige a mediana de 2 ou mais.
+    const counts: [number[], number[]] = [[], []];
+    for (let i = 0; i < 10; i++) {
+      const [back, front] = await page.evaluate(() =>
+        [...document.querySelectorAll('.site-marquee')].map(
+          (strip) =>
+            // Todo rótulo com texto conta (as repetições são `aria-hidden`, mas aparecem na tela).
+            [...strip.querySelectorAll('ul > li')].filter((li) => {
+              if (!li.textContent) return false;
+              const r = li.getBoundingClientRect();
+              if (r.left < 0 || r.right > innerWidth) return false;
+              return [0.15, 0.5, 0.85].every((f) => {
+                const hit = document.elementFromPoint(r.left + r.width * f, r.top + r.height / 2);
+                return hit === li || li.contains(hit);
+              });
+            }).length,
+        ),
+      );
+      counts[0].push(back ?? 0);
+      counts[1].push(front ?? 0);
+      await page.waitForTimeout(600);
+    }
+    const median = (xs: number[]) => [...xs].sort((a, b) => a - b)[Math.floor(xs.length / 2)]!;
+    expect(median(counts[0]), `faixa de trás: ${counts[0].join(',')}`).toBeGreaterThanOrEqual(2);
+    expect(median(counts[1]), `faixa da frente: ${counts[1].join(',')}`).toBeGreaterThanOrEqual(2);
+  });
+}
+
 test.describe('com prefers-reduced-motion', () => {
   test.use({ viewport: { width: 390, height: 844 } });
 
@@ -119,8 +189,12 @@ test.describe('com prefers-reduced-motion', () => {
         .map((el) => (el.textContent ?? '').slice(0, 40)),
     );
     expect(hidden).toEqual([]);
-    const marquee = await page.locator('.site-marquee-track').first().evaluate((el) => getComputedStyle(el).animationName);
-    expect(marquee).toBe('none');
+    // As duas faixas em X e os elementos flutuando no fundo ficam parados (sub-projeto 20).
+    const moving = await page.evaluate(() =>
+      [...document.querySelectorAll('.site-marquee-track, [data-backdrop] *')].filter((el) => getComputedStyle(el).animationName !== 'none').length,
+    );
+    expect(moving).toBe(0);
+    expect(await page.locator('.site-marquee-track').count()).toBe(4);
     // As âncoras do cabeçalho também não rolam animadas.
     const scrollBehavior = await page.evaluate(() => getComputedStyle(document.documentElement).scrollBehavior);
     expect(scrollBehavior).toBe('auto');

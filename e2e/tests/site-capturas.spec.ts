@@ -49,6 +49,17 @@ test.describe('celular', () => {
   });
 });
 
+/** O iPad ao lado do notebook na seção "No celular" (sub-projeto 20, V8): `SITE_CAPTURES=1 npm run test:e2e -- site-capturas -g tablet`. */
+test.describe('tablet', () => {
+  test.use({ viewport: { width: 820, height: 1180 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
+
+  test('painel no tablet', async ({ page }) => {
+    test.setTimeout(120_000);
+    await enterDemo(page);
+    await shoot(page, '/', 'painel-tablet');
+  });
+});
+
 test.describe('computador', () => {
   test.use({ viewport: { width: 1440, height: 900 } });
 
