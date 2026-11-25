@@ -257,7 +257,12 @@
 .site-marquee-track {
   animation: site-marquee 38s linear infinite;
 }
-.site-marquee:hover .site-marquee-track {
+/* A faixa de trás (sub-projeto 20, V5) vai para o outro lado, um pouco mais devagar; com o mouse na seção, as duas param. */
+.site-marquee-track-back {
+  animation-duration: 46s;
+  animation-direction: reverse;
+}
+.site-marquees:hover .site-marquee-track {
   animation-play-state: paused;
 }
 @keyframes site-marquee {
