@@ -3,9 +3,11 @@ import { Navigate, useLocation } from 'react-router';
 import { useAuth } from '../features/auth/auth-context';
 import { AuthLoading, ToLogin } from '../features/auth/require-auth';
 import { useDemoStart } from '../features/auth/use-start-demo';
+import { preloadable } from '../lib/preloadable';
 
-// O site e a biblioteca de animação ficam num pedaço separado do bundle (sub-projeto 17, S3).
-const SitePage = lazy(() => import('../features/site/site-page'));
+// O site e a biblioteca de animação ficam num pedaço separado do bundle (sub-projeto 17, S3). Pré-carregável: antes de
+// hidratar o HTML estático da `/`, o boot.tsx carrega o pedaço (sub-projeto 18).
+export const SitePage = preloadable(() => import('../features/site/site-page'));
 // O app também é um pedaço próprio: quem vê o site não baixa o app (o formulário de lançamento, o react-hook-form…), e
 // quem tem sessão recebe o modulepreload dele pelo public/theme-init.js, sem esperar (Lighthouse do site).
 const AppShell = lazy(() => import('./app-shell').then((m) => ({ default: m.AppShell })));

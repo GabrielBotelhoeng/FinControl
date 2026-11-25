@@ -69,7 +69,13 @@ function previewLikeVercel(): Plugin {
 }
 
 /** Os pedaços que o `public/theme-init.js` adianta com modulepreload, conforme a rota e a sessão. */
-const PRELOADED_CHUNKS = { site: '/features/site/site-page.tsx', app: '/app/app-shell.tsx', entrar: '/features/auth/login-page.tsx' };
+const PRELOADED_CHUNKS = {
+  // O pedaço que monta o app (o main.tsx o importa; sub-projeto 18).
+  boot: '/src/boot.tsx',
+  site: '/features/site/site-page.tsx',
+  app: '/app/app-shell.tsx',
+  entrar: '/features/auth/login-page.tsx',
+};
 
 /**
  * Põe no index.html o nome de cada pedaço adiantado (`<meta name="fincontrol-chunk-site">` etc.), para o

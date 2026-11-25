@@ -1,7 +1,9 @@
 import { lazy, Suspense, type ReactNode } from 'react';
 import { Navigate, type RouteObject } from 'react-router';
 import { ListSkeleton } from '../components/ui/states';
-import { HomeGate } from './home-gate';
+import { preloadable } from '../lib/preloadable';
+import type { PublicPath } from '../lib/public-head';
+import { HomeGate, SitePage } from './home-gate';
 
 const LoginPage = lazy(() => import('../features/auth/login-page').then((m) => ({ default: m.LoginPage })));
 const DashboardPage = lazy(() => import('../features/dashboard/dashboard-page'));
@@ -23,8 +25,14 @@ const AssistantPage = lazy(() => import('../features/assistant/assistant-page'))
 const NotificationsPage = lazy(() => import('../features/notifications/notifications-page'));
 const CategoriesPage = lazy(() => import('../features/categories/categories-page'));
 const ProfilePage = lazy(() => import('../features/profile/profile-page'));
-const PrivacyPage = lazy(() => import('../features/legal/privacy-page'));
-const TermsPage = lazy(() => import('../features/legal/terms-page'));
+const PrivacyPage = preloadable(() => import('../features/legal/privacy-page'));
+const TermsPage = preloadable(() => import('../features/legal/terms-page'));
+
+/**
+ * Carrega o pedaço da página pública antes de hidratar o HTML estático dela (boot.tsx, sub-projeto 18): sem isso, a parte
+ * em `lazy` fica desidratada, e a conferência da sessão faz o React descartar o HTML do servidor.
+ */
+export const preloadPublicPage = (path: PublicPath) => ({ '/': SitePage, '/privacidade': PrivacyPage, '/termos': TermsPage })[path].preload();
 
 const page = (node: ReactNode) => <Suspense fallback={<ListSkeleton />}>{node}</Suspense>;
 

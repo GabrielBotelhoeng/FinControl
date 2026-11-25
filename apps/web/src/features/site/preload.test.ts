@@ -9,8 +9,14 @@ import { HERO_IMAGE_SIZES } from './hero';
 const script = readFileSync(resolve(process.cwd(), 'public/theme-init.js'), 'utf8');
 
 /** Roda o theme-init.js com as metas que o build põe no index.html e devolve os links que ele criou. */
-function runThemeInit() {
-  for (const [name, files] of Object.entries({ site: '/assets/site.js /assets/icone.js', app: '/assets/app.js', entrar: '/assets/entrar.js' })) {
+function runThemeInit(prerendered?: string) {
+  if (prerendered) {
+    const meta = document.createElement('meta');
+    meta.name = 'fincontrol-prerendered';
+    meta.content = prerendered;
+    document.head.appendChild(meta);
+  }
+  for (const [name, files] of Object.entries({ boot: '/assets/boot.js', site: '/assets/site.js /assets/icone.js', app: '/assets/app.js', entrar: '/assets/entrar.js' })) {
     const meta = document.createElement('meta');
     meta.name = `fincontrol-chunk-${name}`;
     meta.content = files;
@@ -38,18 +44,32 @@ describe('public/theme-init.js adianta a tela que vai abrir (Lighthouse do site)
     expect(hero?.srcset).toBe(CAPTURES.dashboardPhone.srcSet);
     expect(hero?.sizes).toBe(HERO_IMAGE_SIZES);
     expect(hero?.href).toBe(CAPTURES.dashboardPhone.src);
-    expect(links.filter((l) => l.rel === 'modulepreload').map((l) => l.href)).toEqual(['/assets/site.js', '/assets/icone.js']);
+    expect(links.filter((l) => l.rel === 'modulepreload').map((l) => l.href)).toEqual(['/assets/boot.js', '/assets/site.js', '/assets/icone.js']);
+  });
+
+  it('na / com o HTML estático: só a captura do herói; o JavaScript vem depois da primeira pintura (sub-projeto 18)', () => {
+    const links = runThemeInit('/');
+    expect(links.map((l) => [l.rel, l.href])).toEqual([['preload', CAPTURES.dashboardPhone.src]]);
+  });
+
+  it('nas páginas legais com o HTML estático: nada adiantado, nem com sessão', () => {
+    localStorage.setItem('sb-projeto-auth-token', '{}');
+    window.history.replaceState(null, '', '/termos');
+    expect(runThemeInit('/termos')).toEqual([]);
   });
 
   it('com sessão guardada: só o pedaço do app, sem a imagem do site', () => {
     localStorage.setItem('sb-projeto-auth-token', '{}');
     const links = runThemeInit();
-    expect(links.map((l) => [l.rel, l.href])).toEqual([['modulepreload', '/assets/app.js']]);
+    expect(links.map((l) => [l.rel, l.href])).toEqual([
+      ['modulepreload', '/assets/boot.js'],
+      ['modulepreload', '/assets/app.js'],
+    ]);
   });
 
   it('na volta do link de confirmação (?token_hash=…&type=signup), não adianta o site', () => {
     window.history.replaceState(null, '', '/?token_hash=x&type=signup');
-    expect(runThemeInit()).toEqual([]);
+    expect(runThemeInit('/').map((l) => l.href)).toEqual(['/assets/boot.js']);
   });
 
   it('usa a mesma lista de parâmetros de retorno do portão da /', () => {
