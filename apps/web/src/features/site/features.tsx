@@ -1,13 +1,15 @@
 import { Bot, CreditCard, FileBarChart, LayoutDashboard, ListChecks, TrendingDown, type LucideIcon } from 'lucide-react';
 import { useInView } from 'motion/react';
 import * as m from 'motion/react-m';
-import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { IconTile } from '../../components/ui/icon-tile';
 import { PALETTE } from '../../lib/palette';
 import { CAPTURES, type Capture } from './captures';
 import { PhoneFrame } from './device-frame';
+import { BACKDROPS, FloatingBackdrop } from './floating-backdrop';
 import { EASE_OUT, Reveal, RevealItem, useSiteReducedMotion } from './reveal';
 import { SectionHeading } from './section-heading';
+import { useIsDesktop } from './use-is-desktop';
 
 type Feature = { title: string; text: string; icon: LucideIcon; tint: string; capture: Capture };
 
@@ -56,25 +58,6 @@ export const FEATURES: Feature[] = [
   },
 ];
 
-const DESKTOP = '(min-width: 768px)';
-
-/**
- * Computador ou celular (o `md` do Tailwind). A seção monta só a versão da largura atual, em vez das duas com uma
- * escondida por CSS: são 6 molduras a menos no commit (Lighthouse no celular).
- */
-function useIsDesktop() {
-  return useSyncExternalStore(
-    (onChange) => {
-      const query = window.matchMedia(DESKTOP);
-      query.addEventListener('change', onChange);
-      return () => query.removeEventListener('change', onChange);
-    },
-    () => window.matchMedia(DESKTOP).matches,
-    // No build e na hidratação, a versão do celular (o HTML gerado é um só); no computador, troca logo depois.
-    () => false,
-  );
-}
-
 /** Um bloco de texto da coluna rolante: avisa quando passa pelo meio da tela para a tela presa trocar. */
 function FeatureText({ feature, index, onActive }: { feature: Feature; index: number; onActive: (i: number) => void }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -97,11 +80,13 @@ function FeatureText({ feature, index, onActive }: { feature: Feature; index: nu
  */
 export function Features() {
   const [active, setActive] = useState(0);
+  // Monta só a versão da largura atual, em vez das duas com uma escondida por CSS: 6 molduras a menos no commit.
   const desktop = useIsDesktop();
   const reduce = useSiteReducedMotion();
 
   return (
-    <section id="recursos" aria-labelledby="recursos-titulo" className="px-4 py-20 md:px-10 md:py-28">
+    <section id="recursos" aria-labelledby="recursos-titulo" className="relative isolate px-4 py-20 md:px-10 md:py-28">
+      <FloatingBackdrop items={BACKDROPS.features} />
       <div className="mx-auto max-w-7xl">
         <SectionHeading
           id="recursos-titulo"

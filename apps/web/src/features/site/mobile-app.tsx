@@ -6,6 +6,7 @@ import { IconTile } from '../../components/ui/icon-tile';
 import { PALETTE } from '../../lib/palette';
 import { CAPTURES } from './captures';
 import { LaptopFrame, PhoneFrame } from './device-frame';
+import { BACKDROPS, FloatingBackdrop } from './floating-backdrop';
 import { Reveal, RevealItem, useSiteReducedMotion } from './reveal';
 import { SectionHeading } from './section-heading';
 
@@ -40,7 +41,8 @@ export function MobileApp() {
   const backY = useTransform(scrollYProgress, [0, 1], reduce ? [0, 0] : [20, -20]);
 
   return (
-    <section aria-labelledby="celular-titulo" className="bg-surface-2/60 px-4 py-20 md:px-10 md:py-28">
+    <section aria-labelledby="celular-titulo" className="relative isolate bg-surface-2/60 px-4 py-20 md:px-10 md:py-28">
+      <FloatingBackdrop items={BACKDROPS.mobileApp} />
       <div className="mx-auto grid max-w-7xl items-center gap-14 md:grid-cols-2 md:gap-16">
         <div>
           <SectionHeading
