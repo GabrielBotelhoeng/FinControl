@@ -1,8 +1,12 @@
 import { holdButtonClicks } from './lib/held-clicks';
+import { reloadOnce, watchForUpdates } from './lib/pwa-update';
 import './styles/index.css';
 
 const root = document.getElementById('root');
 if (!root) throw new Error('Elemento #root ausente');
+
+// Versão nova (sub-projeto 19): começa antes do app, para não perder a troca do service worker durante o boot.
+watchForUpdates();
 
 /**
  * Chama `fn` depois da primeira pintura com conteúdo (o evento `paint` do navegador), ou em 1,5 s se ele não vier.
@@ -42,7 +46,9 @@ const start = () =>
       () => clicks?.release(),
       (error: unknown) => {
         console.error('O app não carregou:', error);
-        clicks?.giveUp();
+        // Um pedaço que sumiu depois de um deploy (sub-projeto 19, A4): nada foi montado, então recarrega uma vez para
+        // buscar a versão certa. Se já recarregou (a trava do sessionStorage), desiste, sem laço.
+        if (!reloadOnce()) clicks?.giveUp();
       },
     );
 
