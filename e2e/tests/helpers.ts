@@ -1,5 +1,14 @@
 import { expect, type Page } from '@playwright/test';
 
+/**
+ * Abre uma página e espera o app assumir (`data-app-ready`, src/boot.tsx). Nas páginas públicas o HTML estático aparece
+ * antes e o app hidrata depois da primeira pintura (sub-projeto 18): rolar antes disso não dispara as revelações.
+ */
+export async function openSite(page: Page, url = '/') {
+  await page.goto(url);
+  await page.locator('html[data-app-ready]').waitFor({ state: 'attached' });
+}
+
 export const uniqueEmail = (prefix: string) => `${prefix}-${Date.now()}-${Math.floor(Math.random() * 1e6)}@exemplo.com`;
 
 /** Cadastro por e-mail e senha pela tela de entrada; o provedor falso confirma na hora, como o autoconfirm. */

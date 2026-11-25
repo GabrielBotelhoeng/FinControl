@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { enterDemo } from './helpers';
+import { enterDemo, openSite } from './helpers';
 
 /** Rola a página inteira devagar, para todas as seções dispararem a revelação (whileInView), e volta ao topo. */
 async function scrollThrough(page: Page) {
@@ -16,7 +16,7 @@ async function scrollThrough(page: Page) {
 const hero = (page: Page) => page.getByRole('region', { name: 'Seu dinheiro, sob controle.' });
 
 test('sem sessão, a / mostra o site de apresentação, e as rotas protegidas continuam levando à entrada', async ({ page }) => {
-  await page.goto('/');
+  await openSite(page, '/');
   await expect(page).toHaveURL('/');
   await expect(page.getByRole('heading', { level: 1, name: 'Seu dinheiro, sob controle.' })).toBeVisible();
   await expect(page).toHaveTitle(/FinControl — controle financeiro pessoal/);
@@ -27,7 +27,7 @@ test('sem sessão, a / mostra o site de apresentação, e as rotas protegidas co
 for (const width of [360, 390, 1440]) {
   test(`sem rolagem horizontal a ${width} px, com todas as seções reveladas`, async ({ page }) => {
     await page.setViewportSize({ width, height: width === 360 ? 640 : width < 1000 ? 800 : 900 });
-    await page.goto('/');
+    await openSite(page, '/');
     await expect(hero(page)).toBeVisible();
     await scrollThrough(page);
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
@@ -50,7 +50,7 @@ for (const width of [360, 390, 1440]) {
 }
 
 test('"Experimentar sem cadastro" do herói abre o painel da demo', async ({ page }) => {
-  await page.goto('/');
+  await openSite(page, '/');
   await hero(page).getByRole('button', { name: 'Experimentar sem cadastro' }).click();
   await expect(page).toHaveURL('/');
   await expect(page.getByText('Criar conta de verdade')).toBeVisible();
@@ -59,13 +59,13 @@ test('"Experimentar sem cadastro" do herói abre o painel da demo', async ({ pag
 
 test('com sessão, a / continua sendo o painel', async ({ page }) => {
   await enterDemo(page);
-  await page.goto('/');
+  await openSite(page, '/');
   await expect(page.getByText('Criar conta de verdade')).toBeVisible();
   await expect(page.getByRole('heading', { level: 1, name: 'Seu dinheiro, sob controle.' })).toHaveCount(0);
 });
 
 test('a chave dos planos troca o preço do Completo', async ({ page }) => {
-  await page.goto('/#planos');
+  await openSite(page, '/#planos');
   const price = page.getByTestId('preco-complete');
   await expect(price).toContainText('por mês');
   await expect(price).toContainText('9,90');
@@ -76,7 +76,7 @@ test('a chave dos planos troca o preço do Completo', async ({ page }) => {
 });
 
 test('os botões escuros sobre o limão têm texto visível (QA E-001)', async ({ page }) => {
-  await page.goto('/');
+  await openSite(page, '/');
   await scrollThrough(page);
   const buttons = [
     page.getByRole('button', { name: 'Experimentar o Completo' }),
@@ -94,7 +94,7 @@ test('os botões escuros sobre o limão têm texto visível (QA E-001)', async (
 
 test('a 390 px, o "Experimentar" do cabeçalho tem folga da borda', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto('/');
+  await openSite(page, '/');
   const right = await page.getByRole('banner').getByRole('button', { name: 'Experimentar' }).evaluate((el) => el.getBoundingClientRect().right);
   // O portal do celular perde ~10 px para a barra de rolagem; o botão precisa terminar antes disso.
   expect(right).toBeLessThanOrEqual(390 - 16);
@@ -105,7 +105,7 @@ test.describe('com prefers-reduced-motion', () => {
 
   test('todo o conteúdo aparece parado, sem precisar rolar, a faixa não anda e as âncoras não rolam animadas', async ({ page }) => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
-    await page.goto('/');
+    await openSite(page, '/');
     await expect(hero(page)).toBeVisible();
     // Sem rolar: nada depende da revelação para aparecer. Textos com opacidade parcial de propósito (0,7–0,8) contam
     // como visíveis; as respostas fechadas do acordeão (inert) ficam de fora.
