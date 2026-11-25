@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { Link } from 'react-router';
 import { Logo } from '../../components/ui/logo';
 import { Panel } from '../../components/ui/panel';
+import { usePublicHead, type PublicPath } from '../../lib/public-head';
 
 export const CONTACT = 'botelhog45@gmail.com';
 
@@ -37,8 +38,12 @@ export function DocLink({ to, children }: { to: string; children: ReactNode }) {
   );
 }
 
-/** Moldura das páginas públicas de documentos (privacidade, termos): fora do login, legível em 360 px. */
-export function LegalPage({ title, meta, intro, children }: { title: string; meta: string; intro: ReactNode; children: ReactNode }) {
+/**
+ * Moldura das páginas públicas de documentos (privacidade, termos): fora do login, legível em 360 px. Cada uma tem a
+ * própria cabeça (título, descrição e canonical; sub-projeto 18, E6).
+ */
+export function LegalPage({ path, title, meta, intro, children }: { path: PublicPath; title: string; meta: string; intro: ReactNode; children: ReactNode }) {
+  usePublicHead(path);
   return (
     <div className="aurora min-h-dvh">
       <main className="mx-auto flex max-w-3xl flex-col gap-8 px-4 py-10 md:px-8 md:py-16">

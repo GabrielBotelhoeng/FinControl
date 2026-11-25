@@ -56,3 +56,69 @@ describe('public/theme-init.js adianta a tela que vai abrir (Lighthouse do site)
     expect(script).toContain(`[${AUTH_RETURN_PARAMS.map((p) => `'${p}'`).join(', ')}]`);
   });
 });
+
+/** Roda o theme-init.js numa página gerada no build (`prerendered`) ou na casca do app (sem a meta). */
+function bootFor(url: string, prerendered?: string) {
+  window.history.replaceState(null, '', url);
+  if (prerendered) {
+    const meta = document.createElement('meta');
+    meta.name = 'fincontrol-prerendered';
+    meta.content = prerendered;
+    document.head.appendChild(meta);
+  }
+  new Function(script)();
+  return document.documentElement.dataset.boot;
+}
+
+describe('public/theme-init.js decide se o HTML estático vale, antes da pintura (sub-projeto 18, E3)', () => {
+  const originalMatchMedia = window.matchMedia;
+  afterEach(() => {
+    document.head.innerHTML = '';
+    delete document.documentElement.dataset.boot;
+    localStorage.clear();
+    window.matchMedia = originalMatchMedia;
+    window.history.replaceState(null, '', '/');
+  });
+
+  it('na / gerada, sem sessão, fora do app instalado e sem retorno de login: vale (hidrata)', () => {
+    expect(bootFor('/', '/')).toBe('static');
+  });
+
+  it('com sessão guardada na /: não vale (o painel abre sem o site aparecer)', () => {
+    localStorage.setItem('sb-ojywswdjhjmwnfhalntl-auth-token', '{}');
+    expect(bootFor('/', '/')).toBe('app');
+  });
+
+  it('no app instalado na /: não vale (abre a entrada)', () => {
+    window.matchMedia = ((query: string) => ({ ...originalMatchMedia(query), matches: query === '(display-mode: standalone)' })) as typeof window.matchMedia;
+    expect(bootFor('/', '/')).toBe('app');
+  });
+
+  it.each(AUTH_RETURN_PARAMS)('no retorno de login com "%s" na URL: não vale', (param) => {
+    expect(bootFor(`/?${param}=x`, '/')).toBe('app');
+    document.head.innerHTML = '';
+    expect(bootFor(`/#${param}=x`, '/')).toBe('app');
+  });
+
+  it('nas páginas legais geradas, vale mesmo com sessão (são as mesmas para todo mundo)', () => {
+    localStorage.setItem('sb-ojywswdjhjmwnfhalntl-auth-token', '{}');
+    expect(bootFor('/privacidade', '/privacidade')).toBe('static');
+    document.head.innerHTML = '';
+    expect(bootFor('/termos', '/termos')).toBe('static');
+  });
+
+  it('fora da rota gerada (casca do app, ou um HTML servido em outro caminho): não vale', () => {
+    expect(bootFor('/lancamentos')).toBe('app');
+    document.head.innerHTML = '';
+    expect(bootFor('/lancamentos', '/')).toBe('app');
+    document.head.innerHTML = '';
+    expect(bootFor('/privacidade/', '/privacidade')).toBe('app');
+  });
+
+  it('o index.html esconde o conteúdo gerado quando não vale, com <style> (a CSP permite estilo embutido, não script)', () => {
+    const html = readFileSync(resolve(process.cwd(), 'index.html'), 'utf8');
+    expect(html).toMatch(/<style>[^<]*html\[data-boot="app"\] #root\[data-prerendered-route\][^<]*display:\s*none[^<]*<\/style>/);
+    // O <style> vem antes do theme-init.js, para valer já no primeiro quadro.
+    expect(html.indexOf('<style>')).toBeLessThan(html.indexOf('<script src="/theme-init.js">'));
+  });
+});

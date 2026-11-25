@@ -1,8 +1,35 @@
+import { resolve } from 'node:path';
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
-import type { Plugin } from 'vite';
+import type { Plugin, ResolvedConfig } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
 import { defineConfig } from 'vitest/config';
+import { prerenderPages } from './scripts/prerender.mjs';
+
+/**
+ * HTML estático das páginas públicas, da casca do app e do 404 (sub-projeto 18, E1): no fim do build do cliente, antes do
+ * service worker (o PWA roda depois, `closeBundleOrder: 'post'`), para o precache levar o HTML final e o `app.html`.
+ */
+function prerenderPublicPages(): Plugin {
+  let config: ResolvedConfig;
+  return {
+    name: 'fincontrol-prerender',
+    apply: 'build',
+    configResolved(resolved) {
+      config = resolved;
+    },
+    closeBundle: {
+      sequential: true,
+      order: 'pre',
+      async handler() {
+        // O próprio build SSR do prerender passa por este arquivo de configuração: nele, nada a fazer.
+        if (config.build.ssr) return;
+        const files = await prerenderPages({ root: config.root, outDir: resolve(config.root, config.build.outDir), mode: config.mode });
+        config.logger.info(`HTML estático gerado: ${files.join(', ')}`);
+      },
+    },
+  };
+}
 
 /** Os pedaços que o `public/theme-init.js` adianta com modulepreload, conforme a rota e a sessão. */
 const PRELOADED_CHUNKS = { site: '/features/site/site-page.tsx', app: '/app/app-shell.tsx', entrar: '/features/auth/login-page.tsx' };
@@ -61,8 +88,11 @@ export default defineConfig({
     react(),
     tailwindcss(),
     preloadChunkMetas(),
+    prerenderPublicPages(),
     VitePWA({
       registerType: 'autoUpdate',
+      // O service worker é gerado depois do HTML estático (plugin acima), para o precache levar a versão final.
+      integration: { closeBundleOrder: 'post' },
       // O registro do service worker não segura a primeira pintura (Lighthouse do site, sub-projeto 17).
       injectRegister: 'script-defer',
       includeAssets: ['icon.svg', 'apple-touch-icon.png'],

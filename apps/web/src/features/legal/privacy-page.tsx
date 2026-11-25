@@ -7,6 +7,7 @@ const mail = <MailLink />;
 export default function PrivacyPage() {
   return (
     <LegalPage
+      path="/privacidade"
       title="Política de Privacidade"
       meta={`Última atualização: ${UPDATED_AT}`}
       intro={

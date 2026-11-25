@@ -6,12 +6,18 @@
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#F5F6F0" />
+    <!--
+      Quando o HTML estático da página não vale (com sessão, no app instalado, no retorno de login; o theme-init.js decide),
+      o conteúdo gerado fica escondido desde o primeiro quadro, e o app é desenhado do zero (sub-projeto 18, E3). Estilo
+      embutido é permitido pela CSP (style-src 'unsafe-inline'); script embutido, não.
+    -->
+    <style>html[data-boot="app"] #root[data-prerendered-route] { display: none; }</style>
     <!-- Tema guardado antes do app carregar (sub-projeto 16, L1). Em arquivo, não embutido: a CSP só aceita scripts do próprio site. -->
     <script src="/theme-init.js"></script>
     <title>FinControl — controle financeiro pessoal no celular e no computador</title>
     <!--
-      SEO do site de apresentação (sub-projeto 17, S11). As prévias de link (WhatsApp, redes) leem só este HTML, que é
-      servido em todas as rotas; as telas do app trocam o título com document.title.
+      SEO do site de apresentação (sub-projeto 17, S11). Esta é a cabeça da home; o build (src/prerender.tsx) gera o HTML
+      de cada página pública com a cabeça própria (src/lib/public-head.ts), a casca do app (app.html) e o 404.html.
     -->
     <meta name="description" content="Saiba quanto entra, quanto sai e o que vence no mês. Contas, cartões, faturas, orçamento, metas e relatórios num app simples, em português. Experimente sem cadastro." />
     <link rel="canonical" href="https://fincontrol-gb.vercel.app/" />

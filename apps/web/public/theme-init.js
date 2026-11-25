@@ -1,5 +1,5 @@
 // Aplica o tema guardado antes do app carregar (sub-projeto 16, L1); o padrão é o claro.
-// Também adianta o site de apresentação (sub-projeto 17; ver o fim do arquivo).
+// Também adianta o site de apresentação (sub-projeto 17) e decide se o HTML estático vale (sub-projeto 18; ver o fim).
 // Fica fora do index.html porque a CSP (auditoria final) não aceita script embutido.
 try {
   var t = localStorage.getItem('fincontrol-theme');
@@ -16,6 +16,7 @@ try {
 // descobrir qual é: na `/` sem sessão (e fora do app instalado), o site e a captura do herói, que é o LCP; com sessão,
 // o app; em `/entrar`, a entrada. O `imagesrcset`/`imagesizes` repetem os da imagem do herói (hero.tsx e captures.ts;
 // conferidos por teste), e os nomes dos pedaços vêm das metas "fincontrol-chunk-*" que o build põe no index.html.
+var showStatic = location.pathname !== '/';
 try {
   var preload = function (name) {
     var meta = document.querySelector('meta[name="fincontrol-chunk-' + name + '"]');
@@ -33,6 +34,7 @@ try {
     if (/^sb-.+-auth-token$/.test(localStorage.key(i) || '')) signedIn = true;
   }
   var path = location.pathname;
+  var standalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
   // Volta do login com Google ou do link de confirmação de cadastro: a sessão chega pela URL e o app vai abrir, não o
   // site. A mesma lista do AUTH_RETURN_PARAMS de home-gate.tsx (teste).
   var authParams = ['access_token', 'refresh_token', 'code', 'token_hash', 'type', 'error', 'error_code', 'error_description'];
@@ -45,7 +47,7 @@ try {
     preload('entrar');
   } else if (signedIn) {
     preload('app');
-  } else if (path === '/' && !authReturn && !matchMedia('(display-mode: standalone)').matches) {
+  } else if (path === '/' && !authReturn && !standalone) {
     var hero = document.createElement('link');
     hero.rel = 'preload';
     hero.as = 'image';
@@ -56,6 +58,14 @@ try {
     document.head.appendChild(hero);
     preload('site');
   }
+  showStatic = path !== '/' || (!signedIn && !authReturn && !standalone);
 } catch {
-  // Sem acesso ao armazenamento: cada tela carrega do jeito normal.
+  // Sem acesso ao armazenamento: cada tela carrega do jeito normal (e a `/` não arrisca mostrar o site para quem está logado).
 }
+
+// HTML estático (sub-projeto 18, E3): as páginas públicas chegam já desenhadas do build. Ele só vale no caminho da página
+// gerada (a meta "fincontrol-prerendered") e, na `/`, sem sessão guardada, fora do app instalado e sem retorno de login:
+// as mesmas regras do portão da `/` (home-gate.tsx). Se não valer, `data-boot="app"` esconde o conteúdo gerado (o
+// <style> do index.html) desde o primeiro quadro, e o main.tsx desenha o app do zero; se valer, ele hidrata.
+var prerendered = document.querySelector('meta[name="fincontrol-prerendered"]');
+document.documentElement.dataset.boot = prerendered && prerendered.content === location.pathname && showStatic ? 'static' : 'app';

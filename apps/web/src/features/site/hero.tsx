@@ -1,16 +1,27 @@
 import { ArrowRight, Briefcase, ShoppingCart, Sparkles, Utensils, Wallet, type LucideIcon } from 'lucide-react';
-import { animate, useReducedMotion, useScroll, useTransform } from 'motion/react';
+import { animate, useScroll, useTransform } from 'motion/react';
 import * as m from 'motion/react-m';
 import { useEffect, useRef } from 'react';
 import { Link } from 'react-router';
 import { Button } from '../../components/ui/button';
 import { IconTile } from '../../components/ui/icon-tile';
 import { formatBRL, splitBRL } from '../../lib/format';
+import { useBornFromStaticHtml } from '../../lib/hydration';
 import { PALETTE } from '../../lib/palette';
 import { CAPTURES } from './captures';
 import { useSiteDemo } from './demo-context';
 import { PhoneFrame } from './device-frame';
-import { EASE_OUT } from './reveal';
+import { EASE_OUT, useSiteReducedMotion } from './reveal';
+
+/**
+ * As entradas do herói tocam só quando a página é desenhada do zero: vindo do HTML estático (sub-projeto 18, E4), o que
+ * já está na tela não se mexe; com `prefers-reduced-motion`, também não.
+ */
+function usePlayEntrance(): boolean {
+  const bornStatic = useBornFromStaticHtml();
+  const reduce = useSiteReducedMotion();
+  return !bornStatic && !reduce;
+}
 
 /**
  * O saldo da demo na captura do painel (`public/site/painel-celular.webp`): o cartão limão "salta" da tela com o mesmo
@@ -22,16 +33,17 @@ export const HERO_BALANCE_CENTS = 2135910;
 export const HERO_IMAGE_SIZES = '(min-width: 768px) 265px, 235px';
 
 /**
- * O saldo do cartão limão conta de 0 até o valor; com `prefers-reduced-motion`, já nasce no valor final. Mesmo desenho
+ * O saldo do cartão limão conta de 0 até o valor; com `prefers-reduced-motion` ou vindo do HTML estático, já nasce no
+ * valor final. Mesmo desenho
  * do `HeroAmount`, mas o número é escrito direto no DOM a cada quadro (sem re-render do React enquanto a página carrega).
  */
 function CountingBalance({ cents }: { cents: number }) {
-  const reduce = useReducedMotion();
+  const play = usePlayEntrance();
   const integerRef = useRef<HTMLSpanElement>(null);
   const centsRef = useRef<HTMLSpanElement>(null);
-  const start = splitBRL(reduce ? cents : 0);
+  const start = splitBRL(play ? 0 : cents);
   useEffect(() => {
-    if (reduce) return;
+    if (!play) return;
     const controls = animate(0, cents, {
       duration: 1.4,
       delay: 0.3,
@@ -43,7 +55,7 @@ function CountingBalance({ cents }: { cents: number }) {
       },
     });
     return () => controls.stop();
-  }, [reduce, cents]);
+  }, [play, cents]);
   return (
     <>
       {/* O número que conta é decoração; o leitor de tela ouve o valor final uma vez. */}
@@ -74,8 +86,8 @@ type ChipProps = {
 
 /** Um lançamento de exemplo: entra com fade e escala 0,95 e depois oscila devagar em CSS (fora do thread principal). */
 function FloatingChip({ icon, tint, name, amount, kind, className, delay, floatClass }: ChipProps) {
-  const reduce = useReducedMotion();
-  const enter = <T,>(from: T) => (reduce ? false : from);
+  const play = usePlayEntrance();
+  const enter = <T,>(from: T) => (play ? from : false);
   return (
     <m.div
       className={`absolute ${className}`}
@@ -117,9 +129,10 @@ function AgeNotice() {
  */
 export function Hero() {
   const demo = useSiteDemo();
-  // Com `prefers-reduced-motion`, as entradas do herói nascem paradas, no lugar (sem nem o fade).
-  const reduce = useReducedMotion();
-  const enter = <T,>(from: T) => (reduce ? false : from);
+  // Com `prefers-reduced-motion` (ou vindo do HTML estático), as entradas do herói nascem paradas, no lugar.
+  const play = usePlayEntrance();
+  const reduce = useSiteReducedMotion();
+  const enter = <T,>(from: T) => (play ? from : false);
   const ref = useRef<HTMLElement>(null);
   const { scrollYProgress } = useScroll({ target: ref, offset: ['start start', 'end start'] });
   // Paralaxe leve; com `prefers-reduced-motion`, nada acompanha a rolagem.

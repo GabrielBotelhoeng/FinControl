@@ -3,14 +3,17 @@ import { cleanup } from '@testing-library/react';
 import { afterEach } from 'vitest';
 import { resetDemoStartForTests } from '../features/auth/use-start-demo';
 
+// O src/prerender.test.tsx roda no ambiente node (o caminho do build): lá não há window nem localStorage.
+const hasDom = typeof window !== 'undefined';
+
 afterEach(() => {
   cleanup();
-  localStorage.clear();
+  if (hasDom) localStorage.clear();
   // O início da demo guarda o estado fora do React (store de módulo): cada teste começa do zero.
   resetDemoStartForTests();
 });
 
-if (!window.matchMedia) {
+if (hasDom && !window.matchMedia) {
   Object.defineProperty(window, 'matchMedia', {
     writable: true,
     value: (query: string) => ({
@@ -27,7 +30,7 @@ if (!window.matchMedia) {
 }
 
 // O jsdom não tem IntersectionObserver; o site (Motion `whileInView`/`useInView`) só precisa que ele exista.
-if (!('IntersectionObserver' in window)) {
+if (hasDom && !('IntersectionObserver' in window)) {
   class NoopIntersectionObserver {
     readonly root = null;
     readonly rootMargin = '0px';

@@ -6,6 +6,7 @@ const VERSION = 'Versão 1 · Em vigor desde 12 de novembro de 2026';
 export default function TermsPage() {
   return (
     <LegalPage
+      path="/termos"
       title="Termos de Uso"
       meta={VERSION}
       intro={

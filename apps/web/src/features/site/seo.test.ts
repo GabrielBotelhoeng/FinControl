@@ -3,6 +3,7 @@ import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { FAQ } from './faq-data';
 import { PLANS } from './pricing';
+import { PUBLIC_HEAD } from '../../lib/public-head';
 import { SITE_TITLE } from './site-page';
 
 // O Vitest roda a partir de apps/web.
@@ -17,6 +18,9 @@ describe('SEO do index.html (sub-projeto 17, S11)', () => {
   it('título, descrição, canonical, Open Graph e Twitter Card', () => {
     expect(doc.title).toBe(SITE_TITLE);
     expect(meta('meta[name="description"]')?.length).toBeGreaterThan(80);
+    // A cabeça da home é a mesma da tabela que o build usa para gerar cada página pública (sub-projeto 18, E6).
+    expect(meta('meta[name="description"]')).toBe(PUBLIC_HEAD['/'].description);
+    expect(meta('meta[property="og:description"]')).toBe(PUBLIC_HEAD['/'].description);
     expect(doc.querySelector('link[rel="canonical"]')?.getAttribute('href')).toBe('https://fincontrol-gb.vercel.app/');
     expect(meta('meta[property="og:locale"]')).toBe('pt_BR');
     expect(meta('meta[property="og:title"]')).toBe(SITE_TITLE);

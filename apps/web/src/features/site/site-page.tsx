@@ -1,5 +1,7 @@
 import { LazyMotion, MotionConfig } from 'motion/react';
 import { startTransition, useEffect, useState } from 'react';
+import { useHydrated } from '../../lib/hydration';
+import { PUBLIC_HEAD, usePublicHead } from '../../lib/public-head';
 import { SiteDemoProvider } from './demo-context';
 import { Faq } from './faq';
 import { Features } from './features';
@@ -21,10 +23,12 @@ const REST_OF_PAGE = [HowItWorks, Features, MobileApp, PrivacyBlock, Pricing, Fa
 /**
  * O primeiro quadro só tem o cabeçalho, o herói e a faixa (o LCP é a captura do herói). As outras seções entram logo
  * depois, uma por quadro, cada uma numa transição do React: são commits pequenos em vez de uma tarefa longa
- * (Lighthouse no celular). Chegando por uma âncora (ex.: `/#planos`), a página inteira já vem no primeiro quadro.
+ * (Lighthouse no celular). Chegando por uma âncora (ex.: `/#planos`), a página inteira já vem no primeiro quadro, e
+ * também no HTML estático do build e na hidratação dele (sub-projeto 18, E1): os robôs leem a página toda.
  */
 function useSectionsShown() {
-  const [shown, setShown] = useState(() => (window.location.hash.length > 1 ? REST_OF_PAGE.length : 0));
+  const hydrated = useHydrated();
+  const [shown, setShown] = useState(() => (!hydrated || window.location.hash.length > 1 ? REST_OF_PAGE.length : 0));
   useEffect(() => {
     if (shown >= REST_OF_PAGE.length) return;
     const frame = requestAnimationFrame(() => startTransition(() => setShown((n) => n + 1)));
@@ -33,7 +37,7 @@ function useSectionsShown() {
   return shown;
 }
 
-export const SITE_TITLE = 'FinControl — controle financeiro pessoal no celular e no computador';
+export const SITE_TITLE = PUBLIC_HEAD['/'].title;
 
 /**
  * Site de apresentação (sub-projeto 17): a `/` para quem ainda não tem sessão. Sempre claro (`site-root` fixa os
@@ -41,13 +45,7 @@ export const SITE_TITLE = 'FinControl — controle financeiro pessoal no celular
  */
 export default function SitePage() {
   const sectionsShown = useSectionsShown();
-  useEffect(() => {
-    const previous = document.title;
-    document.title = SITE_TITLE;
-    return () => {
-      document.title = previous;
-    };
-  }, []);
+  usePublicHead('/');
 
   return (
     <MotionConfig reducedMotion="user">

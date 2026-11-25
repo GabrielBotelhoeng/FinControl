@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Toaster } from 'sonner';
 import { AuthProvider, useAuth } from '../features/auth/auth-context';
 import { createAuthClient } from '../features/auth/client';
-import { createSupabaseGateway } from '../features/auth/gateway';
+import { createSupabaseGateway, type AuthGateway } from '../features/auth/gateway';
 import { createApiClient } from '../lib/api-client';
 import { ApiProvider } from '../lib/api-context';
 import type { WebEnv } from '../lib/env';
@@ -44,10 +44,13 @@ export function ClearCacheOnUserChange({ queryClient }: { queryClient: QueryClie
   return null;
 }
 
-/** Recebe a configuração já validada (main.tsx) e cria os serviços uma única vez. */
-export function AppProviders({ env, children }: { env: WebEnv; children: ReactNode }) {
+/**
+ * Recebe a configuração já validada (main.tsx) e cria os serviços uma única vez. O build do HTML estático
+ * (src/prerender.tsx) passa um `gateway` próprio, que nunca responde: a sessão só é conferida no navegador.
+ */
+export function AppProviders({ env, gateway: givenGateway, children }: { env: WebEnv; gateway?: AuthGateway; children: ReactNode }) {
   const [{ gateway, queryClient }] = useState(() => ({
-    gateway: createSupabaseGateway(createAuthClient(env.VITE_SUPABASE_URL, env.VITE_SUPABASE_ANON_KEY)),
+    gateway: givenGateway ?? createSupabaseGateway(createAuthClient(env.VITE_SUPABASE_URL, env.VITE_SUPABASE_ANON_KEY)),
     queryClient: createQueryClient(),
   }));
   return (

@@ -10,12 +10,17 @@ const SitePage = lazy(() => import('../features/site/site-page'));
 // quem tem sessão recebe o modulepreload dele pelo public/theme-init.js, sem esperar (Lighthouse do site).
 const AppShell = lazy(() => import('./app-shell').then((m) => ({ default: m.AppShell })));
 
+/** No build (prerender do HTML estático, sub-projeto 18) não há navegador: a `/` é o site, sem sessão. */
+const isServer = () => typeof window === 'undefined';
+
 /** App instalado (PWA): quem abre pela tela inicial quer entrar, não ler a apresentação (S2). */
 const isStandalone = () =>
-  window.matchMedia?.('(display-mode: standalone)').matches || (navigator as { standalone?: boolean }).standalone === true;
+  !isServer() &&
+  (window.matchMedia?.('(display-mode: standalone)').matches || (navigator as { standalone?: boolean }).standalone === true);
 
 /** Há uma sessão do Supabase guardada neste navegador? (A mesma regra do `public/theme-init.js`.) */
 function hasStoredSession(): boolean {
+  if (isServer()) return false;
   try {
     for (let i = 0; i < localStorage.length; i++) if (/^sb-.+-auth-token$/.test(localStorage.key(i) ?? '')) return true;
     return false;
@@ -32,6 +37,7 @@ export const AUTH_RETURN_PARAMS = ['access_token', 'refresh_token', 'code', 'tok
  * sem estar guardada. A mesma lista vale no `public/theme-init.js` (teste).
  */
 const isAuthRedirect = () => {
+  if (isServer()) return false;
   const hash = new URLSearchParams(window.location.hash.slice(1));
   const query = new URLSearchParams(window.location.search);
   return AUTH_RETURN_PARAMS.some((p) => hash.has(p) || query.has(p));
