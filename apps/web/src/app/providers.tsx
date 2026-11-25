@@ -9,6 +9,7 @@ import { ApiProvider } from '../lib/api-context';
 import type { WebEnv } from '../lib/env';
 import { createQueryClient } from '../lib/query-client';
 import { ThemeProvider } from './theme';
+import { UpdateNotice } from './update-notice';
 
 function ApiFromAuth({ baseUrl, queryClient, children }: { baseUrl: string; queryClient: QueryClient; children: ReactNode }) {
   const { getToken, signOut } = useAuth();
@@ -60,7 +61,9 @@ export function AppProviders({ env, gateway: givenGateway, children }: { env: We
           <ClearCacheOnUserChange queryClient={queryClient} />
           <ApiFromAuth baseUrl={env.VITE_API_URL} queryClient={queryClient}>
             {children}
-            <Toaster position="top-center" theme="system" toastOptions={{ className: 'font-sans' }} />
+            <Toaster position="top-center" theme="system" containerAriaLabel="Avisos" toastOptions={{ className: 'font-sans' }} />
+            {/* Versão nova do app (sub-projeto 19): no app e no site público, que também passa por aqui. */}
+            <UpdateNotice />
           </ApiFromAuth>
         </AuthProvider>
       </QueryClientProvider>
