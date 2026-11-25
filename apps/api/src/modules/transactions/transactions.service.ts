@@ -40,7 +40,7 @@ export type TransactionsServiceDeps = {
   withDebtLock: <T>(
     userId: string,
     debtId: string,
-    fn: (anchor: { date: DateOnly; recordedAt: Date } | null, repo: Pick<TransactionsRepository, 'update'>) => Promise<T>,
+    fn: (anchor: { date: DateOnly; recordedAt: Date } | null, repo: Pick<TransactionsRepository, 'findById' | 'update'>) => Promise<T>,
   ) => Promise<T>;
   /** Grava as N parcelas de uma compra no cartão numa única transação do banco (decisão R10). */
   createInstallments: (userId: string, rows: NewTransaction[]) => Promise<TransactionRow[]>;
@@ -73,8 +73,11 @@ export function createTransactionsService(deps: TransactionsServiceDeps) {
   async function setStatus(userId: string, current: TransactionRow, patch: { status: TransactionStatus; paidDate: DateOnly | null }) {
     if (!current.debtId) return repo.update(userId, current.id, patch);
     return deps.withDebtLock(userId, current.debtId, async (anchor, txRepo) => {
+      // Relido com a trava (E-002): um cancelamento de acordo que terminou enquanto este esperava apagou a parcela.
+      const fresh = await txRepo.findById(userId, current.id);
+      if (!fresh) throw new NotFoundError('Lançamento');
       if (anchor) {
-        if (current.createdAt <= anchor.recordedAt) throw new UnprocessableError(DEBT_INSTALLMENT_MESSAGES.frozen);
+        if (fresh.createdAt <= anchor.recordedAt) throw new UnprocessableError(DEBT_INSTALLMENT_MESSAGES.frozen);
         if (patch.paidDate && patch.paidDate < anchor.date) throw new UnprocessableError(DEBT_INSTALLMENT_MESSAGES.beforeAnchor);
       }
       return txRepo.update(userId, current.id, patch);
