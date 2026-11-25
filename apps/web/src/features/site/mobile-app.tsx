@@ -5,7 +5,7 @@ import { useRef } from 'react';
 import { IconTile } from '../../components/ui/icon-tile';
 import { PALETTE } from '../../lib/palette';
 import { CAPTURES } from './captures';
-import { LaptopFrame, PhoneFrame } from './device-frame';
+import { LaptopFrame, PhoneFrame, TabletFrame } from './device-frame';
 import { BACKDROPS, FloatingBackdrop } from './floating-backdrop';
 import { Reveal, RevealItem, useSiteReducedMotion } from './reveal';
 import { SectionHeading } from './section-heading';
@@ -31,13 +31,17 @@ const POINTS: { title: string; text: string; icon: LucideIcon; tint: string }[] 
   },
 ];
 
-/** "No celular, como app" (seção 3.6): o notebook ao fundo e dois celulares na frente, com um paralaxe leve. */
+/**
+ * "No celular, como app" (seção 3.6): o notebook ao fundo, o iPad na frente à esquerda e dois celulares na frente à
+ * direita (sub-projeto 20, V8), com um paralaxe leve em três profundidades.
+ */
 export function MobileApp() {
   const ref = useRef<HTMLDivElement>(null);
   const reduce = useSiteReducedMotion();
   const { scrollYProgress } = useScroll({ target: ref, offset: ['start end', 'end start'] });
   // Paralaxe leve; com `prefers-reduced-motion`, os aparelhos ficam parados.
   const frontY = useTransform(scrollYProgress, [0, 1], reduce ? [0, 0] : [50, -50]);
+  const midY = useTransform(scrollYProgress, [0, 1], reduce ? [0, 0] : [35, -35]);
   const backY = useTransform(scrollYProgress, [0, 1], reduce ? [0, 0] : [20, -20]);
 
   return (
@@ -70,9 +74,12 @@ export function MobileApp() {
 
         <div ref={ref} className="relative mx-auto w-full max-w-[560px] pb-16 pt-4">
           <m.div style={{ y: backY }}>
-            <LaptopFrame capture={CAPTURES.dashboardDesktop} className="w-[92%]" />
+            <LaptopFrame capture={CAPTURES.dashboardDesktop} className="ml-[17%] w-[80%]" />
           </m.div>
-          <m.div style={{ y: frontY }} className="absolute -bottom-2 right-0 flex w-[52%] items-end gap-3">
+          <m.div style={{ y: midY }} className="absolute bottom-[2%] left-0 w-[26%]">
+            <TabletFrame capture={CAPTURES.dashboardTablet} className="-rotate-2" />
+          </m.div>
+          <m.div style={{ y: frontY }} className="absolute -bottom-2 right-0 flex w-[42%] items-end gap-3">
             <PhoneFrame capture={CAPTURES.transactionsPhone} size="sm" className="w-1/2 -rotate-3" />
             <PhoneFrame capture={CAPTURES.dashboardPhone} size="sm" className="mb-8 w-1/2 rotate-2" />
           </m.div>

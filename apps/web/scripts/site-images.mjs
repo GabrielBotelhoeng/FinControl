@@ -12,7 +12,8 @@ const SRC = fileURLToPath(new URL('../../../e2e/.site-capturas/', import.meta.ur
 const OUT = fileURLToPath(new URL('../public/site/', import.meta.url));
 const OG = fileURLToPath(new URL('../public/og-image.png', import.meta.url));
 
-const MAX_WIDTH = { celular: 780, computador: 1440 };
+// O tablet aparece pequeno, ao lado do notebook (sub-projeto 20): 560 px bastam.
+const MAX_WIDTH = { celular: 780, tablet: 560, computador: 1440 };
 // Versões menores do celular para o `srcset`: o aparelho do herói tem ~235 px de tela num celular (420 px com 1,75x) e
 // as outras telas, ~320 px (560 px).
 const PHONE_SMALLER = [420, 560];
@@ -23,7 +24,7 @@ async function main() {
   await mkdir(OUT, { recursive: true });
   for (const file of files) {
     const name = file.replace(/\.png$/, '');
-    const width = name.endsWith('-computador') ? MAX_WIDTH.computador : MAX_WIDTH.celular;
+    const width = name.endsWith('-computador') ? MAX_WIDTH.computador : name.endsWith('-tablet') ? MAX_WIDTH.tablet : MAX_WIDTH.celular;
     const info = await sharp(SRC + file)
       .resize({ width, withoutEnlargement: true })
       .webp({ quality: 80 })
@@ -36,6 +37,11 @@ async function main() {
       const small = await sharp(SRC + file).resize({ width: w }).webp({ quality }).toFile(`${OUT}${name}-${w}.webp`);
       console.log(`site/${name}-${w}.webp  ${small.width}×${small.height}  ${Math.round(small.size / 1024)} KB`);
     }
+  }
+  // Rodando só uma parte das capturas (ex.: `-g tablet`), a og-image não é refeita: fica a que já está no repositório.
+  if (!(await readdir(SRC)).includes('og-image.png')) {
+    console.log('og-image.png não foi refeita nesta execução; mantida a atual.');
+    return;
   }
   const og = await sharp(SRC + 'og-image.png').resize(1200, 630).png({ compressionLevel: 9, palette: true, quality: 90 }).toFile(OG);
   console.log(`og-image.png  ${og.width}×${og.height}  ${Math.round(og.size / 1024)} KB`);

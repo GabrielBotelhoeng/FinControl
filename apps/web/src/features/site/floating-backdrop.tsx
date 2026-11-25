@@ -114,7 +114,7 @@ export const BACKDROPS = {
     { kind: 'blob', color: soft(PALETTE.lime, 0.25), size: 'h-80 w-80', at: 'right-[8%] top-[6%]', drift: 'a', seconds: 14 },
     { kind: 'coin', tone: 'banana', at: 'right-[5%] top-[2%] md:left-[45%] md:right-auto md:top-[10%]', phone: true, tilt: '-rotate-12', drift: 'b', seconds: 8 },
     { kind: 'chip', icon: Wallet, color: PALETTE.teal, name: 'Feira', amount: '− R$ 48,90', at: 'right-[3%] top-[7%]', tilt: '-rotate-2', drift: 'c', seconds: 10, offset: 3 },
-    { kind: 'icon', icon: CalendarDays, color: PALETTE.grape, at: 'left-[4%] bottom-[1.5%] md:left-[46%] md:bottom-[12%]', phone: true, tilt: 'rotate-6', drift: 'a', seconds: 9, offset: 2 },
+    { kind: 'icon', icon: CalendarDays, color: PALETTE.grape, at: 'left-[4%] top-[1%] md:left-[46%] md:top-auto md:bottom-[12%]', phone: true, tilt: 'rotate-6', drift: 'a', seconds: 9, offset: 2 },
     { kind: 'icon', icon: ChartPie, color: PALETTE.sky, at: 'right-[4%] bottom-[8%]', tilt: '-rotate-6', drift: 'b', seconds: 11, offset: 5 },
   ],
 } satisfies Record<string, FloatItem[]>;
