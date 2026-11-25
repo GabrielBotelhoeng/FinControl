@@ -2,7 +2,7 @@ import { RefreshCw, X } from 'lucide-react';
 import { useEffect } from 'react';
 import { toast } from 'sonner';
 import { Button } from '../components/ui/button';
-import { onUpdateAvailable } from '../lib/pwa-update';
+import { dismissUpdate, onUpdateAvailable } from '../lib/pwa-update';
 
 export const UPDATE_TOAST_ID = 'nova-versao';
 
@@ -31,7 +31,10 @@ export function UpdateToast({ id, reload = reloadPage }: { id: string | number; 
       <button
         type="button"
         aria-label="Fechar aviso"
-        onClick={() => toast.dismiss(id)}
+        onClick={() => {
+          dismissUpdate();
+          toast.dismiss(id);
+        }}
         className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-muted transition-colors hover:bg-surface-2 hover:text-text"
       >
         <X aria-hidden className="h-4 w-4" strokeWidth={1.75} />
@@ -45,7 +48,8 @@ export function UpdateNotice({ reload }: { reload?: () => void }) {
   useEffect(
     () =>
       onUpdateAvailable(() => {
-        toast.custom((id) => <UpdateToast id={id} reload={reload} />, { id: UPDATE_TOAST_ID, duration: Infinity });
+        // Fechar (no X ou arrastando) consome o aviso até a próxima versão nova: remontar o app não o traz de volta.
+        toast.custom((id) => <UpdateToast id={id} reload={reload} />, { id: UPDATE_TOAST_ID, duration: Infinity, onDismiss: dismissUpdate });
       }),
     [reload],
   );

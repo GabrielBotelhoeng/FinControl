@@ -27,6 +27,11 @@ export function onUpdateAvailable(listener: () => void): () => void {
   };
 }
 
+/** A pessoa dispensou o aviso: ele não volta ao remontar o app, só com a próxima versão nova. */
+export function dismissUpdate() {
+  available = false;
+}
+
 export function resetUpdateStateForTests() {
   available = false;
   listeners.clear();

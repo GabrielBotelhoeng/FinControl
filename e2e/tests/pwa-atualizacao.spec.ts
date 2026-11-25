@@ -102,7 +102,7 @@ test('um pedaço que sumiu depois do deploy mostra o aviso e a tela de erro em p
   // A entrada tem o aviso de idade em dois lugares (celular e computador): o link visível.
   await page.getByRole('link', { name: 'Política de privacidade' }).locator('visible=true').first().click();
   await expect(notice(page)).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Não deu para abrir esta tela' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Saiu uma versão nova do FinControl' })).toBeVisible();
 });
 
 test('o boot que não carrega recarrega a página uma vez só (sem laço)', async ({ page }) => {

@@ -5,8 +5,10 @@ import './styles/index.css';
 const root = document.getElementById('root');
 if (!root) throw new Error('Elemento #root ausente');
 
-// Versão nova (sub-projeto 19): começa antes do app, para não perder a troca do service worker durante o boot.
-watchForUpdates();
+// Versão nova (sub-projeto 19): começa antes do app, para não perder a troca do service worker durante o boot. Vive
+// enquanto a página existir; no desenvolvimento, a troca a quente do módulo desliga o observador antigo.
+const stopWatchingUpdates = watchForUpdates();
+import.meta.hot?.dispose(stopWatchingUpdates);
 
 /**
  * Chama `fn` depois da primeira pintura com conteúdo (o evento `paint` do navegador), ou em 1,5 s se ele não vier.

@@ -84,6 +84,26 @@ describe('UpdateNotice', () => {
     await waitFor(() => expect(screen.queryByText('Nova versão disponível')).not.toBeInTheDocument());
   });
 
+  it('o aviso fechado não volta quando o app remonta, só com a próxima versão nova', async () => {
+    const user = userEvent.setup();
+    const { unmount } = render(
+      <>
+        <UpdateNotice />
+        <Toaster containerAriaLabel="Avisos" />
+      </>,
+    );
+    preloadError();
+    await user.click(await screen.findByRole('button', { name: 'Fechar aviso' }));
+    await waitFor(() => expect(screen.queryByText('Nova versão disponível')).not.toBeInTheDocument());
+    unmount();
+    renderWithForm();
+    // Dá tempo ao sonner de montar qualquer aviso pendente antes de conferir que não há nenhum.
+    await act(() => new Promise((resolve) => setTimeout(resolve, 50)));
+    expect(screen.queryByText('Nova versão disponível')).not.toBeInTheDocument();
+    preloadError();
+    expect(await screen.findByText('Nova versão disponível')).toBeInTheDocument();
+  });
+
   it('a região dos avisos tem nome em português', () => {
     renderWithForm();
     expect(document.querySelector('section[aria-label^="Avisos"]')).not.toBeNull();
