@@ -2,8 +2,80 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "rewrites": [
     {
-      "source": "/(.*)",
-      "destination": "/index.html"
+      "source": "/entrar",
+      "destination": "/app.html"
+    },
+    {
+      "source": "/lancamentos",
+      "destination": "/app.html"
+    },
+    {
+      "source": "/importar",
+      "destination": "/app.html"
+    },
+    {
+      "source": "/contas",
+      "destination": "/app.html"
+    },
+    {
+      "source": "/cartoes/:id",
+      "destination": "/app.html"
+    },
+    {
+      "source": "/emprestimos",
+      "destination": "/app.html"
+    },
+    {
+      "source": "/emprestimos/:id",
+      "destination": "/app.html"
+    },
+    {
+      "source": "/dividas",
+      "destination": "/app.html"
+    },
+    {
+      "source": "/dividas/plano",
+      "destination": "/app.html"
+    },
+    {
+      "source": "/dividas/:id",
+      "destination": "/app.html"
+    },
+    {
+      "source": "/patrimonio",
+      "destination": "/app.html"
+    },
+    {
+      "source": "/calendario",
+      "destination": "/app.html"
+    },
+    {
+      "source": "/planejamento",
+      "destination": "/app.html"
+    },
+    {
+      "source": "/relatorios",
+      "destination": "/app.html"
+    },
+    {
+      "source": "/resumo",
+      "destination": "/app.html"
+    },
+    {
+      "source": "/notificacoes",
+      "destination": "/app.html"
+    },
+    {
+      "source": "/assistente",
+      "destination": "/app.html"
+    },
+    {
+      "source": "/categorias",
+      "destination": "/app.html"
+    },
+    {
+      "source": "/perfil",
+      "destination": "/app.html"
     }
   ],
   "headers": [

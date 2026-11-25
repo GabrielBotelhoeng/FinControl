@@ -1,4 +1,5 @@
-import { resolve } from 'node:path';
+import { existsSync, readFileSync, statSync } from 'node:fs';
+import { resolve, sep } from 'node:path';
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import type { Plugin, ResolvedConfig } from 'vite';
@@ -27,6 +28,42 @@ function prerenderPublicPages(): Plugin {
         const files = await prerenderPages({ root: config.root, outDir: resolve(config.root, config.build.outDir), mode: config.mode });
         config.logger.info(`HTML estático gerado: ${files.join(', ')}`);
       },
+    },
+  };
+}
+
+/**
+ * O `vite preview` (E2E e Lighthouse locais) serve como a Vercel (sub-projeto 18, E5): primeiro o arquivo (as páginas
+ * públicas são `pasta/index.html`), depois os rewrites do `vercel.json` (as rotas do app para `/app.html`) e, no resto, o
+ * `404.html` com status 404. Sem isso, o fallback de SPA do preview serviria o index.html em qualquer caminho.
+ */
+function previewLikeVercel(): Plugin {
+  return {
+    name: 'fincontrol-preview-like-vercel',
+    configurePreviewServer(server) {
+      const root = server.config.root;
+      const outDir = resolve(root, server.config.build.outDir);
+      const { rewrites } = JSON.parse(readFileSync(resolve(root, 'vercel.json'), 'utf8')) as { rewrites: { source: string; destination: string }[] };
+      const rules = rewrites.map((r) => ({ pattern: new RegExp(`^${r.source.replace(/:\w+/g, '[^/]+')}$`), destination: r.destination }));
+      const isFile = (path: string) => path.startsWith(outDir + sep) && existsSync(path) && statSync(path).isFile();
+      server.middlewares.use((req, res, next) => {
+        if (req.method !== 'GET' && req.method !== 'HEAD') return next();
+        const url = new URL(req.url ?? '/', 'http://localhost');
+        const path = decodeURIComponent(url.pathname);
+        if (isFile(resolve(outDir, `.${path}`))) return next();
+        if (isFile(resolve(outDir, `.${path}`, 'index.html'))) {
+          req.url = `${path.replace(/\/?$/, '/')}index.html${url.search}`;
+          return next();
+        }
+        const rule = rules.find((r) => r.pattern.test(path));
+        if (rule) {
+          req.url = `${rule.destination}${url.search}`;
+          return next();
+        }
+        res.statusCode = 404;
+        res.setHeader('Content-Type', 'text/html; charset=utf-8');
+        res.end(readFileSync(resolve(outDir, '404.html')));
+      });
     },
   };
 }
@@ -89,6 +126,7 @@ export default defineConfig({
     tailwindcss(),
     preloadChunkMetas(),
     prerenderPublicPages(),
+    previewLikeVercel(),
     VitePWA({
       registerType: 'autoUpdate',
       // O service worker é gerado depois do HTML estático (plugin acima), para o precache levar a versão final.
@@ -123,8 +161,9 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,svg,png,webp,woff2}'],
         // As fotos do site de apresentação não vão para o cache de quem instala o app (sub-projeto 17, S10).
         globIgnores: ['site/**', 'og-image.png'],
-        navigateFallback: '/index.html',
-        navigateFallbackDenylist: [/^\/api\//],
+        // O app instalado abre a casca do app; as páginas públicas vêm do HTML gerado (sub-projeto 18, seção 3 da spec).
+        navigateFallback: '/app.html',
+        navigateFallbackDenylist: [/^\/$/, /^\/privacidade$/, /^\/termos$/, /^\/api\//],
         // Web Push (sub-projeto 5, Parte B, W7): o tratamento do aviso e do clique fica em public/push-sw.js.
         importScripts: ['push-sw.js'],
       },
