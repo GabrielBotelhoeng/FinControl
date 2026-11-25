@@ -1,8 +1,8 @@
-import { createClient } from '@supabase/supabase-js';
 import { QueryClientProvider, type QueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Toaster } from 'sonner';
 import { AuthProvider, useAuth } from '../features/auth/auth-context';
+import { createAuthClient } from '../features/auth/client';
 import { createSupabaseGateway } from '../features/auth/gateway';
 import { createApiClient } from '../lib/api-client';
 import { ApiProvider } from '../lib/api-context';
@@ -47,7 +47,7 @@ export function ClearCacheOnUserChange({ queryClient }: { queryClient: QueryClie
 /** Recebe a configuração já validada (main.tsx) e cria os serviços uma única vez. */
 export function AppProviders({ env, children }: { env: WebEnv; children: ReactNode }) {
   const [{ gateway, queryClient }] = useState(() => ({
-    gateway: createSupabaseGateway(createClient(env.VITE_SUPABASE_URL, env.VITE_SUPABASE_ANON_KEY)),
+    gateway: createSupabaseGateway(createAuthClient(env.VITE_SUPABASE_URL, env.VITE_SUPABASE_ANON_KEY)),
     queryClient: createQueryClient(),
   }));
   return (
