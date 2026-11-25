@@ -33,12 +33,18 @@ function afterFirstPaint(fn: () => void) {
 const hydrate = root.dataset.prerenderedRoute !== undefined && document.documentElement.dataset.boot === 'static';
 
 // Botões tocados antes da hidratação (ex.: "Experimentar sem cadastro") não fariam nada: os toques ficam guardados e são
-// repetidos, na ordem, quando o app assume (lib/held-clicks.ts).
-const releaseClicks = hydrate ? holdButtonClicks(root) : () => {};
+// repetidos, na ordem, quando o app assume; se ele não vier, não ficam presos (lib/held-clicks.ts).
+const clicks = hydrate ? holdButtonClicks(root) : undefined;
 const start = () =>
   void import('./boot')
     .then(({ boot }) => boot(root, hydrate))
-    .finally(releaseClicks);
+    .then(
+      () => clicks?.release(),
+      (error: unknown) => {
+        console.error('O app não carregou:', error);
+        clicks?.giveUp();
+      },
+    );
 
 if (hydrate) afterFirstPaint(start);
 else start();

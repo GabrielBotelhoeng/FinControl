@@ -26,7 +26,7 @@ describe('toques antes da hidratação (sub-projeto 18, revisão)', () => {
 
   it('guarda os toques em botões sem deixar chegar ao app e, ao soltar, repete todos na ordem, sem duplicar', () => {
     const { root, log, button } = setup();
-    const release = holdButtonClicks(root);
+    const { release } = holdButtonClicks(root);
     button('b').click();
     button('a').click();
     button('b').click();
@@ -37,7 +37,7 @@ describe('toques antes da hidratação (sub-projeto 18, revisão)', () => {
 
   it('depois de soltar, os toques chegam direto, e um botão que saiu da página não é repetido', () => {
     const { root, log, button } = setup();
-    const release = holdButtonClicks(root);
+    const { release } = holdButtonClicks(root);
     button('c').click();
     button('a').click();
     button('c').remove();
@@ -53,5 +53,29 @@ describe('toques antes da hidratação (sub-projeto 18, revisão)', () => {
     const event = new MouseEvent('click', { bubbles: true, cancelable: true });
     link.dispatchEvent(event);
     expect(event.defaultPrevented).toBe(false);
+  });
+
+  it('se o app não vier (desistiu), o toque guardado não fica preso: a página recarrega', () => {
+    const { root, log, button } = setup();
+    let reloads = 0;
+    const { giveUp } = holdButtonClicks(root, () => reloads++);
+    button('a').click();
+    giveUp();
+    expect(reloads).toBe(1);
+    expect(log).toEqual([]);
+  });
+
+  it('desistiu sem toque guardado: o próximo toque num botão recarrega a página (links seguem sozinhos)', () => {
+    const { root, button, link } = setup();
+    let reloads = 0;
+    const { giveUp } = holdButtonClicks(root, () => reloads++);
+    giveUp();
+    expect(reloads).toBe(0);
+    const event = new MouseEvent('click', { bubbles: true, cancelable: true });
+    link.dispatchEvent(event);
+    expect(event.defaultPrevented).toBe(false);
+    expect(reloads).toBe(0);
+    button('b').click();
+    expect(reloads).toBe(1);
   });
 });

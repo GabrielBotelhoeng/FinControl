@@ -6,3 +6,12 @@
 export function appRoutePatterns(rewrites: { source: string }[]): RegExp[] {
   return rewrites.map((r) => new RegExp(`^${r.source.replace(/:\w+/g, '[^/]+')}$`));
 }
+
+/**
+ * As mesmas rotas para o service worker, que compara o caminho com a query (`/lancamentos?novo=1`, o atalho do app
+ * instalado): aceitam uma query no fim, e as páginas públicas e os caminhos desconhecidos continuam de fora.
+ */
+export function offlineAppPatterns(rewrites: { source: string }[]): RegExp[] {
+  // `^/lancamentos$` → `^/lancamentos(\?.*)?$`
+  return appRoutePatterns(rewrites).map((pattern) => new RegExp(`${pattern.source.slice(0, -1)}(\\?.*)?$`));
+}

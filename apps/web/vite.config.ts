@@ -6,7 +6,7 @@ import type { Plugin, ResolvedConfig } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
 import { defineConfig } from 'vitest/config';
 import { prerenderPages } from './scripts/prerender.mjs';
-import { appRoutePatterns } from './src/app/app-route-patterns';
+import { appRoutePatterns, offlineAppPatterns } from './src/app/app-route-patterns';
 
 /** Os rewrites do `vercel.json`: as rotas do app, que abrem a casca (`/app.html`). Fonte única da Vercel, do preview e do PWA. */
 const { rewrites } = JSON.parse(readFileSync(new URL('./vercel.json', import.meta.url), 'utf8')) as { rewrites: { source: string; destination: string }[] };
@@ -174,7 +174,8 @@ export default defineConfig({
         // O app instalado abre a casca do app só nas rotas do app (as mesmas do vercel.json). As páginas públicas vêm do HTML
         // gerado, e um caminho desconhecido vai à rede e recebe o 404 de verdade (sub-projeto 18, seção 3 da spec; CodeRabbit).
         navigateFallback: '/app.html',
-        navigateFallbackAllowlist: appRoutePatterns(rewrites),
+        // O Workbox compara caminho + query: o atalho /lancamentos?novo=1 também abre a casca offline.
+        navigateFallbackAllowlist: offlineAppPatterns(rewrites),
         // Web Push (sub-projeto 5, Parte B, W7): o tratamento do aviso e do clique fica em public/push-sw.js.
         importScripts: ['push-sw.js'],
       },

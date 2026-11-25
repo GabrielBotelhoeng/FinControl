@@ -9,8 +9,34 @@ import { checkEnv } from './lib/env';
 import { retrying } from './lib/preloadable';
 import { PUBLIC_HEAD, type PublicPath } from './lib/public-head';
 
-/** Esperas (ms) entre as tentativas de carregar o pedaço da página antes de hidratar. */
-const RETRY_DELAYS = [1000, 3000];
+/**
+ * Esperas (ms) entre as tentativas de carregar o pedaço da página antes de hidratar: crescentes, até 30 s, uns 2 minutos
+ * no total. Depois disso o boot desiste, e o main.tsx solta os toques guardados (CodeRabbit, PR #40).
+ */
+export const BOOT_RETRY_DELAYS = [1000, 2000, 4000, 8000, 15000, 30000, 30000, 30000];
+
+/**
+ * O que encurta a espera entre tentativas: a conexão voltar, a pessoa voltar para a aba ou tocar na página. Nenhum deles é
+ * necessário (a espera acaba sozinha); um toque com o aparelho sem conexão (`navigator.onLine`) não gasta tentativa.
+ */
+function wakeOnActivity(root: HTMLElement) {
+  return (now: () => void) => {
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') now();
+    };
+    const onTouch = () => {
+      if (navigator.onLine) now();
+    };
+    window.addEventListener('online', now);
+    document.addEventListener('visibilitychange', onVisible);
+    root.addEventListener('click', onTouch, true);
+    return () => {
+      window.removeEventListener('online', now);
+      document.removeEventListener('visibilitychange', onVisible);
+      root.removeEventListener('click', onTouch, true);
+    };
+  };
+}
 
 /** Marca o `<html>` quando o app terminou de montar ou de hidratar (`data-app-ready`): os testes E2E esperam por ela. */
 function AppReady() {
@@ -43,14 +69,10 @@ export async function boot(root: HTMLElement, hydrate: boolean) {
   );
   const path = root.dataset.prerenderedRoute;
   if (hydrate && config.ok && path && path in PUBLIC_HEAD) {
-    try {
-      await retrying(() => preloadPublicPage(path as PublicPath), RETRY_DELAYS);
-    } catch {
-      // Sem o pedaço da página (rede): o HTML estático continua na tela, com os links funcionando, e o app só assume
-      // quando a conexão voltar. Hidratar sem ele faria o lazy cair no erro (CodeRabbit).
-      await new Promise((online) => window.addEventListener('online', online, { once: true }));
-      return boot(root, hydrate);
-    }
+    // Sem o pedaço da página (rede, servidor): o HTML estático continua na tela, com os links funcionando, e o app só
+    // assume quando ele chegar (hidratar sem ele faria o lazy cair no erro). Se nenhuma tentativa der certo, o erro sobe
+    // para o main.tsx, que solta os toques guardados (CodeRabbit, PR #40).
+    await retrying(() => preloadPublicPage(path as PublicPath), BOOT_RETRY_DELAYS, wakeOnActivity(root));
     hydrateRoot(root, app, { onRecoverableError: (error) => console.error('Erro na hidratação do HTML estático:', error) });
     return;
   }

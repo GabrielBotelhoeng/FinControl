@@ -30,15 +30,26 @@ export function preloadable<P extends object>(factory: () => Promise<{ default: 
 }
 
 /**
- * Tenta `load` e, se falhar, de novo depois de cada espera de `delays` (em ms); rejeita com o último erro. Usado para
- * carregar o pedaço da página pública antes de hidratar o HTML estático (boot.tsx).
+ * Tenta `load` e, se falhar, de novo depois de cada espera de `delays` (em ms); rejeita com o último erro. `wake`, se
+ * vier, pode encurtar a espera: recebe a função que tenta na hora e devolve a que desliga o que ela ligou. As esperas nunca
+ * dependem dele (um evento que não chega não trava nada). Usado para carregar o pedaço da página pública antes de
+ * hidratar o HTML estático (boot.tsx).
  */
-export async function retrying<T>(load: () => Promise<T>, delays: number[]): Promise<T> {
+export async function retrying<T>(load: () => Promise<T>, delays: number[], wake?: (now: () => void) => () => void): Promise<T> {
   for (const delay of delays) {
     try {
       return await load();
     } catch {
-      await new Promise((done) => setTimeout(done, delay));
+      await new Promise<void>((done) => {
+        let stop = () => {};
+        const timer = setTimeout(finish, delay);
+        function finish() {
+          clearTimeout(timer);
+          stop();
+          done();
+        }
+        if (wake) stop = wake(finish);
+      });
     }
   }
   return load();
