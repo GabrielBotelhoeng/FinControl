@@ -19,7 +19,8 @@ describe('HomeGate', () => {
 
   it('com sessão, a / mostra o app', async () => {
     renderApp(<HomeGate />, { gateway: fakeGateway(signedIn()).gateway, route: '/', path: '/*', extraRoutes: login });
-    expect((await screen.findAllByRole('link', { name: 'Painel' })).length).toBeGreaterThan(0);
+    // O AppShell é um pedaço `lazy`: sob a suíte inteira, o import pode passar de 1 s (QA).
+    expect((await screen.findAllByRole('link', { name: 'Painel' }, { timeout: 5000 })).length).toBeGreaterThan(0);
     expect(screen.queryByRole('heading', { level: 1, name: /sob controle/ })).not.toBeInTheDocument();
   });
 
@@ -50,7 +51,7 @@ describe('HomeGate', () => {
     expect(screen.queryAllByRole('link', { name: 'Painel' })).toHaveLength(0);
 
     await userEvent.click(within(hero).getByRole('button', { name: 'Experimentar sem cadastro' }));
-    expect((await screen.findAllByRole('link', { name: 'Painel' })).length).toBeGreaterThan(0);
+    expect((await screen.findAllByRole('link', { name: 'Painel' }, { timeout: 5000 })).length).toBeGreaterThan(0);
     expect(gateway.signInAnonymously).toHaveBeenCalledTimes(1);
     expect(api.post).toHaveBeenCalledTimes(2);
   });
