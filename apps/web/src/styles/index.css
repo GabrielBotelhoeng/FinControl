@@ -221,6 +221,24 @@
 .site-drift-c {
   animation-name: site-drift-c;
 }
+.site-backdrop > div {
+  animation: site-backdrop-in 0.8s ease-out both;
+}
+@keyframes site-backdrop-in {
+  from {
+    opacity: 0;
+  }
+}
+/* A coluna de avisos (sub-projeto 20) sobe metade da altura (a lista vai duas vezes), devagar e em laço. */
+.site-ticker {
+  animation: site-ticker 22s linear infinite;
+}
+@keyframes site-ticker {
+  to {
+    transform: translateY(-50%);
+  }
+}
+.site-backdrop[data-offscreen] .site-ticker,
 .site-backdrop[data-offscreen] .site-drift {
   animation-play-state: paused;
 }
@@ -253,6 +271,10 @@
   50% {
     transform: translate3d(-6px, 10px, 0) rotate(3deg);
   }
+}
+/* As pontas das faixas somem num degradê (como o `fade` do Marquee do spell.sh; só máscara, sem custo de animação). */
+.site-marquee {
+  mask-image: linear-gradient(to right, transparent 4%, #000 16%, #000 84%, transparent 96%);
 }
 .site-marquee-track {
   animation: site-marquee 38s linear infinite;

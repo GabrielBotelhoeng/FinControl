@@ -1,7 +1,7 @@
 import { CalendarDays, ChartPie, CreditCard, PiggyBank, Receipt, Target, Wallet, type LucideIcon } from 'lucide-react';
 import { useScroll, useTransform } from 'motion/react';
 import * as m from 'motion/react-m';
-import { useEffect, useRef, type CSSProperties } from 'react';
+import { startTransition, useEffect, useRef, useState, type CSSProperties, type RefObject } from 'react';
 import { IconTile } from '../../components/ui/icon-tile';
 import { cn } from '../../lib/cn';
 import { PALETTE } from '../../lib/palette';
@@ -26,7 +26,40 @@ export type FloatItem =
   | (Base & { kind: 'blob'; color: string; size: string })
   | (Base & { kind: 'coin'; tone: 'tangerine' | 'banana'; tilt?: string })
   | (Base & { kind: 'icon'; icon: LucideIcon; color: string; tilt?: string })
-  | (Base & { kind: 'chip'; icon: LucideIcon; color: string; name: string; amount: string; tilt?: string });
+  | (Base & { kind: 'chip'; icon: LucideIcon; color: string; name: string; amount: string; tilt?: string })
+  | (Base & { kind: 'ticker'; notes: Note[] });
+
+/** Um aviso da coluna que sobe devagar (como os do app). */
+type Note = { icon: LucideIcon; color: string; title: string; detail: string };
+
+/**
+ * Coluna estreita de avisos subindo devagar, como o "Vertical Scroll" do Marquee do spell.sh (sub-projeto 20): a lista
+ * vai duas vezes, e a coluna sobe metade da própria altura em laço (só `transform`). As pontas somem num degradê
+ * (`mask-image`). Só no computador.
+ */
+function Ticker({ notes, still }: { notes: Note[]; still: boolean }) {
+  const list = (hidden?: boolean) => (
+    <ul aria-hidden={hidden || undefined} className="flex flex-col gap-2.5 pb-2.5">
+      {notes.map((n) => (
+        <li key={n.title} className="flex items-center gap-2.5 rounded-2xl border border-border bg-surface py-2 pl-2 pr-3.5 shadow-bar">
+          <IconTile icon={n.icon} color={n.color} size="sm" />
+          <span>
+            <span className="block whitespace-nowrap text-xs font-semibold text-text">{n.title}</span>
+            <span className="block whitespace-nowrap text-[11px] text-muted">{n.detail}</span>
+          </span>
+        </li>
+      ))}
+    </ul>
+  );
+  return (
+    <span className="block h-44 w-56 overflow-hidden [mask-image:linear-gradient(transparent,#000_22%,#000_78%,transparent)]">
+      <span className={cn('block', !still && 'site-ticker')}>
+        {list()}
+        {list(true)}
+      </span>
+    </span>
+  );
+}
 
 /** Moeda: o "R$" vem do CSS (`content`), é só desenho, sem texto para o leitor de tela nem para a auditoria de contraste. */
 function Coin({ tone }: { tone: 'tangerine' | 'banana' }) {
@@ -55,7 +88,7 @@ function Chip({ icon, color, name, amount }: { icon: LucideIcon; color: string; 
 
 function Item({ item, still }: { item: FloatItem; still: boolean }) {
   const drift: CSSProperties = { animationDuration: `${item.seconds}s`, animationDelay: `${-(item.offset ?? 0)}s` };
-  const tilt = item.kind === 'blob' ? undefined : item.tilt;
+  const tilt = item.kind === 'blob' || item.kind === 'ticker' ? undefined : item.tilt;
   return (
     <span
       data-float={item.kind}
@@ -68,13 +101,14 @@ function Item({ item, still }: { item: FloatItem; still: boolean }) {
         tilt,
       )}
     >
-      <span className={cn('block', !still && `site-drift site-drift-${item.drift}`)} style={drift}>
+      <span className={cn('block', !still && item.kind !== 'ticker' && `site-drift site-drift-${item.drift}`)} style={drift}>
         {item.kind === 'blob' && (
           <span className={cn('block rounded-full', item.size)} style={{ background: `radial-gradient(closest-side, ${item.color}, transparent)` }} />
         )}
         {item.kind === 'coin' && <Coin tone={item.tone} />}
         {item.kind === 'icon' && <IconTile icon={item.icon} color={item.color} className="max-md:h-8 max-md:w-8 max-md:rounded-[10px]" />}
         {item.kind === 'chip' && <Chip icon={item.icon} color={item.color} name={item.name} amount={item.amount} />}
+        {item.kind === 'ticker' && <Ticker notes={item.notes} still={still} />}
       </span>
     </span>
   );
@@ -98,7 +132,18 @@ export const BACKDROPS = {
     { kind: 'coin', tone: 'tangerine', at: 'right-[5%] top-[3%] md:right-[9%] md:top-[12%]', phone: true, tilt: '-rotate-12', drift: 'b', seconds: 8 },
     { kind: 'icon', icon: CalendarDays, color: PALETTE.sky, at: 'right-[24%] top-[6%]', tilt: 'rotate-6', drift: 'a', seconds: 9, offset: 3 },
     { kind: 'icon', icon: Wallet, color: PALETTE.teal, at: 'left-[3%] bottom-[2%] md:left-[30%] md:bottom-[3%]', phone: true, tilt: '-rotate-6', drift: 'c', seconds: 11, offset: 2 },
-    { kind: 'chip', icon: Receipt, color: PALETTE.indigo, name: 'Conta de luz', amount: '− R$ 182,40', at: 'left-[47%] top-[13%]', tilt: 'rotate-2', drift: 'b', seconds: 10, offset: 6 },
+    {
+      kind: 'ticker',
+      at: 'left-[47%] top-[3%]',
+      drift: 'a',
+      seconds: 10,
+      notes: [
+        { icon: Receipt, color: PALETTE.indigo, title: 'Conta de luz vence amanhã', detail: 'R$ 182,40 · Calendário' },
+        { icon: Target, color: PALETTE.grape, title: 'Meta de viagem em 60%', detail: 'Faltam R$ 1.200,00' },
+        { icon: Wallet, color: PALETTE.teal, title: 'Salário + R$ 5.070,00', detail: 'Conta corrente · hoje' },
+        { icon: CreditCard, color: PALETTE.tangerine, title: 'Fatura fecha em 3 dias', detail: 'Cartão principal' },
+      ],
+    },
   ],
   features: [
     { kind: 'blob', color: soft(PALETTE.grape, 0.16), size: 'h-72 w-72', at: '-left-24 top-[1%] md:left-[30%] md:-top-10', phone: true, drift: 'a', seconds: 14 },
@@ -126,15 +171,67 @@ export const BACKDROPS = {
  * `prefers-reduced-motion`, tudo parado; fora da tela, a flutuação pausa. No build e na hidratação, o mesmo HTML para
  * todo mundo (sub-projeto 18): posição absoluta e tamanho fixo, sem CLS.
  */
+/** As duas camadas, longe (blobs) e perto (o resto), paradas: no celular e com `prefers-reduced-motion`. */
+function StillLayers({ far, near, still }: { far: FloatItem[]; near: FloatItem[]; still: boolean }) {
+  return (
+    <>
+      <div className="absolute inset-0">
+        {far.map((item, i) => (
+          <Item key={i} item={item} still={still} />
+        ))}
+      </div>
+      <div className="absolute inset-0">
+        {near.map((item, i) => (
+          <Item key={i} item={item} still={still} />
+        ))}
+      </div>
+    </>
+  );
+}
+
+/**
+ * As mesmas camadas com o paralaxe do computador: os blobs (longe) andam menos que as moedas e os ícones (perto),
+ * profundidade sem 3D. Só monta no computador, para o celular não medir a rolagem à toa (Lighthouse no celular).
+ */
+function ParallaxLayers({ target, far, near }: { target: RefObject<HTMLDivElement | null>; far: FloatItem[]; near: FloatItem[] }) {
+  const { scrollYProgress } = useScroll({ target, offset: ['start end', 'end start'] });
+  const farY = useTransform(scrollYProgress, [0, 1], [24, -24]);
+  const nearY = useTransform(scrollYProgress, [0, 1], [60, -60]);
+  return (
+    <>
+      <m.div className="absolute inset-0" style={{ y: farY }}>
+        {far.map((item, i) => (
+          <Item key={i} item={item} still={false} />
+        ))}
+      </m.div>
+      <m.div className="absolute inset-0" style={{ y: nearY }}>
+        {near.map((item, i) => (
+          <Item key={i} item={item} still={false} />
+        ))}
+      </m.div>
+    </>
+  );
+}
+
+/**
+ * Elementos flutuando no fundo de uma seção (sub-projeto 20, V1–V4): blobs, moedas, ícones do app e mini-cartões de
+ * lançamento, `aria-hidden` e sem receber toque, atrás do conteúdo. A seção precisa de `relative isolate`. Cada um
+ * flutua em CSS (só `transform`, no compositor); no computador, a camada acompanha a rolagem com um paralaxe leve. Com
+ * `prefers-reduced-motion`, tudo parado; fora da tela, a flutuação pausa. No build e na hidratação, o mesmo HTML para
+ * todo mundo (sub-projeto 18, sem paralaxe): posição absoluta e tamanho fixo, sem CLS.
+ */
 export function FloatingBackdrop({ items }: { items: readonly FloatItem[] }) {
   const ref = useRef<HTMLDivElement>(null);
   const reduce = useSiteReducedMotion();
   const desktop = useIsDesktop();
-  const parallax = desktop && !reduce;
-  const { scrollYProgress } = useScroll({ target: ref, offset: ['start end', 'end start'] });
-  // Os blobs (longe) andam menos que as moedas e os ícones (perto): profundidade sem 3D.
-  const farY = useTransform(scrollYProgress, [0, 1], parallax ? [24, -24] : [0, 0]);
-  const nearY = useTransform(scrollYProgress, [0, 1], parallax ? [60, -60] : [0, 0]);
+  // Os elementos entram no quadro depois da montagem (ou da hidratação), numa transição do React e com um fade (CSS): o
+  // HTML estático fica menor, o LCP não espera por eles e a hidratação não ganha trabalho. A camada já vem no HTML; como
+  // tudo é absoluto, nada se mexe (CLS 0) e a hidratação vê o mesmo HTML.
+  const [shown, setShown] = useState(false);
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => startTransition(() => setShown(true)));
+    return () => cancelAnimationFrame(frame);
+  }, []);
 
   // Pausa a flutuação fora da tela (direto no DOM, sem re-render).
   useEffect(() => {
@@ -152,16 +249,11 @@ export function FloatingBackdrop({ items }: { items: readonly FloatItem[] }) {
   const near = items.filter((i) => i.kind !== 'blob');
   return (
     <div ref={ref} aria-hidden data-backdrop className="site-backdrop pointer-events-none absolute inset-0 -z-10 select-none overflow-hidden">
-      <m.div className="absolute inset-0" style={{ y: farY }}>
-        {far.map((item, i) => (
-          <Item key={i} item={item} still={reduce} />
-        ))}
-      </m.div>
-      <m.div className="absolute inset-0" style={{ y: nearY }}>
-        {near.map((item, i) => (
-          <Item key={i} item={item} still={reduce} />
-        ))}
-      </m.div>
+      {!shown ? null : desktop && !reduce ? (
+        <ParallaxLayers target={ref} far={far} near={near} />
+      ) : (
+        <StillLayers far={far} near={near} still={reduce} />
+      )}
     </div>
   );
 }

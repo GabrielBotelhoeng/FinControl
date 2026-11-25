@@ -100,6 +100,28 @@ test('a 390 px, o "Experimentar" do cabeçalho tem folga da borda', async ({ pag
   expect(right).toBeLessThanOrEqual(390 - 16);
 });
 
+test('as duas faixas em X andam em sentidos opostos e o fundo flutua só com transform (sub-projeto 20)', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await openSite(page, '/');
+  const tracks = await page.locator('.site-marquee-track').evaluateAll((els) =>
+    els.map((el) => ({ name: getComputedStyle(el).animationName, direction: getComputedStyle(el).animationDirection, hidden: el.getAttribute('aria-hidden') })),
+  );
+  expect(tracks.map((t) => t.direction)).toEqual(['reverse', 'reverse', 'normal', 'normal']);
+  expect(tracks.every((t) => t.name === 'site-marquee')).toBe(true);
+  expect(tracks.map((t) => t.hidden)).toEqual([null, 'true', null, 'true']);
+  // Os elementos do fundo: escondidos do leitor de tela, sem receber toque, e as animações só mexem em transform.
+  const layers = await page.locator('[data-backdrop]').evaluateAll((els) =>
+    els.map((el) => ({ hidden: el.getAttribute('aria-hidden'), pointer: getComputedStyle(el).pointerEvents })),
+  );
+  expect(layers.length).toBeGreaterThanOrEqual(4);
+  expect(layers.every((l) => l.hidden === 'true' && l.pointer === 'none')).toBe(true);
+  const props = await page.evaluate(() =>
+    [...new Set(document.getAnimations().flatMap((a) => ((a.effect as KeyframeEffect | null)?.getKeyframes() ?? []).flatMap((k) => Object.keys(k))))],
+  );
+  const animated = props.filter((p) => !['offset', 'computedOffset', 'easing', 'composite'].includes(p));
+  expect(animated.every((p) => ['transform', 'opacity'].includes(p)), animated.join(', ')).toBe(true);
+});
+
 test.describe('com prefers-reduced-motion', () => {
   test.use({ viewport: { width: 390, height: 844 } });
 
@@ -119,8 +141,12 @@ test.describe('com prefers-reduced-motion', () => {
         .map((el) => (el.textContent ?? '').slice(0, 40)),
     );
     expect(hidden).toEqual([]);
-    const marquee = await page.locator('.site-marquee-track').first().evaluate((el) => getComputedStyle(el).animationName);
-    expect(marquee).toBe('none');
+    // As duas faixas em X e os elementos flutuando no fundo ficam parados (sub-projeto 20).
+    const moving = await page.evaluate(() =>
+      [...document.querySelectorAll('.site-marquee-track, [data-backdrop] *')].filter((el) => getComputedStyle(el).animationName !== 'none').length,
+    );
+    expect(moving).toBe(0);
+    expect(await page.locator('.site-marquee-track').count()).toBe(4);
     // As âncoras do cabeçalho também não rolam animadas.
     const scrollBehavior = await page.evaluate(() => getComputedStyle(document.documentElement).scrollBehavior);
     expect(scrollBehavior).toBe('auto');
