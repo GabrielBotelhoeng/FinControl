@@ -31,7 +31,15 @@ const RULES: Record<keyof WebEnv, (value: unknown) => value is string> = {
 /** Valida a configuração do build sem lançar erro: quem chama decide o que mostrar (veja main.tsx). */
 export function checkEnv(source: Record<string, unknown> = buildEnv): EnvCheck {
   const keys = Object.keys(RULES) as (keyof WebEnv)[];
-  const fields = keys.filter((key) => !RULES[key](source[key]));
+  // Os endereços sem os espaços das pontas, como o zod devolvia (um espaço no fim montaria um host inválido no login);
+  // a chave anônima fica como veio.
+  const values: Record<string, unknown> = Object.fromEntries(
+    keys.map((key) => {
+      const value = source[key];
+      return [key, RULES[key] === isHttpUrl && typeof value === 'string' ? value.trim() : value];
+    }),
+  );
+  const fields = keys.filter((key) => !RULES[key](values[key]));
   if (fields.length > 0) return { ok: false, fields };
-  return { ok: true, env: Object.fromEntries(keys.map((key) => [key, source[key]])) as WebEnv };
+  return { ok: true, env: Object.fromEntries(keys.map((key) => [key, values[key]])) as WebEnv };
 }

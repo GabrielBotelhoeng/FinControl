@@ -6,7 +6,11 @@ import { AppProviders } from './app/providers';
 import { router } from './app/router';
 import { preloadPublicPage } from './app/routes';
 import { checkEnv } from './lib/env';
+import { retrying } from './lib/preloadable';
 import { PUBLIC_HEAD, type PublicPath } from './lib/public-head';
+
+/** Esperas (ms) entre as tentativas de carregar o pedaço da página antes de hidratar. */
+const RETRY_DELAYS = [1000, 3000];
 
 /** Marca o `<html>` quando o app terminou de montar ou de hidratar (`data-app-ready`): os testes E2E esperam por ela. */
 function AppReady() {
@@ -39,8 +43,14 @@ export async function boot(root: HTMLElement, hydrate: boolean) {
   );
   const path = root.dataset.prerenderedRoute;
   if (hydrate && config.ok && path && path in PUBLIC_HEAD) {
-    // Se o pedaço não vier (rede), hidrata assim mesmo: o lazy tenta de novo.
-    await preloadPublicPage(path as PublicPath).catch(() => {});
+    try {
+      await retrying(() => preloadPublicPage(path as PublicPath), RETRY_DELAYS);
+    } catch {
+      // Sem o pedaço da página (rede): o HTML estático continua na tela, com os links funcionando, e o app só assume
+      // quando a conexão voltar. Hidratar sem ele faria o lazy cair no erro (CodeRabbit).
+      await new Promise((online) => window.addEventListener('online', online, { once: true }));
+      return boot(root, hydrate);
+    }
     hydrateRoot(root, app, { onRecoverableError: (error) => console.error('Erro na hidratação do HTML estático:', error) });
     return;
   }

@@ -6,6 +6,10 @@ import type { Plugin, ResolvedConfig } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
 import { defineConfig } from 'vitest/config';
 import { prerenderPages } from './scripts/prerender.mjs';
+import { appRoutePatterns } from './src/app/app-route-patterns';
+
+/** Os rewrites do `vercel.json`: as rotas do app, que abrem a casca (`/app.html`). Fonte única da Vercel, do preview e do PWA. */
+const { rewrites } = JSON.parse(readFileSync(new URL('./vercel.json', import.meta.url), 'utf8')) as { rewrites: { source: string; destination: string }[] };
 
 /**
  * HTML estático das páginas públicas, da casca do app e do 404 (sub-projeto 18, E1): no fim do build do cliente, antes do
@@ -43,8 +47,8 @@ function previewLikeVercel(): Plugin {
     configurePreviewServer(server) {
       const root = server.config.root;
       const outDir = resolve(root, server.config.build.outDir);
-      const { rewrites } = JSON.parse(readFileSync(resolve(root, 'vercel.json'), 'utf8')) as { rewrites: { source: string; destination: string }[] };
-      const rules = rewrites.map((r) => ({ pattern: new RegExp(`^${r.source.replace(/:\w+/g, '[^/]+')}$`), destination: r.destination }));
+      const patterns = appRoutePatterns(rewrites);
+      const rules = rewrites.map((r, i) => ({ pattern: patterns[i]!, destination: r.destination }));
       const isFile = (path: string) => path.startsWith(outDir + sep) && existsSync(path) && statSync(path).isFile();
       server.middlewares.use((req, res, next) => {
         if (req.method !== 'GET' && req.method !== 'HEAD') return next();
@@ -167,9 +171,10 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,svg,png,webp,woff2}'],
         // As fotos do site de apresentação não vão para o cache de quem instala o app (sub-projeto 17, S10).
         globIgnores: ['site/**', 'og-image.png'],
-        // O app instalado abre a casca do app; as páginas públicas vêm do HTML gerado (sub-projeto 18, seção 3 da spec).
+        // O app instalado abre a casca do app só nas rotas do app (as mesmas do vercel.json). As páginas públicas vêm do HTML
+        // gerado, e um caminho desconhecido vai à rede e recebe o 404 de verdade (sub-projeto 18, seção 3 da spec; CodeRabbit).
         navigateFallback: '/app.html',
-        navigateFallbackDenylist: [/^\/$/, /^\/privacidade$/, /^\/termos$/, /^\/api\//],
+        navigateFallbackAllowlist: appRoutePatterns(rewrites),
         // Web Push (sub-projeto 5, Parte B, W7): o tratamento do aviso e do clique fica em public/push-sw.js.
         importScripts: ['push-sw.js'],
       },

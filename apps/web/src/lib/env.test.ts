@@ -30,4 +30,11 @@ describe('checkEnv', () => {
     // O Vitest roda a partir de apps/web.
     expect(readFileSync('src/lib/env.ts', 'utf8')).not.toMatch(/from ['"]zod['"]/);
   });
+
+  it('tira os espaços das pontas dos endereços (o zod fazia isso), e a chave fica como veio', () => {
+    expect(checkEnv({ VITE_API_URL: ' http://localhost:3333/api/v1 ', VITE_SUPABASE_URL: 'https://x.supabase.co ', VITE_SUPABASE_ANON_KEY: 'chave' })).toEqual({
+      ok: true,
+      env: { VITE_API_URL: 'http://localhost:3333/api/v1', VITE_SUPABASE_URL: 'https://x.supabase.co', VITE_SUPABASE_ANON_KEY: 'chave' },
+    });
+  });
 });
