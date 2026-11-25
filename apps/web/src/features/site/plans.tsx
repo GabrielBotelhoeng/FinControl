@@ -56,7 +56,7 @@ function BillingSwitch({ value, onChange }: { value: Billing; onChange: (b: Bill
             className={cn('relative h-10 whitespace-nowrap rounded-full px-5 text-sm font-semibold transition-colors', checked ? 'text-brand-fg' : 'text-muted hover:text-text')}
           >
             {o.label}
-            {o.value === 'yearly' && YEARLY_FREE_MONTHS > 0 && <span className="ml-1.5 text-xs font-semibold opacity-75">{YEARLY_FREE_MONTHS} meses grátis</span>}
+            {o.value === 'yearly' && YEARLY_FREE_MONTHS > 0 && <span className="ml-1.5 text-xs font-semibold">{YEARLY_FREE_MONTHS} meses grátis</span>}
           </button>
         );
       })}

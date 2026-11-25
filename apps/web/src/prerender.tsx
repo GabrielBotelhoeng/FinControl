@@ -103,9 +103,15 @@ export function pageHtml(template: string, path: PublicPath, body: string): stri
   return replaceOnce(html, EMPTY_ROOT, `<div id="root" data-prerendered-route="${path}">${body}</div>`, 'o #root vazio');
 }
 
-/** A casca do app (`dist/app.html`): a entrada e as rotas privadas, sem o HTML do site e fora do índice (E2 e E7). */
+/**
+ * A casca do app (`dist/app.html`): a entrada e as rotas privadas, sem o HTML do site e fora do índice (E2 e E7). Sem
+ * canonical nem as metas de compartilhamento da home (og:*, twitter:*): elas apontariam para a `/`. O título é só a marca;
+ * as telas do app trocam o título.
+ */
 export function appShellHtml(template: string): string {
-  let html = removeTag(template, 'link[rel="canonical"]');
+  let html = setTitle(template, 'FinControl');
+  html = removeTag(html, 'link[rel="canonical"]');
+  html = html.replace(/\s*<meta (?:property="og:|name="twitter:)[^>]*>/g, '');
   html = removeJsonLd(html);
   return beforeThemeInit(html, NOINDEX);
 }

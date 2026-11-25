@@ -20,11 +20,14 @@ const isStandalone = () =>
   !isServer() &&
   (window.matchMedia?.('(display-mode: standalone)').matches || (navigator as { standalone?: boolean }).standalone === true);
 
+/** A chave de uma sessão do Supabase no localStorage. A mesma regra vale no `public/theme-init.js` (teste). */
+export const SESSION_KEY_PATTERN = /^sb-.+-auth-token$/;
+
 /** Há uma sessão do Supabase guardada neste navegador? (A mesma regra do `public/theme-init.js`.) */
 function hasStoredSession(): boolean {
   if (isServer()) return false;
   try {
-    for (let i = 0; i < localStorage.length; i++) if (/^sb-.+-auth-token$/.test(localStorage.key(i) ?? '')) return true;
+    for (let i = 0; i < localStorage.length; i++) if (SESSION_KEY_PATTERN.test(localStorage.key(i) ?? '')) return true;
     return false;
   } catch {
     return true; // Sem acesso ao armazenamento: não arrisca mostrar o site para quem pode estar logado.

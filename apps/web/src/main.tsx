@@ -1,3 +1,4 @@
+import { holdButtonClicks } from './lib/held-clicks';
 import './styles/index.css';
 
 const root = document.getElementById('root');
@@ -31,27 +32,13 @@ function afterFirstPaint(fn: () => void) {
 // roteador, login) vem depois. Fora disso, o app carrega na hora (o theme-init.js já o adiantou).
 const hydrate = root.dataset.prerenderedRoute !== undefined && document.documentElement.dataset.boot === 'static';
 
-// Um botão tocado antes da hidratação (ex.: "Experimentar sem cadastro") não faria nada: o toque fica guardado e é
-// repetido quando o app assume. Links continuam valendo sozinhos (navegam sem o JavaScript).
-let heldButton: HTMLButtonElement | null = null;
-const holdButtonClick = (event: MouseEvent) => {
-  const button = event.target instanceof Element ? event.target.closest('button') : null;
-  if (!button) return;
-  event.preventDefault();
-  event.stopPropagation();
-  heldButton = button;
-};
-
+// Botões tocados antes da hidratação (ex.: "Experimentar sem cadastro") não fariam nada: os toques ficam guardados e são
+// repetidos, na ordem, quando o app assume (lib/held-clicks.ts).
+const releaseClicks = hydrate ? holdButtonClicks(root) : () => {};
 const start = () =>
   void import('./boot')
     .then(({ boot }) => boot(root, hydrate))
-    .finally(() => {
-      root.removeEventListener('click', holdButtonClick, true);
-      // O React repete o clique assim que a parte tocada estiver hidratada.
-      if (heldButton?.isConnected) heldButton.click();
-    });
+    .finally(releaseClicks);
 
-if (hydrate) {
-  root.addEventListener('click', holdButtonClick, true);
-  afterFirstPaint(start);
-} else start();
+if (hydrate) afterFirstPaint(start);
+else start();

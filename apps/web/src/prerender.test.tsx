@@ -76,8 +76,10 @@ describe('HTML estático das páginas públicas (sub-projeto 18, E1 e E6)', () =
 });
 
 describe('casca do app e página 404 (sub-projeto 18, E2 e E7)', () => {
-  it('app.html: casca vazia, com noindex, sem canonical nem JSON-LD', () => {
+  it('app.html: casca vazia, com noindex, sem canonical, sem as metas de compartilhamento da home nem JSON-LD', () => {
     const doc = parse(appShellHtml(template));
+    expect(doc.title).toBe('FinControl');
+    expect(doc.querySelectorAll('meta[property^="og:"], meta[name^="twitter:"]')).toHaveLength(0);
     expect(attr(doc, 'meta[name="robots"]', 'content')).toBe('noindex');
     expect(doc.getElementById('root')!.innerHTML).toBe('');
     expect(doc.getElementById('root')!.dataset.prerenderedRoute).toBeUndefined();

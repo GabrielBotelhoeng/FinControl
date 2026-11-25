@@ -2,7 +2,8 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { CAPTURES } from './captures';
-import { AUTH_RETURN_PARAMS } from '../../app/home-gate';
+import { AUTH_RETURN_PARAMS, SESSION_KEY_PATTERN } from '../../app/home-gate';
+import { authStorageKey } from '../auth/client';
 import { HERO_IMAGE_SIZES } from './hero';
 
 // O Vitest roda a partir de apps/web.
@@ -70,6 +71,12 @@ describe('public/theme-init.js adianta a tela que vai abrir (Lighthouse do site)
   it('na volta do link de confirmação (?token_hash=…&type=signup), não adianta o site', () => {
     window.history.replaceState(null, '', '/?token_hash=x&type=signup');
     expect(runThemeInit('/').map((l) => l.href)).toEqual(['/assets/boot.js']);
+  });
+
+  it('usa a mesma regra de sessão guardada do portão da /, e ela reconhece a chave do cliente de login', () => {
+    expect(script).toContain(SESSION_KEY_PATTERN.toString());
+    expect(SESSION_KEY_PATTERN.test(authStorageKey('https://ojywswdjhjmwnfhalntl.supabase.co'))).toBe(true);
+    expect(SESSION_KEY_PATTERN.test('fincontrol-theme')).toBe(false);
   });
 
   it('usa a mesma lista de parâmetros de retorno do portão da /', () => {
