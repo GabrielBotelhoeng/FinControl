@@ -35,8 +35,10 @@ describe('rotas do app para o PWA e o preview, a partir do vercel.json (sub-proj
     expect(shortcuts).toEqual(['/lancamentos?novo=1', '/calendario', '/importar']);
     const offline = offlineAppPatterns(vercel.rewrites);
     const opens = (url: string) => offline.some((p) => p.test(url));
-    for (const url of [...shortcuts, '/entrar?modo=cadastro', '/cartoes/abc?mes=2026-11']) expect(opens(url), url).toBe(true);
+    for (const url of [...shortcuts, '/entrar?modo=cadastro', '/cartoes/abc?mes=2026-11', '/cartoes/abc?x=1', '/lancamentos?novo=1']) expect(opens(url), url).toBe(true);
     for (const url of ['/', '/?code=x', '/privacidade', '/termos?x=1', '/nao-existe', '/nao-existe?x=1', '/lancamentosx', '/lancamentos/x?y=1']) expect(opens(url), url).toBe(false);
+    // O parâmetro não engole a query: sem o ID, não é rota do app, e o service worker deixa chegar ao 404 (CodeRabbit).
+    for (const url of ['/cartoes/?x=1', '/emprestimos/?x=1', '/dividas/?x=1']) expect(opens(url), url).toBe(false);
     expect(config).toMatch(/navigateFallbackAllowlist:\s*offlineAppPatterns\(rewrites\)/);
   });
 });
