@@ -40,8 +40,16 @@ describe('herói e faixa do site', () => {
     expect(front).not.toHaveAttribute('aria-hidden');
     expect(backCopy).toHaveAttribute('aria-hidden', 'true');
     expect(frontCopy).toHaveAttribute('aria-hidden', 'true');
-    for (const item of MARQUEE_ITEMS) expect(within(front).getByText(item)).toBeInTheDocument();
-    for (const item of MARQUEE_BACK_ITEMS) expect(within(back).getByText(item)).toBeInTheDocument();
+    // Os rótulos se repetem para a lista cobrir a largura da faixa, mas cada um é lido uma vez só.
+    const readOnce = (list: HTMLElement, items: string[]) => {
+      for (const item of items) {
+        const all = within(list).getAllByText(item);
+        expect(all.length, item).toBeGreaterThan(1);
+        expect(all.filter((li) => !li.closest('[aria-hidden="true"]')), item).toHaveLength(1);
+      }
+    };
+    readOnce(front, MARQUEE_ITEMS);
+    readOnce(back, MARQUEE_BACK_ITEMS);
     // A de trás vai para o outro lado; a seção corta o que passa da largura (sem rolagem horizontal).
     expect(back).toHaveClass('site-marquee-track-back');
     expect(front).not.toHaveClass('site-marquee-track-back');

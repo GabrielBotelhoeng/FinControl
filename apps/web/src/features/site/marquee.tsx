@@ -23,12 +23,21 @@ export const MARQUEE_BACK_ITEMS = [
   'Avisos de vencimento',
 ];
 
+/**
+ * Quantas vezes os rótulos se repetem dentro de cada lista: cada lista precisa ser pelo menos tão larga quanto a faixa
+ * (112% da seção), senão o fim de cada volta deixa o lado direito vazio. Com 2, a de trás tem ~3.600 px no computador e a
+ * da frente ~5.800 px, acima dos ~2.870 px de uma tela de 2560 px (CodeRabbit, PR #42).
+ */
+const REPEAT = 2;
+
+/** Uma lista da faixa. Só a primeira volta dos rótulos é lida (na lista que não é a cópia do laço); o resto é desenho. */
 function Track({ items, hidden, back }: { items: string[]; hidden?: boolean; back?: boolean }) {
   return (
     <ul aria-hidden={hidden || undefined} className={cn('site-marquee-track flex shrink-0 items-center', back && 'site-marquee-track-back')}>
-      {items.map((label) => (
-        <Fragment key={label}>
+      {Array.from({ length: REPEAT }, (_, round) => items.map((label) => ({ label, round }))).flat().map(({ label, round }) => (
+        <Fragment key={`${round}-${label}`}>
           <li
+            aria-hidden={(!hidden && round > 0) || undefined}
             className={cn(
               'whitespace-nowrap font-display font-semibold tracking-[-0.01em] md:px-7',
               back ? 'px-3 text-sm md:text-2xl' : 'px-4 text-lg md:text-3xl',

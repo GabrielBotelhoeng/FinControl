@@ -38,7 +38,8 @@ async function main() {
       console.log(`site/${name}-${w}.webp  ${small.width}×${small.height}  ${Math.round(small.size / 1024)} KB`);
     }
   }
-  // Rodando só uma parte das capturas (ex.: `-g tablet`), a og-image não é refeita: fica a que já está no repositório.
+  // Rodando só uma parte das capturas (ex.: `-g tablet`), a og-image não é refeita: fica a que já está no repositório. A
+  // pasta é limpa no começo de cada rodada de capturas (e2e/global-setup.ts), então nenhuma og-image velha sobra aqui.
   if (!(await readdir(SRC)).includes('og-image.png')) {
     console.log('og-image.png não foi refeita nesta execução; mantida a atual.');
     return;

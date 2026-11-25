@@ -122,6 +122,20 @@ test('as duas faixas em X andam em sentidos opostos e o fundo flutua só com tra
   expect(animated.every((p) => ['transform', 'opacity'].includes(p)), animated.join(', ')).toBe(true);
 });
 
+for (const width of [1920, 1440, 360]) {
+  test(`a ${width} px, cada lista das faixas cobre a largura da faixa (sem lado vazio no fim da volta)`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 });
+    await openSite(page, '/');
+    const gaps = await page.evaluate(() =>
+      [...document.querySelectorAll('.site-marquee')].flatMap((strip) =>
+        [...strip.querySelectorAll('ul')].map((ul) => Math.round(ul.scrollWidth - (strip as HTMLElement).offsetWidth)),
+      ),
+    );
+    expect(gaps).toHaveLength(4);
+    for (const gap of gaps) expect(gap).toBeGreaterThanOrEqual(0);
+  });
+}
+
 for (const width of [360, 390]) {
   test(`a ${width} px, as duas faixas em X ficam legíveis: cada uma com pelo menos 2 termos inteiros à vista (QA)`, async ({ page }) => {
     await page.setViewportSize({ width, height: 800 });
@@ -134,7 +148,9 @@ for (const width of [360, 390]) {
       const [back, front] = await page.evaluate(() =>
         [...document.querySelectorAll('.site-marquee')].map(
           (strip) =>
-            [...strip.querySelectorAll('ul > li:not([aria-hidden])')].filter((li) => {
+            // Todo rótulo com texto conta (as repetições são `aria-hidden`, mas aparecem na tela).
+            [...strip.querySelectorAll('ul > li')].filter((li) => {
+              if (!li.textContent) return false;
               const r = li.getBoundingClientRect();
               if (r.left < 0 || r.right > innerWidth) return false;
               return [0.15, 0.5, 0.85].every((f) => {
