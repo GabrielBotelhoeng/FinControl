@@ -4,6 +4,7 @@ import { ListSkeleton } from '../components/ui/states';
 import { preloadable } from '../lib/preloadable';
 import type { PublicPath } from '../lib/public-head';
 import { HomeGate, SitePage } from './home-gate';
+import { RouteErrorPage } from './route-error-page';
 
 const LoginPage = lazy(() => import('../features/auth/login-page').then((m) => ({ default: m.LoginPage })));
 const DashboardPage = lazy(() => import('../features/dashboard/dashboard-page'));
@@ -36,18 +37,22 @@ export const preloadPublicPage = (path: PublicPath) => ({ '/': SitePage, '/priva
 
 const page = (node: ReactNode) => <Suspense fallback={<ListSkeleton />}>{node}</Suspense>;
 
+/** Uma tela que quebra, como um pedaço antigo que sumiu depois de um deploy (sub-projeto 19, A4), cai aqui, em português. */
+const errorElement = <RouteErrorPage />;
+
 /**
  * As rotas, sem o roteador: o navegador usa `createBrowserRouter` (router.tsx) e o build do HTML estático, o roteador
  * estático (src/prerender.tsx), com as mesmas rotas, para hidratar o mesmo HTML (sub-projeto 18, E1).
  */
 export const routes: RouteObject[] = [
-  { path: '/entrar', element: page(<LoginPage />) },
-  { path: '/privacidade', element: page(<PrivacyPage />) },
-  { path: '/termos', element: page(<TermsPage />) },
+  { path: '/entrar', element: page(<LoginPage />), errorElement },
+  { path: '/privacidade', element: page(<PrivacyPage />), errorElement },
+  { path: '/termos', element: page(<TermsPage />), errorElement },
   {
     path: '/',
     // Sem sessão, a `/` é o site de apresentação e as outras rotas levam à entrada (sub-projeto 17, S1).
     element: <HomeGate />,
+    errorElement,
     children: [
       { index: true, element: page(<DashboardPage />) },
       { path: 'lancamentos', element: page(<TransactionsPage />) },
