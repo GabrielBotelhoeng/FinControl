@@ -84,6 +84,25 @@ export function createTransactionsService(deps: TransactionsServiceDeps) {
     });
   }
 
+  /** V8: o valor de uma parcela de acordo vem do acordo. Reenviar o mesmo valor (o formulário sempre envia) é permitido. */
+  function assertDebtInstallmentAmount(row: TransactionRow, amount: number | undefined): void {
+    if (row.debtId && row.installmentNumber !== null && amount !== undefined && amount !== row.amount) {
+      throw new UnprocessableError(DEBT_INSTALLMENT_MESSAGES.amount);
+    }
+  }
+
+  /** Grava a edição; num lançamento de dívida, com a dívida travada e o lançamento relido (E-003). */
+  async function writeUpdate(userId: string, current: TransactionRow, fields: Partial<NewTransaction>, amount: number | undefined) {
+    if (!current.debtId) return repo.update(userId, current.id, fields);
+    return deps.withDebtLock(userId, current.debtId, async (_anchor, txRepo) => {
+      // Um cancelamento de acordo que terminou enquanto este esperava apagou a parcela: 404, não erro interno.
+      const fresh = await txRepo.findById(userId, current.id);
+      if (!fresh) throw new NotFoundError('Lançamento');
+      assertDebtInstallmentAmount(fresh, amount);
+      return txRepo.update(userId, current.id, fields);
+    });
+  }
+
   /**
    * A1: num pago cujo pagamento caiu no próprio vencimento, mudar o vencimento leva o pagamento junto (senão ele
    * seguiria contando no mês antigo). Pagamento em outra data é escolha da pessoa e fica; nunca vai para o futuro.
@@ -173,9 +192,8 @@ export function createTransactionsService(deps: TransactionsServiceDeps) {
       if (current.loanId && input.amount !== undefined && input.amount !== current.amount) {
         throw new UnprocessableError(LOAN_INSTALLMENT_MESSAGES.amount);
       }
-      if (current.debtId && current.installmentNumber !== null && input.amount !== undefined && input.amount !== current.amount) {
-        throw new UnprocessableError(DEBT_INSTALLMENT_MESSAGES.amount);
-      }
+      // Conferido de novo dentro da trava, com o lançamento relido (writeUpdate).
+      assertDebtInstallmentAmount(current, input.amount);
       // Guarda de cartão (decisão R11): antes de ramificar por escopo, para também bloquear mover uma
       // recorrência comum para um cartão via scope=future. Só bloqueia accountId/destinationAccountId que
       // realmente mudam de valor — reenviar o mesmo valor (como o formulário da web sempre faz) é permitido.
@@ -208,7 +226,7 @@ export function createTransactionsService(deps: TransactionsServiceDeps) {
         category: input.categoryId !== undefined,
       });
       const { recurrence: _recurrence, ...fields } = input;
-      const updated = await repo.update(userId, id, fields);
+      const updated = await writeUpdate(userId, current, fields, input.amount);
       const follow = followPaidDate(current, input.dueDate);
       // Condicional: um pagamento registrado ao mesmo tempo (outra data) não é sobrescrito (CodeRabbit).
       if (follow.paidDate && current.paidDate) {

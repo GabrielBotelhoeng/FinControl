@@ -22,6 +22,46 @@ const agreementBody = (accountId: string, over: Record<string, unknown> = {}) =>
   downPayment: 10000, installments: 4, installmentAmount: 20000, firstDueDate: '2026-12-05', accountId, ...over,
 });
 
+// Conexões deste banco na fila atrás da sessão `holder`, direta ou indiretamente (uma requisição pode esperar
+// outra, que espera a trava). Como `holder` só trava a linha do teste, travas alheias no Postgres não contam.
+async function waitingBehind(holder: number): Promise<number> {
+  const rows = await testDb.$queryRaw<{ n: bigint }[]>`
+    WITH RECURSIVE chain(pid) AS (
+      SELECT ${holder}::int
+      UNION
+      SELECT a.pid FROM pg_stat_activity a JOIN chain c ON c.pid = ANY(pg_blocking_pids(a.pid))
+      WHERE a.datname = current_database()
+    )
+    SELECT count(*) - 1 AS n FROM chain`;
+  return Number(rows[0]!.n);
+}
+
+/**
+ * Corrida em ordem garantida (E-002, E-003): segura a trava de `lock` e dispara cada requisição só depois que a
+ * anterior entrou na fila atrás dela. Solta a trava no fim e devolve as respostas na mesma ordem. Se a espera
+ * falhar, as requisições em voo terminam aqui, não depois do teste.
+ */
+async function raceBehindLock(
+  lock: (tx: Parameters<Parameters<typeof testDb.$transaction>[0]>[0]) => Promise<unknown>,
+  requests: (() => PromiseLike<request.Response>)[],
+): Promise<request.Response[]> {
+  const inFlight: Promise<request.Response>[] = [];
+  try {
+    await testDb.$transaction(async (tx) => {
+      await lock(tx);
+      const holder = (await tx.$queryRaw<{ pid: number }[]>`SELECT pg_backend_pid() AS pid`)[0]!.pid;
+      for (const [i, send] of requests.entries()) {
+        inFlight.push(Promise.resolve(send()));
+        for (let t = 0; t < 200 && (await waitingBehind(holder)) < i + 1; t++) await new Promise((r) => setTimeout(r, 25));
+        expect(await waitingBehind(holder)).toBeGreaterThanOrEqual(i + 1);
+      }
+    }, { timeout: 15_000 });
+  } finally {
+    await Promise.allSettled(inFlight);
+  }
+  return Promise.all(inFlight);
+}
+
 describe('dívidas com credores', () => {
   beforeEach(resetDb);
 
@@ -255,47 +295,55 @@ describe('dívidas com credores', () => {
     const { user, checking, debt } = await debtScenario();
     await request(app).post(`/api/v1/debts/${debt.id}/agreement`).set(user.auth).send(agreementBody(checking.id));
     const first = await testDb.transaction.findFirst({ where: { debtId: debt.id, installmentNumber: 1 } });
-    // Conexões deste banco na fila atrás da sessão `holder`, direta ou indiretamente (o pagamento espera o
-    // cancelamento, que espera a trava). Como `holder` só trava esta dívida, travas alheias no Postgres não contam.
-    const waiting = async (holder: number) => {
-      const rows = await testDb.$queryRaw<{ n: bigint }[]>`
-        WITH RECURSIVE chain(pid) AS (
-          SELECT ${holder}::int
-          UNION
-          SELECT a.pid FROM pg_stat_activity a JOIN chain c ON c.pid = ANY(pg_blocking_pids(a.pid))
-          WHERE a.datname = current_database()
-        )
-        SELECT count(*) - 1 AS n FROM chain`;
-      return Number(rows[0]!.n);
-    };
-    const until = async (holder: number, n: number) => {
-      for (let i = 0; i < 200 && (await waiting(holder)) < n; i++) await new Promise((r) => setTimeout(r, 25));
-      expect(await waiting(holder)).toBeGreaterThanOrEqual(n);
-    };
-    // Segura a trava: o cancelamento entra na fila primeiro; o pagamento lê a parcela (ainda existe) e entra atrás.
-    const inFlight: Promise<request.Response>[] = [];
-    let cancel!: Promise<request.Response>;
-    let pay!: Promise<request.Response>;
-    try {
-      await testDb.$transaction(async (tx) => {
-        await tx.$queryRaw`SELECT "id" FROM "debts" WHERE "id" = ${debt.id}::uuid FOR UPDATE`;
-        const holder = (await tx.$queryRaw<{ pid: number }[]>`SELECT pg_backend_pid() AS pid`)[0]!.pid;
-        cancel = request(app).delete(`/api/v1/debts/${debt.id}/agreement`).set(user.auth).then((r) => r);
-        inFlight.push(cancel);
-        await until(holder, 1);
-        pay = request(app).post(`/api/v1/transactions/${first!.id}/pay`).set(user.auth).send({ paidDate: '2026-11-11' }).then((r) => r);
-        inFlight.push(pay);
-        await until(holder, 2);
-      }, { timeout: 15_000 });
-    } finally {
-      // Falhou a espera: a trava é solta e as duas requisições terminam aqui, não depois do teste.
-      await Promise.allSettled(inFlight);
-    }
-    expect((await cancel).status).toBe(200);
-    const paid = await pay;
-    expect(paid.status, JSON.stringify(paid.body)).toBe(404);
+    // Segura a trava da dívida: o cancelamento entra na fila primeiro; o pagamento lê a parcela (ainda existe) e entra atrás.
+    const [cancel, paid] = await raceBehindLock(
+      (tx) => tx.$queryRaw`SELECT "id" FROM "debts" WHERE "id" = ${debt.id}::uuid FOR UPDATE`,
+      [
+        () => request(app).delete(`/api/v1/debts/${debt.id}/agreement`).set(user.auth),
+        () => request(app).post(`/api/v1/transactions/${first!.id}/pay`).set(user.auth).send({ paidDate: '2026-11-11' }),
+      ],
+    );
+    expect(cancel!.status).toBe(200);
+    expect(paid!.status, JSON.stringify(paid!.body)).toBe(404);
     const after = (await request(app).get(`/api/v1/debts/${debt.id}`).set(user.auth)).body;
     expect(after).toMatchObject({ status: 'open', agreement: null, balance: 80000, paid: 10000 });
+  });
+
+  it('edição de parcela que esperou o cancelamento do acordo dá 404, não 500 (E-003)', async () => {
+    const { user, checking, debt } = await debtScenario();
+    await request(app).post(`/api/v1/debts/${debt.id}/agreement`).set(user.auth).send(agreementBody(checking.id));
+    const first = await testDb.transaction.findFirst({ where: { debtId: debt.id, installmentNumber: 1 } });
+    // Segura a linha da parcela: o cancelamento (já com a dívida travada) espera para apagá-la; a edição lê a
+    // parcela (ainda existe) e entra atrás dele. Solta a linha: o cancelamento apaga e a edição chega depois.
+    const [cancel, edited] = await raceBehindLock(
+      (tx) => tx.$queryRaw`SELECT "id" FROM "transactions" WHERE "id" = ${first!.id}::uuid FOR UPDATE`,
+      [
+        () => request(app).delete(`/api/v1/debts/${debt.id}/agreement`).set(user.auth),
+        () => request(app).patch(`/api/v1/transactions/${first!.id}`).set(user.auth).send({ description: 'Parcela renomeada' }),
+      ],
+    );
+    expect(cancel!.status).toBe(200);
+    expect(edited!.status, JSON.stringify(edited!.body)).toBe(404);
+    expect(await testDb.transaction.findUnique({ where: { id: first!.id } })).toBeNull();
+    const after = (await request(app).get(`/api/v1/debts/${debt.id}`).set(user.auth)).body;
+    expect(after).toMatchObject({ status: 'open', agreement: null, balance: 80000, paid: 10000 });
+  });
+
+  it('pagamento que esperou a exclusão da dívida dá 404, não 500 (E-003)', async () => {
+    const { user, checking, debt } = await debtScenario();
+    await request(app).post(`/api/v1/debts/${debt.id}/agreement`).set(user.auth).send(agreementBody(checking.id));
+    const first = await testDb.transaction.findFirst({ where: { debtId: debt.id, installmentNumber: 1 } });
+    // Segura a dívida: a exclusão espera para apagá-la; o pagamento lê a parcela (ainda existe) e espera a trava atrás.
+    const [removed, paid] = await raceBehindLock(
+      (tx) => tx.$queryRaw`SELECT "id" FROM "debts" WHERE "id" = ${debt.id}::uuid FOR UPDATE`,
+      [
+        () => request(app).delete(`/api/v1/debts/${debt.id}`).set(user.auth),
+        () => request(app).post(`/api/v1/transactions/${first!.id}/pay`).set(user.auth).send({ paidDate: '2026-11-11' }),
+      ],
+    );
+    expect(removed!.status).toBe(204);
+    expect(paid!.status, JSON.stringify(paid!.body)).toBe(404);
+    expect(await testDb.debt.findUnique({ where: { id: debt.id } })).toBeNull();
   });
 
   it('valores inválidos dão 400', async () => {
