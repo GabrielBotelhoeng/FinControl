@@ -251,6 +251,37 @@ describe('dívidas com credores', () => {
     expect(after.paid).toBe(pay.status === 200 ? 30000 : 10000);
   });
 
+  it('pagamento que esperou a trava enquanto o acordo era cancelado dá 404, não 422 (E-002)', async () => {
+    const { user, checking, debt } = await debtScenario();
+    await request(app).post(`/api/v1/debts/${debt.id}/agreement`).set(user.auth).send(agreementBody(checking.id));
+    const first = await testDb.transaction.findFirst({ where: { debtId: debt.id, installmentNumber: 1 } });
+    // Quantas conexões esperam a trava da dívida (o SELECT ... FOR UPDATE do repositório).
+    const waiting = async () => {
+      const rows = await testDb.$queryRaw<{ n: bigint }[]>`
+        SELECT count(*) AS n FROM pg_stat_activity WHERE wait_event_type = 'Lock' AND query ILIKE '%FOR UPDATE%'`;
+      return Number(rows[0]!.n);
+    };
+    const until = async (n: number) => {
+      for (let i = 0; i < 200 && (await waiting()) < n; i++) await new Promise((r) => setTimeout(r, 25));
+      expect(await waiting()).toBe(n);
+    };
+    // Segura a trava: o cancelamento entra na fila primeiro; o pagamento lê a parcela (ainda existe) e entra atrás.
+    let cancel!: Promise<request.Response>;
+    let pay!: Promise<request.Response>;
+    await testDb.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT "id" FROM "debts" WHERE "id" = ${debt.id}::uuid FOR UPDATE`;
+      cancel = request(app).delete(`/api/v1/debts/${debt.id}/agreement`).set(user.auth).then((r) => r);
+      await until(1);
+      pay = request(app).post(`/api/v1/transactions/${first!.id}/pay`).set(user.auth).send({ paidDate: '2026-11-11' }).then((r) => r);
+      await until(2);
+    }, { timeout: 15_000 });
+    expect((await cancel).status).toBe(200);
+    const paid = await pay;
+    expect(paid.status, JSON.stringify(paid.body)).toBe(404);
+    const after = (await request(app).get(`/api/v1/debts/${debt.id}`).set(user.auth)).body;
+    expect(after).toMatchObject({ status: 'open', agreement: null, balance: 80000, paid: 10000 });
+  });
+
   it('valores inválidos dão 400', async () => {
     const { user, debt } = await debtScenario();
     expect((await request(app).post('/api/v1/debts').set(user.auth).send({ name: '', creditor: 'x', kind: 'store', originalAmount: 1, since: '2026-01-01' })).status).toBe(400);
