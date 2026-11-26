@@ -1,6 +1,18 @@
 # HANDOFF — FinControl
 
-_Atualizado em 2026-11-25 (sub-projeto 20, adicionais visuais do site)._
+_Atualizado em 2026-11-25 (sub-projeto 19, atualização do PWA)._
+
+## Sub-projeto 19: atualização do PWA (2026-11-25, branch feat/pwa-atualizacao)
+
+- **Spec:** `docs/superpowers/specs/2026-11-25-fincontrol-sp19-pwa-atualizacao-design.md` (A1–A6, com o motivo de cada uma). Sem migration, sem API.
+- **Causa (visto em produção):** com `injectRegister: 'script-defer'`, o `vite-plugin-pwa` não liga o `skipWaiting`/`clientsClaim` (só com `'auto'`), e o `registerSW.js` gerado só registra: o SW novo ficava em `waiting` até fechar todas as abas.
+- **A1:** `workbox.skipWaiting` e `clientsClaim` no `vite.config.ts`; o `registerSW.js` continua em arquivo (CSP sem script embutido, registro fora da primeira pintura).
+- **A2/A3 (`lib/pwa-update.ts`, ligado no início do `main.tsx`):** a troca de controlador (`controllerchange`) é versão nova, exceto a primeira instalação (página aberta sem controlador e sem registro ativo; a recarga forçada, com SW ativo, conta como versão nova). Procura `registration.update()` ao voltar para a aba e a cada 60 min; sem conexão, falha em silêncio. O aviso é `app/update-notice.tsx` (`toast.custom` do sonner, id único, sem prazo): "Nova versão disponível", **Atualizar** (só `location.reload()`) e fechar. Nada recarrega sozinho; vale no app e no site público. A região do `Toaster` passou a se chamar "Avisos".
+- **A4:** o `vite:preloadError` (o Vite dispara em qualquer `import()` que falha) mostra o mesmo aviso, sem impedir o erro; as rotas de topo têm `errorElement` (`app/route-error-page.tsx`, "Não deu para abrir esta tela", com Atualizar), no lugar da tela em inglês do React Router. Se o próprio boot falha (nada montado), o `main.tsx` recarrega **uma vez**, com a trava `fincontrol-recarga-versao` no `sessionStorage`, tirada pelo `AppReady` do `boot.tsx`.
+- **A5/A6:** nenhum `caches.delete`, `unregister` ou limpeza de armazenamento (a sessão `sb-…-auth-token` fica); o aviso tem `role="status"`, não puxa o foco (Alt+T leva aos avisos), anel de foco do DESIGN.md; o sonner já desliga a animação com `prefers-reduced-motion`.
+- **Testes:** 389 na web (novos: `lib/pwa-update.test.ts`, `app/update-notice.test.tsx`, `app/route-error-page.test.tsx`). E2E: 49 passaram e 6 pulados de propósito; novo `e2e/tests/pwa-atualizacao.spec.ts`, com o SW liberado só nele: na `/` o SW controla sem aviso na primeira instalação; o `dist/sw.js` ganha outra revisão (um ouvinte que responde "nova") e a volta à aba mostra o aviso, com o SW novo já controlando; na `/entrar`, o e-mail digitado e o foco ficam até o clique, e Atualizar recarrega sob o SW novo, sem aviso depois e com o `localStorage` igual; o pedaço da privacidade em 404 mostra o aviso e a tela de erro; o boot em 404 recarrega uma vez só. O arquivo original do `sw.js` volta depois de cada teste.
+- **Lighthouse no celular** (`lighthouse@12 --form-factor=mobile`, build servida localmente, Chromium do Playwright): SP19 **96, 94 e 95** (mediana 95), acessibilidade, boas práticas e SEO 100, CLS 0, LCP 1,9 s. A base `main` f595ea3, medida na mesma hora e alternando: **95, 96 e 88** (mediana 95). A máquina estava carregada (TBT 200–450 ms nas duas, contra 110–130 ms na medição do sub-projeto 20); o código não mudou o resultado. Pacote de entrada +394 B gzip, JS total +794 B gzip.
+- **Pendência:** repetir o Lighthouse com a máquina livre (ou na prévia da Vercel) para confirmar os 99. Em produção, a primeira vez de cada pessoa ainda passa pelo SW antigo (sem o `skipWaiting`): a versão nova entra quando ela fechar as abas uma vez, e daí em diante as trocas são pelo aviso.
 
 ## Sub-projeto 20: adicionais visuais no site (2026-11-25, branch feat/site-adicionais-visuais)
 

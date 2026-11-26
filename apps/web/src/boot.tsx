@@ -7,6 +7,7 @@ import { router } from './app/router';
 import { preloadPublicPage } from './app/routes';
 import { checkEnv } from './lib/env';
 import { retrying } from './lib/preloadable';
+import { clearReloadGuard } from './lib/pwa-update';
 import { PUBLIC_HEAD, type PublicPath } from './lib/public-head';
 
 /**
@@ -38,9 +39,13 @@ function wakeOnActivity(root: HTMLElement) {
   };
 }
 
-/** Marca o `<html>` quando o app terminou de montar ou de hidratar (`data-app-ready`): os testes E2E esperam por ela. */
+/**
+ * Marca o `<html>` quando o app terminou de montar ou de hidratar (`data-app-ready`): os testes E2E esperam por ela. Também
+ * tira a trava da recarga única do main.tsx (sub-projeto 19, A4): o boot deu certo.
+ */
 function AppReady() {
   useEffect(() => {
+    clearReloadGuard();
     document.documentElement.dataset.appReady = 'true';
   }, []);
   return null;
